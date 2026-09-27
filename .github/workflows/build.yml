@@ -32,24 +32,27 @@ jobs:
             templates/experienced-resume.tex
             templates/ai-engineer-resume.tex
             templates/ml-engineer-resume.tex
+            templates/graduate-admissions-resume.tex
           latexmk_use_xelatex: true
           args: -file-line-error -halt-on-error -interaction=nonstopmode
           extra_system_packages: poppler-utils python3
           post_compile: |
             python3 -m unittest discover -s tests -p 'test_*.py'
             python3 scripts/package_templates.py --check
-            python3 tests/check_pdf_text.py --no-internship no-internship-resume.pdf --new-grad new-grad-resume.pdf --experienced experienced-resume.pdf --ai-engineer ai-engineer-resume.pdf --ml-engineer ml-engineer-resume.pdf
-            python3 tests/check_pdf_text.py --no-internship output/pdf/no-internship-resume.pdf --new-grad output/pdf/new-grad-resume.pdf --experienced output/pdf/experienced-resume.pdf --ai-engineer output/pdf/ai-engineer-resume.pdf --ml-engineer output/pdf/ml-engineer-resume.pdf
+            python3 tests/check_pdf_text.py --no-internship no-internship-resume.pdf --new-grad new-grad-resume.pdf --experienced experienced-resume.pdf --ai-engineer ai-engineer-resume.pdf --ml-engineer ml-engineer-resume.pdf --graduate-admissions graduate-admissions-resume.pdf
+            python3 tests/check_pdf_text.py --no-internship output/pdf/no-internship-resume.pdf --new-grad output/pdf/new-grad-resume.pdf --experienced output/pdf/experienced-resume.pdf --ai-engineer output/pdf/ai-engineer-resume.pdf --ml-engineer output/pdf/ml-engineer-resume.pdf --graduate-admissions output/pdf/graduate-admissions-resume.pdf
             python3 scripts/check_resume.py output/pdf/no-internship-resume.pdf --max-pages 1
             python3 scripts/check_resume.py output/pdf/new-grad-resume.pdf --max-pages 1
             python3 scripts/check_resume.py output/pdf/experienced-resume.pdf --max-pages 2
             python3 scripts/check_resume.py output/pdf/ai-engineer-resume.pdf --max-pages 1
             python3 scripts/check_resume.py output/pdf/ml-engineer-resume.pdf --max-pages 1
+            python3 scripts/check_resume.py output/pdf/graduate-admissions-resume.pdf --max-pages 1
             test "$(pdfinfo no-internship-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
             test "$(pdfinfo new-grad-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
             test "$(pdfinfo experienced-resume.pdf | awk '/^Pages:/ {print $2}')" = "2"
             test "$(pdfinfo ai-engineer-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
             test "$(pdfinfo ml-engineer-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
+            test "$(pdfinfo graduate-admissions-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
             mkdir -p /tmp/resume-previews
             pdftoppm -png -singlefile -f 1 -l 1 -r 72 no-internship-resume.pdf /tmp/resume-previews/no-internship
             pdftoppm -png -singlefile -f 1 -l 1 -r 72 new-grad-resume.pdf /tmp/resume-previews/new-grad
@@ -63,6 +66,8 @@ jobs:
             pdftoppm -png -singlefile -f 1 -l 1 -r 72 ml-engineer-resume.pdf /tmp/resume-previews/ml-engineer
             test -s /tmp/resume-previews/ai-engineer.png
             test -s /tmp/resume-previews/ml-engineer.png
+            pdftoppm -png -singlefile -f 1 -l 1 -r 72 graduate-admissions-resume.pdf /tmp/resume-previews/graduate-admissions
+            test -s /tmp/resume-previews/graduate-admissions.png
 
             python3 tests/check_starter_builds.py
             python3 tests/check_placeholders.py
@@ -70,6 +75,7 @@ jobs:
             python3 tests/check_page_limits.py
             python3 tests/check_contacts.py
             python3 tests/check_ai_ml.py
+            python3 tests/check_graduate_admissions.py
             python3 scripts/package_application_versions.py --check
             python3 tests/check_application_versions.py
             python3 tests/check_application_versions.py --published
@@ -86,11 +92,13 @@ jobs:
             experienced-resume.pdf
             ai-engineer-resume.pdf
             ml-engineer-resume.pdf
+            graduate-admissions-resume.pdf
             downloads/new-grad-resume.zip
             downloads/no-internship-resume.zip
             downloads/experienced-resume.zip
             downloads/ai-engineer-resume.zip
             downloads/ml-engineer-resume.zip
+            downloads/graduate-admissions-resume.zip
             downloads/application-versions.zip
             output/pdf/application-backend.pdf
             output/pdf/application-frontend.pdf

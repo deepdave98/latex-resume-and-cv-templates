@@ -37,7 +37,7 @@ cd swe-resume-templates
 make
 ```
 
-Edit files in `templates/`. `make` builds all five starters to `build/`. To build one, use `make no-internship`, `make new-grad`, `make experienced`, `make ai-engineer`, or `make ml-engineer`.
+Edit files in `templates/`. `make` builds all starters to `build/`. To build one, use `make no-internship`, `make new-grad`, `make experienced`, `make ai-engineer`, `make ml-engineer`, or `make graduate-admissions`.
 
 On Windows or without `make`, run the relevant command from the repository root:
 
@@ -47,6 +47,7 @@ latexmk -xelatex -outdir=build/new-grad templates/new-grad-resume.tex
 latexmk -xelatex -outdir=build/experienced templates/experienced-resume.tex
 latexmk -xelatex -outdir=build/ai-engineer templates/ai-engineer-resume.tex
 latexmk -xelatex -outdir=build/ml-engineer templates/ml-engineer-resume.tex
+latexmk -xelatex -outdir=build/graduate-admissions templates/graduate-admissions-resume.tex
 ```
 
 `make preview` refreshes published PDFs in `output/pdf/` and PNGs in `preview/`; it also needs Poppler or ImageMagick. See [contributing](../CONTRIBUTING.md) before changing published files.

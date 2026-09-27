@@ -3,7 +3,7 @@
 [![Build resumes](https://github.com/deepdave98/swe-resume-templates/actions/workflows/build.yml/badge.svg)](https://github.com/deepdave98/swe-resume-templates/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-29627e.svg)](LICENSE)
 
-LaTeX resumes for software, AI, and ML engineers. Edit in Overleaf or build locally with XeLaTeX.
+LaTeX resumes for software, AI, and ML engineers, plus a graduate-admissions CV. Edit in Overleaf or build locally with XeLaTeX.
 
 ## Pick a Template
 
@@ -14,10 +14,13 @@ LaTeX resumes for software, AI, and ML engineers. Edit in Overleaf or build loca
 | Experienced (2 pages) | [![Open the Experienced resume in Overleaf](https://img.shields.io/badge/Experienced-Open_in_Overleaf-47A141?logo=overleaf&logoColor=white)](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Fswe-resume-templates%2Fmain%2Fdownloads%2Fexperienced-resume.zip&engine=xelatex&main_document=resume.tex) | [Starter ZIP](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/downloads/experienced-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/output/pdf/experienced-resume.pdf) | [Page 1](preview/experienced-resume-page-1.png) · [Page 2](preview/experienced-resume-page-2.png) |
 | AI Engineer (1 page) | [![Open the AI Engineer resume in Overleaf](https://img.shields.io/badge/AI_Engineer-Open_in_Overleaf-47A141?logo=overleaf&logoColor=white)](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Fswe-resume-templates%2Fmain%2Fdownloads%2Fai-engineer-resume.zip&engine=xelatex&main_document=resume.tex) | [Starter ZIP](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/downloads/ai-engineer-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/output/pdf/ai-engineer-resume.pdf) | [Image](preview/ai-engineer-resume.png) |
 | ML Engineer (1 page) | [![Open the ML Engineer resume in Overleaf](https://img.shields.io/badge/ML_Engineer-Open_in_Overleaf-47A141?logo=overleaf&logoColor=white)](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Fswe-resume-templates%2Fmain%2Fdownloads%2Fml-engineer-resume.zip&engine=xelatex&main_document=resume.tex) | [Starter ZIP](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/downloads/ml-engineer-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/output/pdf/ml-engineer-resume.pdf) | [Image](preview/ml-engineer-resume.png) |
+| Graduate Admissions (1-page starter) | [![Open the Graduate Admissions CV in Overleaf](https://img.shields.io/badge/Graduate_Admissions-Open_in_Overleaf-47A141?logo=overleaf&logoColor=white)](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Fswe-resume-templates%2Fmain%2Fdownloads%2Fgraduate-admissions-resume.zip&engine=xelatex&main_document=resume.tex) | [Starter ZIP](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/downloads/graduate-admissions-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/output/pdf/graduate-admissions-resume.pdf) | [Image](preview/graduate-admissions-resume.png) |
 
 The no-internship starter emphasizes projects; new grad leads with education; experienced with work. Use a second page only when relevant experience needs it. [Section order guide](docs/section-order.md).
 
 AI Engineer covers applications built with models; ML Engineer covers model training and serving. Graduates can move education and projects first. [AI/ML guide](docs/ai-ml-resumes.md).
+
+Applying for a PhD or research master's? Start with education and research. Publications are optional; follow the program's CV requirements. [Admissions guide](docs/graduate-admissions.md).
 
 <details>
 <summary>View all previews</summary>
@@ -44,6 +47,10 @@ AI Engineer covers applications built with models; ML Engineer covers model trai
   <a href="https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/output/pdf/ml-engineer-resume.pdf"><img src="preview/ml-engineer-resume.png" width="49%" alt="Machine learning engineer resume with data, model evaluation, and serving examples"></a>
 </p>
 
+### Graduate Admissions
+
+[![Education-first graduate admissions CV with research and academic project prompts](preview/graduate-admissions-resume.png)](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/output/pdf/graduate-admissions-resume.pdf)
+
 </details>
 
 ## Edit the Content
@@ -68,7 +75,7 @@ latexmk resume.tex
 
 The included config selects XeLaTeX and writes `resume.pdf`. No clone needed.
 
-In a clone, `make` builds all five starters to `build/`; `make new-grad` builds one. [All targets and Windows commands](docs/local-setup.md#build-from-a-clone).
+In a clone, `make` builds all starters to `build/`; `make new-grad` builds one. [All targets and Windows commands](docs/local-setup.md#build-from-a-clone).
 
 ## Check Your PDF
 
