@@ -1,0 +1,109 @@
+% !TeX program = xelatex
+\documentclass{resume}
+\resumepagelimit{1}
+\hypersetup{
+  pdftitle={Graduate Admissions CV Template},
+  pdfsubject={Research-focused master's and PhD applications}
+}
+
+% Start here: replace every bracketed prompt; delete entries you do not have.
+% This is a one-page starting point, not a program's required format or length.
+% Check the program's CV instructions. Change the page budget above if needed.
+% Guide: https://github.com/deepdave98/swe-resume-templates/blob/main/docs/graduate-admissions.md
+% Use your actual role: a thesis or course project is not an RA appointment.
+% List degrees newest first. Add a master's only if you have started/completed it.
+% Optional grades: use the transcript's scale and the program's reporting rules.
+
+\begin{document}
+
+\resumename{Your Name}
+\resumecontact{City, Region
+  \contactsep\resumeemail{hello@example.com}
+  \contactsep\resumelink{https://example.com}{Website}
+  \contactsep\resumelink{https://github.com/your-handle}{GitHub}}
+% Delete Website or GitHub if you have no relevant work to link.
+
+\section{Education}
+
+\jobentry{[Degree in Field]}{[University]}{[City, Country]}{Expected [Month Year]}
+\begin{jobduties}
+  \item Thesis: [Title]. Supervisor: [Name]. [In progress / completed Month Year].
+  \item Selected coursework: [Two or three courses relevant to the program].
+\end{jobduties}
+% Remove the thesis line if you do not have one. Remove Expected after graduation.
+% Duplicate this degree block for earlier degrees; do not duplicate thesis bullets.
+
+\section{Research Experience}
+
+\jobentry{[Thesis Student / Actual Research Role]}{[Department, University]}{}{[Month Year] -- Present}
+\begin{jobduties}
+  \item Investigate [specific question] using [method] and [data or materials].
+  \item Developed [your part of the study]; compared [approaches or conditions] while controlling for [confounder].
+  \item Observed [finding or limitation] in [scope tested]; checked [alternative explanation] using [analysis or experiment].
+\end{jobduties}
+% Use present tense only for ongoing work. If results are pending, state what
+% you have completed and what remains untested instead of inventing a finding.
+
+\jobentry{[Actual Research Role]}{[Lab, Institution]}{}{[Month Year] -- [Month Year]}
+\begin{jobduties}
+  \item Built [instrument, dataset, or implementation] for [research question], supervised by [Name].
+  \item Validated [specific property] using [check]; documented [limitation] in [report, code, or lab handoff].
+\end{jobduties}
+% Delete this entry if your thesis is your only research experience.
+
+% Optional publications: remove the leading "% " from the block below.
+% Include only work you authored; preserve author order. Use your field's style.
+% Keep submissions/drafts separate from accepted or published work. Do not list
+% the same paper twice. Add a real DOI/URL only if you may share it.
+% BEGIN OPTIONAL PUBLICATIONS
+% \section{Publications}
+% \begin{skillitems}
+%   \item {[Authors in order]}. ``[Title].'' [Venue], [Year]. [Published / accepted].
+% \end{skillitems}
+% END OPTIONAL PUBLICATIONS
+
+% A preprint is not an accepted paper. Replace the status accurately.
+% BEGIN OPTIONAL PREPRINTS
+% \section{Preprints}
+% \begin{skillitems}
+%   \item {[Authors in order]}. ``[Title].'' [Year]. Preprint, not peer reviewed.
+% \end{skillitems}
+% END OPTIONAL PREPRINTS
+
+\section{Selected Academic Project}
+
+\jobentry{[Course Project / Independent Study]}{[Project Title]}{}{[Month Year] -- [Month Year]}
+\begin{jobduties}
+  \item Tested [question] by implementing [your contribution] and comparing it with [reference method].
+  \item Found [result or discrepancy] on [test conditions]; reported [what the comparison cannot establish].
+\end{jobduties}
+% Keep course work labeled. For a team project, describe your part, not the team's.
+
+% Optional presentations: label the event and your contribution accurately.
+% Attending a conference is not a presentation; a poster is not a paper.
+% BEGIN OPTIONAL PRESENTATIONS
+% \section{Presentations}
+% \begin{skillitems}
+%   \item ``[Title].'' Poster presented at [Event], [Month Year]. [Your contribution].
+% \end{skillitems}
+% END OPTIONAL PRESENTATIONS
+
+% Keep this heading with its entry when optional sections push it onto page two.
+\Needspace{8\baselineskip}
+\section{Teaching and Service}
+
+\jobentry{[Teaching / Mentoring / Service Role]}{[Department or Organization]}{}{[Month Year] -- [Month Year]}
+\begin{jobduties}
+  \item Led [tutorial or activity] on [topic]; prepared [materials] and helped [audience] with [specific difficulty].
+\end{jobduties}
+% Delete this section if it does not apply. Add awards only if received, naming
+% the award, awarding body, and year. Do not invent selectivity or class rank.
+
+\section{Research Skills}
+
+\begin{skillitems}
+  \item \textbf{Methods:} [Methods you have used and can explain].
+  \item \textbf{Tools:} [Languages, software, or equipment used in your work].
+\end{skillitems}
+
+\end{document}

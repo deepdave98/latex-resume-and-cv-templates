@@ -34,6 +34,7 @@ EXPECTED_TEMPLATES = {
     "experienced": "templates/experienced-resume.tex",
     "ai-engineer": "templates/ai-engineer-resume.tex",
     "ml-engineer": "templates/ml-engineer-resume.tex",
+    "graduate-admissions": "templates/graduate-admissions-resume.tex",
 }
 
 

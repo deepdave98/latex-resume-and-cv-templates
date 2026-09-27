@@ -15,7 +15,8 @@ class TextChecks(unittest.TestCase):
     def test_page_count_registry_covers_all_starters(self):
         self.assertEqual(
             checker.PAGE_COUNTS,
-            {"new-grad": 1, "no-internship": 1, "experienced": 2, "ai-engineer": 1, "ml-engineer": 1},
+            {"new-grad": 1, "no-internship": 1, "experienced": 2,
+             "ai-engineer": 1, "ml-engineer": 1, "graduate-admissions": 1},
         )
 
     def test_identical_text_passes(self):
@@ -117,11 +118,11 @@ class CommandChecks(unittest.TestCase):
         with patch.object(
             checker,
             "check_pdf",
-            side_effect=[checker.CheckError("changed"), None, None, None, None],
+            side_effect=[checker.CheckError("changed"), None, None, None, None, None],
         ) as check:
             with redirect_stderr(StringIO()), redirect_stdout(StringIO()):
                 self.assertEqual(checker.main([]), 1)
-            self.assertEqual(check.call_count, 5)
+            self.assertEqual(check.call_count, 6)
 
     def test_cli_returns_success(self):
         with patch.object(checker, "check_pdf") as check, redirect_stdout(StringIO()):
@@ -134,6 +135,7 @@ class CommandChecks(unittest.TestCase):
                 call(Path("build/experienced/experienced-resume.pdf"), "experienced"),
                 call(Path("build/ai-engineer/ai-engineer-resume.pdf"), "ai-engineer"),
                 call(Path("build/ml-engineer/ml-engineer-resume.pdf"), "ml-engineer"),
+                call(Path("build/graduate-admissions/graduate-admissions-resume.pdf"), "graduate-admissions"),
             ],
         )
 
@@ -154,10 +156,18 @@ class CommandChecks(unittest.TestCase):
                 "--ai-engineer", "custom folder/ai.pdf",
                 "--ml-engineer", "custom folder/ml.pdf",
             ]), 0)
-        self.assertEqual(check.call_args_list[-2:], [
+        self.assertEqual(check.call_args_list[3:5], [
             call(Path("custom folder/ai.pdf"), "ai-engineer"),
             call(Path("custom folder/ml.pdf"), "ml-engineer"),
         ])
+
+    def test_cli_accepts_graduate_admissions_pdf_override(self):
+        with patch.object(checker, "check_pdf") as check, redirect_stdout(StringIO()):
+            self.assertEqual(checker.main([
+                "--graduate-admissions", "custom folder/admissions.pdf",
+            ]), 0)
+        self.assertEqual(check.call_args_list[-1],
+                         call(Path("custom folder/admissions.pdf"), "graduate-admissions"))
 
 
 if __name__ == "__main__":

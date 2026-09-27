@@ -11,6 +11,8 @@ Certifications are optional. Move one near the top when the role requires it or 
 
 For AI and ML engineering, use the same rule. Relevant industry work leads for working engineers; education, projects, or research can lead for graduates. Put publications near the top only when they support the target role. Neither an MLE title nor an AI title tells you whether a graduate degree is required. See the [AI/ML guide](ai-ml-resumes.md) for examples and role requirements.
 
-Use one page until relevant content earns a second. A senior title alone does not. [MIT's resume guidance](https://capd.mit.edu/resources/resumes/) reserves extra length for extensive experience or an advanced degree.
+For job applications, use one page until relevant content earns a second. A senior title alone does not. [MIT's resume guidance](https://capd.mit.edu/resources/resumes/) reserves extra length for extensive experience or an advanced degree.
+
+For PhD and research master's applications, education and research usually lead. Keep publications near that evidence if you have them; omit the section if you do not. The program's CV and page-limit instructions take precedence. [Admissions starter and guide](graduate-admissions.md).
 
 To reorder these templates, move each complete `\section{...}` block with its entries. The experienced template includes an explicit `\newpage` and `\section{Experience Continued}`. If you shorten it to one page, remove both. Rebuild and inspect the PDF after changing the order or page break.

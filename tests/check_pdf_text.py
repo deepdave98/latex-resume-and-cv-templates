@@ -11,7 +11,10 @@ import unicodedata
 
 
 EXPECTED_DIR = Path(__file__).resolve().parent / "expected"
-PAGE_COUNTS = {"new-grad": 1, "no-internship": 1, "experienced": 2, "ai-engineer": 1, "ml-engineer": 1}
+PAGE_COUNTS = {
+    "new-grad": 1, "no-internship": 1, "experienced": 2,
+    "ai-engineer": 1, "ml-engineer": 1, "graduate-admissions": 1,
+}
 
 
 class CheckError(Exception):

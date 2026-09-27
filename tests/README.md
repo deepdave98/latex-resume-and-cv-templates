@@ -2,7 +2,7 @@
 
 The optional browser reviewer has a separate [test suite and setup](../tools/pdf-review/README.md#development). It renders every page of every published PDF in Chromium, Firefox, and WebKit, including the three shared-content versions. It also checks offline extraction, link destinations and their preview positions, invalid and password-protected files, cancellation, clipboard fallback, keyboard controls, narrow screens, and the self-contained download. Its Node/browser dependencies are not needed for `make test` or for using the reviewer. These tests do not exercise GitHub's PDF viewer.
 
-`make test` builds all five starters, runs unit tests, checks PDFs, headings, and contact links, compiles the starter ZIPs, tests placeholder and page-limit warnings, and exercises the personal PDF checker. It needs XeLaTeX, `latexmk`, Python 3.9+, and Poppler's `pdftotext` and `pdfinfo` on `PATH`; no pip packages.
+`make test` builds all starters, runs unit tests, checks PDFs, headings, and contact links, compiles the starter ZIPs, tests placeholder and page-limit warnings, and exercises the personal PDF checker. It needs XeLaTeX, `latexmk`, Python 3.9+, and Poppler's `pdftotext` and `pdfinfo` on `PATH`; no pip packages.
 
 The check compares every page with `expected/*.txt` using Poppler's `-layout` reading order. Missing or reordered words, changed punctuation, unmapped characters, and extra or missing pages fail. Whitespace and Unicode ligature differences are ignored. Line-end hyphens are preserved.
 
@@ -15,12 +15,13 @@ Build the PDFs first, then run from the repository root:
 ```bash
 python3 -m unittest discover -s tests -p 'test_*.py'
 python3 tests/check_pdf_text.py
-python3 tests/check_pdf_text.py --no-internship output/pdf/no-internship-resume.pdf --new-grad output/pdf/new-grad-resume.pdf --experienced output/pdf/experienced-resume.pdf --ai-engineer output/pdf/ai-engineer-resume.pdf --ml-engineer output/pdf/ml-engineer-resume.pdf
+python3 tests/check_pdf_text.py --no-internship output/pdf/no-internship-resume.pdf --new-grad output/pdf/new-grad-resume.pdf --experienced output/pdf/experienced-resume.pdf --ai-engineer output/pdf/ai-engineer-resume.pdf --ml-engineer output/pdf/ml-engineer-resume.pdf --graduate-admissions output/pdf/graduate-admissions-resume.pdf
 python3 scripts/check_resume.py output/pdf/no-internship-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/new-grad-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/experienced-resume.pdf --max-pages 2
 python3 scripts/check_resume.py output/pdf/ai-engineer-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/ml-engineer-resume.pdf --max-pages 1
+python3 scripts/check_resume.py output/pdf/graduate-admissions-resume.pdf --max-pages 1
 python3 scripts/package_templates.py --check
 python3 tests/check_starter_builds.py
 python3 tests/check_placeholders.py
@@ -28,13 +29,14 @@ python3 tests/check_layout.py
 python3 tests/check_page_limits.py
 python3 tests/check_contacts.py
 python3 tests/check_ai_ml.py
+python3 tests/check_graduate_admissions.py
 ```
 
-On Windows, use `py -3` instead of `python3`. The PDF checker accepts `--no-internship`, `--new-grad`, `--experienced`, `--ai-engineer`, and `--ml-engineer` for other locations.
+On Windows, use `py -3` instead of `python3`. The PDF checker accepts `--no-internship`, `--new-grad`, `--experienced`, `--ai-engineer`, `--ml-engineer`, and `--graduate-admissions` for other locations.
 
 ## Starter downloads
 
-Run `make downloads` to rebuild the five starter ZIPs and the optional application-versions ZIP in `downloads/`. Without make, run `python3 scripts/package_templates.py` for the starters and `python3 scripts/package_application_versions.py` for the shared-content example.
+Run `make downloads` to rebuild the starter ZIPs and the optional application-versions ZIP in `downloads/`. Without make, run `python3 scripts/package_templates.py` for the starters and `python3 scripts/package_application_versions.py` for the shared-content example.
 
 Each regular starter archive contains only the chosen template as `resume.tex`, the shared class, compiler config, start guide, and license. Text is UTF-8 with LF line endings. Fixed ZIP metadata keeps builds identical across checkouts.
 
@@ -72,6 +74,10 @@ Resolve LaTeX rerun warnings before checking the final length. When a last-page 
 
 The default role templates contain no research or publication claims. Their source, published PDFs, and ZIP builds use `expected/ai-engineer-1.txt` and `expected/ml-engineer-1.txt`. `make preview-ai-ml` refreshes only their PDFs and previews.
 
+## Graduate admissions starter
+
+`make test-graduate-admissions` checks the default CV on Letter and A4, optional publication/presentation blocks, a two-degree CV, and a project-first adaptation without research or teaching. It checks page counts, text bounds, contact destinations, and placeholder warnings. `make preview-graduate-admissions` refreshes only this starter's PDF and PNG; its text baseline is `expected/graduate-admissions-1.txt`.
+
 ## Change a baseline
 
 ### Shared-content application versions
@@ -94,7 +100,7 @@ After changing the example, run `make preview-application-versions` and inspect 
 
 After an intentional template edit:
 
-1. Run `make preview` and inspect all six pages.
+1. Run `make preview` and inspect every page.
 2. Read the extracted text with `pdftotext -layout path/to/resume.pdf -`.
 3. Update the affected page in `expected/` with the reviewed text, without the trailing form feed. Keep dates on the same line as the organization, as layout mode emits them.
 4. Run `make downloads`, then `make test`. Commit the source, refreshed previews/PDFs, ZIPs, and baseline together.
@@ -121,4 +127,4 @@ pdftotext -layout "path/to/your-resume.pdf" -
 
 Check your name, email, dates, headings, bullet order, and text split across pages. This manual command prints personal data; redact it before opening an issue. Do the same with snapshot failure diffs, which quote template text.
 
-`make test-personal-pdf` runs the checker against all five published starter PDFs. Unit tests cover blank pages, character handling, corrupt/locked files, timeouts, missing tools, command arguments, standalone use, and private-data suppression. Neither check writes to the input PDF.
+`make test-personal-pdf` runs the checker against all published starter PDFs. Unit tests cover blank pages, character handling, corrupt/locked files, timeouts, missing tools, command arguments, standalone use, and private-data suppression. Neither check writes to the input PDF.

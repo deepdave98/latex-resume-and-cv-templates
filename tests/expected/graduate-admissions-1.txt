@@ -1,0 +1,41 @@
+Your Name
+City, Region ⋄ hello@example.com ⋄ Website ⋄ GitHub
+
+
+Education
+
+[University] – [City, Country]                                                                         Expected [Month Year]
+[Degree in Field]
+• Thesis: [Title]. Supervisor: [Name]. [In progress / completed Month Year].
+• Selected coursework: [Two or three courses relevant to the program].
+
+Research Experience
+
+[Department, University]                                                                               [Month Year] – Present
+[Thesis Student / Actual Research Role]
+• Investigate [specific question] using [method] and [data or materials].
+• Developed [your part of the study]; compared [approaches or conditions] while controlling for [confounder].
+• Observed [finding or limitation] in [scope tested]; checked [alternative explanation] using [analysis or experiment].
+
+[Lab, Institution]                                                                               [Month Year] – [Month Year]
+[Actual Research Role]
+• Built [instrument, dataset, or implementation] for [research question], supervised by [Name].
+• Validated [specific property] using [check]; documented [limitation] in [report, code, or lab handoff].
+
+Selected Academic Project
+
+[Project Title]                                                                                  [Month Year] – [Month Year]
+[Course Project / Independent Study]
+• Tested [question] by implementing [your contribution] and comparing it with [reference method].
+• Found [result or discrepancy] on [test conditions]; reported [what the comparison cannot establish].
+
+Teaching and Service
+
+[Department or Organization]                                                                     [Month Year] – [Month Year]
+[Teaching / Mentoring / Service Role]
+• Led [tutorial or activity] on [topic]; prepared [materials] and helped [audience] with [specific diﬀiculty].
+
+Research Skills
+
+• Methods: [Methods you have used and can explain].
+• Tools: [Languages, software, or equipment used in your work].
