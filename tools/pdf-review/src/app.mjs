@@ -1,6 +1,7 @@
 import { getDocument, PDFWorker, AnnotationMode, PasswordResponses } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { reviewDocument, displayDestination } from './review.mjs';
 import { linkRegion } from './link-region.mjs';
+import { createTextDownload, MAX_DRAFT_CHARS } from './text-download.mjs';
 
 const assets = __PDF_ASSETS__;
 class EmbeddedBinaryDataFactory {
@@ -12,7 +13,8 @@ class EmbeddedBinaryDataFactory {
 }
 
 const byId = id => document.getElementById(id);
-const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help'].map(id => [id, byId(id)]));
+const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help'].map(id => [id, byId(id)]));
+ui['all-text'].maxLength = MAX_DRAFT_CHARS;
 let generation = 0;
 let current;
 let submitPassword;
@@ -57,6 +59,10 @@ function clearReview(message = '') {
   for (const canvas of ui.pages.querySelectorAll('canvas')) canvas.width = canvas.height = 0;
   ui.pages.replaceChildren();
   ui['all-text'].value = '';
+  ui['all-text'].readOnly = true;
+  ui['reset-text'].disabled = true;
+  ui['save-text'].disabled = true;
+  ui['draft-warning'].hidden = true;
   ui['pdf-file'].value = '';
   ui.password.value = '';
   ui['password-form'].hidden = true;
@@ -103,6 +109,37 @@ async function copyText(textarea, button) {
     textarea.focus();
     textarea.select();
     ui.status.textContent = 'Text selected. Press Ctrl+C or Command+C to copy.';
+  }
+}
+
+function updateTextControls() {
+  const ready = typeof current?.originalText === 'string';
+  const hasText = ready && Boolean(ui['all-text'].value.trim());
+  ui['copy-all'].disabled = !hasText;
+  ui['save-text'].disabled = !hasText;
+  ui['reset-text'].disabled = !ready || ui['all-text'].value === current.originalText;
+}
+
+function saveText() {
+  if (typeof current?.originalText !== 'string') return;
+  let url;
+  let anchor;
+  try {
+    const download = createTextDownload(current.fileName, ui['all-text'].value);
+    url = URL.createObjectURL(download.blob);
+    anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = download.filename;
+    anchor.hidden = true;
+    document.body.append(anchor);
+    anchor.click();
+    ui.status.textContent = 'Text download requested. The PDF is unchanged.';
+  } catch {
+    ui.status.textContent = 'Could not save this text. Use Copy all text instead.';
+  } finally {
+    anchor?.remove();
+    // Give the browser time to consume the local download before releasing it.
+    if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 }
 
@@ -269,7 +306,7 @@ async function openFile(file) {
   if (!file.size) return fail('This file is empty. Choose a finished PDF.');
   if (file.size > MAX_BYTES) return fail('Choose a PDF under 20 MB. Larger files can use too much browser memory.');
   const token = generation;
-  const state = { controller: new AbortController() };
+  const state = { controller: new AbortController(), fileName: file.name };
   current = state;
   armTimeout(state);
   ui.review.hidden = false;
@@ -331,7 +368,10 @@ async function openFile(file) {
     const result = await reviewDocument(pdf, { signal: state.controller.signal });
     if (token !== generation) return;
     ui['all-text'].value = result.text;
-    ui['copy-all'].disabled = !result.text.trim();
+    state.originalText = result.text;
+    ui['all-text'].readOnly = false;
+    ui['draft-warning'].hidden = result.pages.every(page => page.textStatus === 'ok') && result.reviewedPageCount === result.pageCount;
+    updateTextControls();
     let blank = 0;
     let noText = 0;
     let failed = 0;
@@ -388,6 +428,14 @@ async function openFile(file) {
 ui['pdf-file'].addEventListener('change', event => void openFile(event.target.files[0]));
 ui['clear-file'].addEventListener('click', () => { clearReview('Review cleared.'); ui['pdf-file'].focus(); });
 ui['copy-all'].addEventListener('click', () => void copyText(ui['all-text'], ui['copy-all']));
+ui['all-text'].addEventListener('input', updateTextControls);
+ui['save-text'].addEventListener('click', saveText);
+ui['reset-text'].addEventListener('click', () => {
+  if (typeof current?.originalText !== 'string') return;
+  ui['all-text'].value = current.originalText;
+  updateTextControls();
+  ui.status.textContent = 'Text restored from the PDF.';
+});
 ui['password-form'].addEventListener('submit', event => {
   event.preventDefault();
   const value = ui.password.value;

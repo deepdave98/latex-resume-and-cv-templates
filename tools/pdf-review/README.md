@@ -7,11 +7,12 @@ Read a resume PDF beside its extracted text. Check where each link points and wh
 1. [Download the reviewer](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/downloads/pdf-review.zip).
 2. Unzip it. Open `pdf-review.html` in a current Chrome, Edge, Firefox, or Safari browser.
 3. Choose **Open PDF** or drop your file onto the file bar.
-4. Read each page and its text. Use **Show on page** to locate a link, and **Copy all text** for application forms.
+4. Read each page and its text. Use **Show on page** to locate a link.
+5. Open **Text for application forms** to edit a text copy. **Copy all text** copies that version; **Save .txt** downloads it. **Reset text** restores the extraction. The PDF and per-page text stay unchanged.
 
 No install, terminal, account, or internet connection is needed after downloading. Keep the HTML file and use it again. It includes the PDF engine, fonts, and decoding resources; it does not load them from a CDN.
 
-One PDF at a time, up to 20 MB and 20 pages. Password-protected files ask for the password locally. **Clear file** discards the review; choosing another file replaces it.
+One PDF at a time, up to 20 MB and 20 pages. Password-protected files ask for the password locally. **Clear file** discards the review and text edits; choosing another file replaces them. Copy or save edits first.
 
 ## What to check
 
@@ -30,7 +31,9 @@ The PDF is read from the browser's file picker into memory. No upload endpoint, 
 
 The page's Content Security Policy blocks network connections, external scripts, form submission, and plugins. The PDF worker runs locally. Closing, reloading, or clearing the page discards this tool's review. This is not a secure memory wipe, and it cannot control browser extensions or your operating system.
 
-Copying text puts it on your system clipboard. Other apps or clipboard history may retain it. If someone hosts this page, their host can receive normal page-request data; it still does not receive your PDF.
+Copying text puts it on your system clipboard. Other apps or clipboard history may retain it. **Save .txt** creates a UTF-8 file in your browser's download location; clearing the review does not delete that file. Exports contain only the text copy, without the reviewer’s warnings or labels. Check it against the PDF, especially if extraction was incomplete. Text edits are limited to 500,100 UTF-16 code units.
+
+If someone hosts this page, their host can receive normal page-request data; it still does not receive your PDF.
 
 ## Development
 
@@ -60,6 +63,7 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/app.mjs` | File lifecycle, worker, previews, clipboard, and DOM |
 | `src/review.mjs` | Bounded text and annotation inspection |
 | `src/link-region.mjs` | Annotation coordinates clipped to the rendered page |
+| `src/text-download.mjs` | UTF-8 text exports and safe download names |
 | `build.mjs` | Embedded PDF.js resources, CSP hashes, and ZIP |
 | `tests/` | Unit, package, privacy, and browser checks |
 
