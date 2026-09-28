@@ -20,6 +20,9 @@ One PDF at a time, up to 20 MB and 20 pages. Password-protected files ask for th
 - **Link destinations:** select **Show on page** beside a destination. Its clickable area is highlighted in the preview so you can compare it with the printed label. **Back to link** returns to that row. Select the same button again to clear the highlight. Destinations remain text only; the tool never follows them or checks whether a website is online. Hidden control characters are shown as escapes. Internal links and unsupported PDF actions are identified separately.
 - **Pages without text:** a scan or outlined lettering may look fine but copy nothing. This tool does not run OCR.
 - **Pages that appear blank:** this is a preview-based hint, not proof. Very faint content can be missed. A failed preview is never counted as a blank page.
+- **File properties:** open the disclosure to inspect title, author, subject, keywords, creating application, producer, and dates. PDF Info and selected XMP values appear separately, so conflicting values remain visible. Dates are shown as stored; hidden control characters are escaped. A software name in Creator or Producer is not an error.
+
+Properties are read only when you open that section. This does not inspect custom metadata, embedded files, comments, or revision history, and it does not remove anything. Missing fields are not proof that a PDF is safe to share. Long values are capped at 1,024 characters and author lists at 16 entries; truncation or unreadable fields are identified. A failed property read leaves the page review available.
 
 Form fields, incomplete extraction, and truncated results get warnings. Review the original PDF if anything is missing. PDF.js and Poppler can produce different text order; neither predicts how every application form or ATS will parse a file. There is no resume score.
 
@@ -64,6 +67,7 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/review.mjs` | Bounded text and annotation inspection |
 | `src/link-region.mjs` | Annotation coordinates clipped to the rendered page |
 | `src/text-download.mjs` | UTF-8 text exports and safe download names |
+| `src/document-properties.mjs` | Bounded PDF Info/XMP inspection, cancellation, and timeout |
 | `build.mjs` | Embedded PDF.js resources, CSP hashes, and ZIP |
 | `tests/` | Unit, package, privacy, and browser checks |
 

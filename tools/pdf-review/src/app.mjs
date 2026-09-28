@@ -2,6 +2,7 @@ import { getDocument, PDFWorker, AnnotationMode, PasswordResponses } from 'pdfjs
 import { reviewDocument, displayDestination } from './review.mjs';
 import { linkRegion } from './link-region.mjs';
 import { createTextDownload, MAX_DRAFT_CHARS } from './text-download.mjs';
+import { readProperties } from './document-properties.mjs';
 
 const assets = __PDF_ASSETS__;
 class EmbeddedBinaryDataFactory {
@@ -13,7 +14,7 @@ class EmbeddedBinaryDataFactory {
 }
 
 const byId = id => document.getElementById(id);
-const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help'].map(id => [id, byId(id)]));
+const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'file-properties', 'properties-status', 'properties-list', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help'].map(id => [id, byId(id)]));
 ui['all-text'].maxLength = MAX_DRAFT_CHARS;
 let generation = 0;
 let current;
@@ -63,6 +64,10 @@ function clearReview(message = '') {
   ui['reset-text'].disabled = true;
   ui['save-text'].disabled = true;
   ui['draft-warning'].hidden = true;
+  ui['file-properties'].hidden = true;
+  ui['file-properties'].open = false;
+  ui['properties-list'].replaceChildren();
+  ui['properties-status'].textContent = '';
   ui['pdf-file'].value = '';
   ui.password.value = '';
   ui['password-form'].hidden = true;
@@ -141,6 +146,28 @@ function saveText() {
     // Give the browser time to consume the local download before releasing it.
     if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+}
+
+async function showProperties(state) {
+  if (!state?.pdf || state.propertiesRequested) return;
+  state.propertiesRequested = true;
+  ui['properties-status'].textContent = 'Reading properties…';
+  const result = await readProperties(state.pdf, { signal: state.controller.signal });
+  if (current !== state || result.status === 'cancelled') return;
+  if (result.status !== 'ok') {
+    ui['properties-status'].textContent = 'Properties could not be read. Check them in your PDF reader.';
+    return;
+  }
+  for (const field of result.fields) {
+    const row = element('div');
+    const value = element('dd', '', displayDestination(field.value));
+    if (field.limited) value.append(element('span', 'property-limit', 'Value cut short.'));
+    row.append(element('dt', '', `${field.label} (${field.source})`), value);
+    ui['properties-list'].append(row);
+  }
+  ui['properties-status'].textContent = result.limited
+    ? 'Some properties were cut short or could not be read.'
+    : result.fields.length ? '' : 'No values reported for the fields checked.';
 }
 
 function showPage(record) {
@@ -364,6 +391,8 @@ async function openFile(file) {
     const pdf = await state.loading.promise;
     if (token !== generation) return;
     if (pdf.numPages > MAX_PAGES) return fail('This PDF has more than 20 pages. Choose just the resume pages to review.');
+    state.pdf = pdf;
+    ui['file-properties'].hidden = false;
     ui.status.textContent = 'Reading text and link destinations…';
     const result = await reviewDocument(pdf, { signal: state.controller.signal });
     if (token !== generation) return;
@@ -430,6 +459,9 @@ ui['clear-file'].addEventListener('click', () => { clearReview('Review cleared.'
 ui['copy-all'].addEventListener('click', () => void copyText(ui['all-text'], ui['copy-all']));
 ui['all-text'].addEventListener('input', updateTextControls);
 ui['save-text'].addEventListener('click', saveText);
+ui['file-properties'].addEventListener('toggle', () => {
+  if (ui['file-properties'].open) void showProperties(current);
+});
 ui['reset-text'].addEventListener('click', () => {
   if (typeof current?.originalText !== 'string') return;
   ui['all-text'].value = current.originalText;
