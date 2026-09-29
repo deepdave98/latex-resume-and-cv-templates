@@ -1,20 +1,20 @@
 # Engineering Resume Bullet Examples
 
-Show what you changed and how you checked it. The reader should not have to guess your part of the work.
+Describe your change and how you checked it.
 
-Use these as prompts, not claims. Replace every square-bracketed placeholder inside an example bullet with a fact you can defend, then delete anything that is not yours.
+Replace brackets with your own work. Delete examples that do not apply.
 
 - Name your contribution, not the team's.
 - Give a baseline, unit, and scope when they matter.
 - Label benchmarks and load tests; do not present them as production results.
-- No useful number? Name what shipped, passed, reconciled, or was adopted.
+- Without a useful number, describe the result and how you checked it.
 - Mention a tool only when it explains the solution.
 
 For early-career roles, describe the part you built or fixed. For experienced roles, include decisions and rollout responsibilities, not just a larger number.
 
 Applying for AI or ML work? See the [AI and ML starters and bullet prompts](../docs/ai-ml-resumes.md).
 
-To paste an example into a `.tex` file, add `\item` and [escape LaTeX's special characters](../README.md#edit-the-content).
+To paste an example into a `.tex` file, add `\item` and [escape LaTeX's special characters](../docs/editing.md#entries).
 
 ## Backend Engineering
 
@@ -46,7 +46,7 @@ To paste an example into a `.tex` file, add `\item` and [escape LaTeX's special 
 - Used real-user monitoring to find `[long task, render cascade, or synchronous handler]`, removed it with `[change]`, and improved p75 INP from `[A] ms` to `[B] ms` for `[traffic segment]` over `[time window]`.
 - Migrated `[screens]` to `[shared component system]`; preserved `[keyboard or screen-reader behavior]` and tested old and new versions before rollout.
 - Fixed `[stale response or cache invalidation defect]` in `[workflow]` with `[change]`; tested rapid navigation and out-of-order responses.
-- Instrumented `[user journey]` and shipped `[change]`; a controlled experiment moved `[completion, conversion, or error rate]` from `[A]` to `[B]` across `[sample and time window]`.
+- Instrumented `[checkout or signup flow]` and shipped `[change]`; a controlled experiment moved `[completion, conversion, or error rate]` from `[A]` to `[B]` across `[sample and time window]`.
 
 ## Data Engineering
 
@@ -64,9 +64,9 @@ To paste an example into a `.tex` file, add `\item` and [escape LaTeX's special 
 - Changed `[partitioning or materialization]` for `[workload]`, reducing p95 query time from `[A] s` to `[B] s` on `[comparable data volume]`.
 - Chose `[batch, micro-batch, or streaming]` for `[use case]` after measuring `[freshness need]`; met `[SLO]` without `[cost or operating burden of the main alternative]`.
 
-## Weak vs. Defensible
+## Before and after
 
-| Weak | Defensible |
+| Vague | Specific |
 | --- | --- |
 | Improved scalability by 40%. | Split `[workflow]` at `[service boundary]`, migrated `[traffic share]` with `[rollout method]`, and reduced production p99 latency from `[A] ms` to `[B] ms` at `[peak load]`. |
 | Built responsive React components. | Built `[workflow]` across `[breakpoints and browsers]`, verified `[keyboard or screen-reader behavior]`, and added visual regression tests for `[N]` components. |

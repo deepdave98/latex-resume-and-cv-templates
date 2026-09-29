@@ -4,30 +4,30 @@ Read a resume PDF beside its extracted text. Check where each link points and wh
 
 ## Use it
 
-1. [Download the reviewer](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/downloads/pdf-review.zip).
+1. [Download the reviewer](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/pdf-review.zip).
 2. Unzip it. Open `pdf-review.html` in a current Chrome, Edge, Firefox, or Safari browser.
 3. Choose **Open PDF** or drop your file onto the file bar.
 4. Read each page and its text. Use **Show on page** to locate a link.
 5. Open **Text for application forms** to edit a text copy. **Copy all text** copies that version; **Save .txt** downloads it. **Reset text** restores the extraction. The PDF and per-page text stay unchanged.
 
-No install, terminal, account, or internet connection is needed after downloading. Keep the HTML file and use it again. It includes the PDF engine, fonts, and decoding resources; it does not load them from a CDN.
+The download works offline. The PDF engine, fonts, and decoders are included in the HTML file.
 
 One PDF at a time, up to 20 MB and 20 pages. Password-protected files ask for the password locally. **Clear file** discards the review and text edits; choosing another file replaces them. Copy or save edits first.
 
 ## What to check
 
-- **Extracted text:** look for missing words, odd symbols, and wrong reading order. Text order comes from the PDF, not from a guess about its layout. Ligatures such as `ﬁ` become ordinary letters for copying.
+- **Extracted text:** look for missing words, odd symbols, and wrong reading order. Ligatures such as `ﬁ` become ordinary letters for copying.
 - **Link destinations:** select **Show on page** beside a destination. Its clickable area is highlighted in the preview so you can compare it with the printed label. **Back to link** returns to that row. Select the same button again to clear the highlight. Destinations remain text only; the tool never follows them or checks whether a website is online. Hidden control characters are shown as escapes. Internal links and unsupported PDF actions are identified separately.
 - **Pages without text:** a scan or outlined lettering may look fine but copy nothing. This tool does not run OCR.
 - **Pages that appear blank:** this is a preview-based hint, not proof. Very faint content can be missed. A failed preview is never counted as a blank page.
 
-Form fields, incomplete extraction, and truncated results get warnings. Review the original PDF if anything is missing. PDF.js and Poppler can produce different text order; neither predicts how every application form or ATS will parse a file. There is no resume score.
+Form fields, incomplete extraction, and truncated results get warnings. Check missing text against the original PDF. Extraction can differ between PDF.js, Poppler, and application forms; this is not an ATS test.
 
 Link highlights use the PDF's annotation bounds, not guessed text matches. A PDF can attach a link to a broad area, an image, or no visible label. Missing or off-page bounds get a position warning; a failed preview never gets a highlight. Highlights follow rotated and cropped pages and scale with the preview. Use **Enlarge** to read small labels; **Fit page** restores the full-page view. Neither changes the PDF.
 
 ## Privacy
 
-The PDF is read from the browser's file picker into memory. No upload endpoint, analytics, cookies, browser storage, or service worker. No filename, password, text, or link destination is sent anywhere. Links and PDF scripts are not executed.
+The PDF is read into browser memory. The tool does not upload file contents, names, passwords, or links, and uses no analytics, cookies, browser storage, or service worker. PDF links and scripts are not executed.
 
 The page's Content Security Policy blocks network connections, external scripts, form submission, and plugins. The PDF worker runs locally. Closing, reloading, or clearing the page discards this tool's review. This is not a secure memory wipe, and it cannot control browser extensions or your operating system.
 
@@ -37,7 +37,7 @@ If someone hosts this page, their host can receive normal page-request data; it 
 
 ## Development
 
-End users need only the download. Maintainers need Node.js 24+:
+Requires Node.js 24+:
 
 ```bash
 cd tools/pdf-review
@@ -73,4 +73,4 @@ PDF.js is pinned in `package-lock.json`. Update it through a dependency PR, rebu
 
 The same HTML works on a static host. No backend is needed. Do not add analytics or third-party scripts.
 
-For this repository, enable **Settings → Pages → Source: GitHub Actions**, merge the PR, then run **Publish PDF review** from the Actions tab on `main`. The workflow publishes only the generated reviewer, not resume sources or PDFs. Run it again after reviewer updates. Downloaded copies do not update themselves.
+Enable **Settings → Pages → Source: GitHub Actions**, then run **Publish PDF review** from the Actions tab on `main`. It publishes only the reviewer. Rerun it after reviewer updates; downloaded copies do not update themselves.

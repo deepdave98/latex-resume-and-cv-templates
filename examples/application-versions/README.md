@@ -1,12 +1,10 @@
 # One source, three application versions
 
-Keep your facts in one place. Choose which bullets to show for backend, frontend, or infrastructure applications. Changing a shared date, contact, or bullet updates every version that uses it when you recompile.
-
-This is an optional example. The regular templates still work as before. No generator, new file format, or extra LaTeX package.
+Share contacts, dates, and work history across backend, frontend, and infrastructure applications. Each version selects its own bullets. Recompile to pick up shared edits.
 
 ## Start
 
-[Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Fswe-resume-templates%2Fmain%2Fdownloads%2Fapplication-versions.zip&engine=xelatex&main_document=backend.tex) or [download the ZIP](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/downloads/application-versions.zip).
+[Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fapplication-versions.zip&engine=xelatex&main_document=backend.tex) or [download the ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/application-versions.zip).
 
 The ZIP contains all three versions and their shared files. Keep them in one project; three separate Overleaf projects would stop sharing edits.
 
@@ -66,5 +64,3 @@ Rebuild every version you plan to send. Editing a shared file does not update a 
 - Check the compile log for placeholders and the one-page limit.
 - Unselected bullets are not checked. Review them when you select them later. Text hidden inside your own commands may also escape the checks.
 - Only a PDF contains the selected version. The source ZIP contains the entire bullet bank, including unselected material. Do not send it with an application or post private work in a public fork.
-
-The versions are different selections of the same history, not three different histories. These checks do not judge your claims or score your resume.

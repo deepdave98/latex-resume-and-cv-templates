@@ -1,6 +1,6 @@
 # Contributing
 
-Issues and pull requests are welcome. Keep changes focused.
+Use an issue for a question or bug; open a PR for a change.
 
 ## Template and documentation changes
 
@@ -13,7 +13,7 @@ Issues and pull requests are welcome. Keep changes focused.
 - Run `make test`; it checks PDF text, ZIP freshness, builds from the actual downloads, and placeholder warnings. See the [test guide](tests/README.md) for dependencies and baseline updates.
 - Run `git diff --check`.
 
-Explain why the change matters. Include before-and-after screenshots for layout changes.
+Include before-and-after screenshots for layout changes.
 
 For AI/ML examples, distinguish offline evaluation from production results. State the baseline and data split when they affect the claim. Do not invent research, publications, degrees, or metrics. See the [role guide](docs/ai-ml-resumes.md).
 
@@ -21,7 +21,7 @@ For AI/ML examples, distinguish offline evaluation from production results. Stat
 
 Submit only a bullet you wrote and have the right to share. Choose either path:
 
-- No Git required: use the [resume example issue form](https://github.com/deepdave98/swe-resume-templates/issues/new?template=resume-example.yml).
+- No Git required: use the [resume example issue form](https://github.com/deepdave98/latex-resume-and-cv-templates/issues/new?template=resume-example.yml).
 - Pull request: copy [`examples/community/TEMPLATE.md`](examples/community/TEMPLATE.md) into `examples/community/accepted/`, complete the content and permissions, and open a draft PR. Leave the review record for the reviewer.
 
 Before submitting:

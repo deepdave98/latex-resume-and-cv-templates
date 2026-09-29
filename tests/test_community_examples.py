@@ -50,9 +50,9 @@ Names the test and the failure without adding an outcome.
 
 ## Review record
 
-- **Submission:** https://github.com/deepdave98/swe-resume-templates/issues/123
-- **Author approval:** https://github.com/deepdave98/swe-resume-templates/pull/124#issuecomment-123
-- **Review:** https://github.com/deepdave98/swe-resume-templates/pull/124#pullrequestreview-456
+- **Submission:** https://github.com/deepdave98/latex-resume-and-cv-templates/issues/123
+- **Author approval:** https://github.com/deepdave98/latex-resume-and-cv-templates/pull/124#issuecomment-123
+- **Review:** https://github.com/deepdave98/latex-resume-and-cv-templates/pull/124#pullrequestreview-456
 """
 
 
@@ -69,6 +69,13 @@ def index(links=()):
 class EntryTests(unittest.TestCase):
     def test_complete_record_and_redactions_pass(self):
         self.assertEqual(checker.check_entry(ENTRY, NAME), [])
+
+    def test_approval_links_survive_the_repository_rename(self):
+        previous = ENTRY.replace("latex-resume-and-cv-templates", "swe-resume-templates")
+        self.assertEqual(checker.check_entry(previous, NAME), [])
+        for suffix in ("-copy", ".evil.test", "/extra"):
+            changed = ENTRY.replace("latex-resume-and-cv-templates", "latex-resume-and-cv-templates" + suffix)
+            self.assertTrue(checker.check_entry(changed, NAME))
 
     def test_ai_and_ml_records_use_the_same_review_requirements(self):
         for discipline in ("ai", "ml"):
@@ -109,14 +116,14 @@ class EntryTests(unittest.TestCase):
 
     def test_review_requires_comment_links_in_this_repo(self):
         for replacement in (
-            "https://github.com/deepdave98/swe-resume-templates/pull/124",
+            "https://github.com/deepdave98/latex-resume-and-cv-templates/pull/124",
             "https://github.com/another/repo/pull/124#issuecomment-123",
-            "https://github.com/deepdave98/swe-resume-templates/pull/124#top",
-            "https://github.com/deepdave98/swe-resume-templates/pull/124?token=secret#issuecomment-123",
-            "https://github.com.evil.test/deepdave98/swe-resume-templates/pull/124#issuecomment-123",
+            "https://github.com/deepdave98/latex-resume-and-cv-templates/pull/124#top",
+            "https://github.com/deepdave98/latex-resume-and-cv-templates/pull/124?token=secret#issuecomment-123",
+            "https://github.com.evil.test/deepdave98/latex-resume-and-cv-templates/pull/124#issuecomment-123",
         ):
             with self.subTest(replacement=replacement):
-                text = ENTRY.replace("https://github.com/deepdave98/swe-resume-templates/pull/124#issuecomment-123", replacement)
+                text = ENTRY.replace("https://github.com/deepdave98/latex-resume-and-cv-templates/pull/124#issuecomment-123", replacement)
                 self.assertTrue(checker.check_entry(text, NAME))
 
     def test_stable_filename_matches_stage_and_discipline(self):

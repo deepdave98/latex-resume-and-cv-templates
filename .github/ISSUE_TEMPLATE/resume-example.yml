@@ -58,7 +58,7 @@ body:
     attributes:
       label: Proposed rewrite
       description: Keep the claim faithful to your real contribution and seniority. Maintainers may refine it during review.
-      placeholder: Implemented [COMPONENT] using [TECHNOLOGY], enabling [USER OR SYSTEM OUTCOME] under [CONSTRAINT].
+      placeholder: Fixed [FAILURE] in [WORKFLOW] by [CHANGE]; added [TEST] that failed before the fix.
     validations:
       required: true
 

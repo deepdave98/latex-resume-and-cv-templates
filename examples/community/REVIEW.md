@@ -1,6 +1,6 @@
 # Review a community example
 
-Accept an example only if the edit teaches something specific: ownership, a technical decision, a constraint, or how the author checked the work. A stronger verb alone is not enough. Do not ask for an offer letter or proof of a hire.
+Accept edits that clarify the author's contribution, a decision, a constraint, or a check. Do not ask for an offer letter or proof of a hire.
 
 ## Review in the open
 
@@ -32,6 +32,6 @@ Review checks the submitted explanation; it does not independently audit an empl
 - On the first acceptance, remove “No accepted examples yet.” Do not list drafts. Keep an existing example only while its context and review record remain valid.
 - Run `python3 scripts/check_community_examples.py` from the repository root. No TeX installation is needed for this check.
 
-The checker validates structure and links, not their truth or contents. Open the approval and review links before merging.
+Open the approval and review links before merging; the checker cannot verify their contents.
 
 For a correction after publication, use another PR and get the author's approval again if the claim changes. Remove an entry from the current index if it cannot be corrected safely. Removing a file does not erase Git history, forks, or issue comments; do not promise full deletion.

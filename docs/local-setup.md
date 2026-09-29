@@ -32,8 +32,8 @@ The bundled `latexmkrc` selects XeLaTeX. Output: `resume.pdf`.
 ## Build from a clone
 
 ```bash
-git clone https://github.com/deepdave98/swe-resume-templates.git
-cd swe-resume-templates
+git clone https://github.com/deepdave98/latex-resume-and-cv-templates.git
+cd latex-resume-and-cv-templates
 make
 ```
 
