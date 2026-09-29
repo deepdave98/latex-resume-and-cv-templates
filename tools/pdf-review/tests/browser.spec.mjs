@@ -574,6 +574,111 @@ test("copy buttons send only extracted text to the clipboard", async ({ page, co
   await assertPrivate(context, page, observations);
 });
 
+for (const [label, location] of [["downloaded file", artifactURL], ["hosted page", "/"]]) {
+  test(`${label}: edits and saves a text copy without changing the PDF extraction`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'Original first page' }, { text: 'Original second page' }]), 'My Resume.PDF'));
+    await page.locator('.all-text-panel > summary').click();
+    const draft = page.locator('#all-text');
+    const original = await draft.inputValue();
+    const edited = 'Zoë — 研究\n\n• Tested retries.\n<not HTML>\n';
+    await expect(draft).toBeEditable();
+    await expect(page.locator('#reset-text')).toBeDisabled();
+    await draft.fill(edited);
+    await expect(page.locator('.page-card textarea').first()).toHaveValue('Original first page');
+    await expect(page.locator('.page-card textarea').first()).toHaveAttribute('readonly', '');
+    const pending = page.waitForEvent('download');
+    await page.locator('#save-text').click();
+    const download = await pending;
+    expect(download.suggestedFilename()).toBe('My Resume-text.txt');
+    const chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    expect(Buffer.concat(chunks).toString('utf8')).toBe(edited);
+    expect(await download.failure()).toBeNull();
+    await page.locator('#reset-text').click();
+    await expect(draft).toHaveValue(original);
+    await expect(page.locator('#reset-text')).toBeDisabled();
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('copy all uses the edited draft while copy page retains the PDF text', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await page.evaluate(() => {
+    globalThis.copiedValues = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true, value: { writeText: async value => globalThis.copiedValues.push(value) },
+    });
+  });
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original PDF text' }])));
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Edited text for the form');
+  await page.locator('#copy-all').click();
+  await page.getByRole('button', { name: 'Copy page text' }).click();
+  expect(await page.evaluate(() => globalThis.copiedValues)).toEqual(['Edited text for the form', 'Original PDF text']);
+  await assertPrivate(context, page, observations);
+});
+
+test('empty drafts disable copy and save but can be reset', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Recover this extraction' }])));
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill(' \n ');
+  await expect(page.locator('#copy-all')).toBeDisabled();
+  await expect(page.locator('#save-text')).toBeDisabled();
+  await expect(page.locator('#reset-text')).toBeEnabled();
+  await page.locator('#reset-text').click();
+  await expect(page.locator('#all-text')).toHaveValue('Recover this extraction');
+  await assertPrivate(context, page, observations);
+});
+
+test('text edits are discarded on replacement, clearing, and reload', async ({ page, context }) => {
+  const observations = await openReview(page, context, artifactURL);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'First document' }])));
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Private edited draft');
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Replacement document' }])));
+  await expect(page.locator('#all-text')).toHaveValue('Replacement document');
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Another draft');
+  await page.locator('#clear-file').click();
+  await expect(page.locator('#all-text')).toHaveValue('');
+  await expect(page.locator('#all-text')).toHaveAttribute('readonly', '');
+  await expect(page.locator('#save-text')).toBeDisabled();
+  await expect(page.locator('#reset-text')).toBeDisabled();
+  await page.reload();
+  await expect(page.locator('#all-text')).toHaveValue('');
+  await expect(page.locator('#review')).toBeHidden();
+  await assertPrivate(context, page, observations);
+});
+
+test('incomplete text stays visible beside the editable copy', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Readable page' }, { image: true }])));
+  await page.locator('.all-text-panel > summary').click();
+  await expect(page.locator('#draft-warning')).toBeVisible();
+  await expect(page.locator('#draft-warning')).toContainText('Some PDF text was not extracted');
+  await page.locator('#all-text').fill('A manual text copy');
+  await expect(page.locator('#draft-warning')).toBeVisible();
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Complete extraction' }])));
+  await page.locator('.all-text-panel > summary').click();
+  await expect(page.locator('#draft-warning')).toBeHidden();
+  await assertPrivate(context, page, observations);
+});
+
+test('a download failure preserves edits and offers copying', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Keep this text' }])));
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Unsaved edits');
+  await page.evaluate(() => { URL.createObjectURL = () => { throw new Error('Download unavailable'); }; });
+  await page.locator('#save-text').click();
+  await expect(page.locator('#status')).toContainText('Use Copy all text instead');
+  await expect(page.locator('#all-text')).toHaveValue('Unsaved edits');
+  await expect(page.locator('#copy-all')).toBeEnabled();
+  await assertPrivate(context, page, observations);
+});
+
 test("remains usable at a narrow viewport", async ({ page, context }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const observations = await openReview(page, context);
@@ -582,5 +687,9 @@ test("remains usable at a narrow viewport", async ({ page, context }) => {
   expect(fits).toBe(true);
   await expect(page.locator("#clear-file")).toBeVisible();
   await expect(page.locator(".page-card textarea")).toBeVisible();
+  await page.locator('.all-text-panel > summary').click();
+  await expect(page.locator('#save-text')).toBeVisible();
+  await expect(page.locator('#all-text')).toBeEditable();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await assertPrivate(context, page, observations);
 });

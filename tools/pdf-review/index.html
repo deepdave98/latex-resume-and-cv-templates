@@ -67,12 +67,17 @@
           </div>
 
           <details class="all-text-panel">
-            <summary>Text from all pages</summary>
+            <summary>Text for application forms</summary>
             <div class="all-text-content">
               <div class="text-toolbar">
-                <label for="all-text">Extracted text</label>
+                <label for="all-text">Text copy</label>
+                <div class="review-actions">
+                  <button id="reset-text" class="button button--small" type="button" disabled>Reset text</button>
+                  <button id="save-text" class="button button--small" type="button" disabled>Save .txt</button>
+                </div>
               </div>
-              <p class="field-hint" id="all-text-hint">Check order and spacing before pasting.</p>
+              <p class="field-hint" id="all-text-hint">Edit spacing or wording here, then copy or save. Changes affect this text copy, not the PDF. Opening another file or clearing the review discards edits.</p>
+              <p id="draft-warning" class="notice notice--warning" hidden>Some PDF text was not extracted. Compare this copy with every page before using it.</p>
               <textarea id="all-text" class="page-text all-text" rows="12" readonly spellcheck="false" aria-describedby="all-text-hint"></textarea>
             </div>
           </details>
@@ -86,7 +91,7 @@
             <p><strong>Text:</strong> extraction order can differ from the layout. Scans and outlined letters may have no text to copy. This tool does not run OCR or predict how an application system reads your resume.</p>
             <p><strong>Pages:</strong> a blank-page warning comes from the preview. Very faint content can be missed. Check the original PDF if a preview fails.</p>
             <p><strong>Links:</strong> destinations are displayed as text. They are never opened or checked online.</p>
-            <p><strong>Your file:</strong> processing runs in this tab. The tool does not upload or save the PDF. Clear, reload, or close the page to discard the review. Copied text goes to your system clipboard and may remain in clipboard history.</p>
+            <p><strong>Your file:</strong> processing runs in this tab. The tool does not upload or save the PDF. Clear, reload, or close the page to discard the review and text edits. Copied text may remain in clipboard history. Saved text files stay in your downloads until you remove them.</p>
             <p>If this page is hosted, the host receives the page request, not your PDF. Browser extensions and your operating system are outside this tool’s control.</p>
           </div>
         </details>
