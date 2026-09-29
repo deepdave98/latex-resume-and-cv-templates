@@ -20,7 +20,8 @@ PERMISSIONS = (
     "Every claim and number is truthful. I did not invent a metric or expose private evidence.",
     "I permit this submission to be published under the repository's MIT License.",
 )
-REPO_URL = r"https://github\.com/deepdave98/swe-resume-templates"
+# Existing approval permalinks remain valid after the repository rename.
+REPO_URL = r"https://github\.com/deepdave98/(?:latex-resume-and-cv-templates|swe-resume-templates)"
 COMMENT = r"(?:issuecomment-\d+|discussion_r\d+|pullrequestreview-\d+)"
 
 

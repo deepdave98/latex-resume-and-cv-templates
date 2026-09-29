@@ -7,9 +7,9 @@ Edit `resume.tex`. Styling lives in `resume.cls`.
 3. Compile and check the log for placeholders and extra pages. Replace flagged text or delete unused entries, then recompile.
 4. Inspect every page, then download the PDF. Warnings do not catch every unfinished example.
 
-Using the no-internship starter? Keep course projects labeled as projects and describe your own part of team work. Delete **Other Experience** if you have no work, volunteering, or club responsibility to include.
+In the no-internship starter, label course projects and your part of team work. Delete **Other Experience** if it does not apply.
 
-Using an AI/ML starter? Keep your actual job titles and degree. Move education and projects first if they are stronger than your work experience. Include research only if you did it; do not present an offline experiment as a production result. The [AI/ML guide](https://github.com/deepdave98/swe-resume-templates/blob/main/docs/ai-ml-resumes.md) includes a research entry you can adapt.
+For AI/ML roles, distinguish offline experiments from production results. The [AI/ML guide](https://github.com/deepdave98/latex-resume-and-cv-templates/blob/main/docs/ai-ml-resumes.md) covers evaluation, section order, and research entries. For graduate applications, follow the [admissions guide](https://github.com/deepdave98/latex-resume-and-cv-templates/blob/main/docs/graduate-admissions.md) and the program's instructions.
 
 ## Contacts
 
@@ -21,11 +21,11 @@ Unsupported formats warn and print without a link. Use `\resumelink{destination}
 
 Use [New Project > Upload Project](https://www.overleaf.com/learn/latex/Kb/Uploading_a_project) and upload the ZIP. Set the compiler to **XeLaTeX** and the main document to `resume.tex`. Click **Recompile**.
 
-Open **View logs** beside **Recompile** to see warnings (**Logs and output files** in the older editor). The checks run inside LaTeX; nothing else to install. They look for sample contacts, known example fields, and `[prompts]` in the template's header, entries, and lists. Literal square brackets may be flagged; unmarked examples and text inside custom commands may be missed.
+Open **View logs** beside **Recompile** (**Logs and output files** in the older editor). Checks flag sample contacts, known example fields, and `[prompts]` in headers, entries, and lists. Literal brackets may trigger warnings; unmarked examples and text inside custom commands may be missed.
 
-## Page Budget
+## Page limit
 
-`\resumepagelimit{1}` near the top of `resume.tex` warns if the current build exceeds one page; the experienced starter uses `2`. Cut less relevant content first. Change the number if the extra page is intentional, or remove the line to disable the reminder. It never changes the font, spacing, or PDF.
+`\resumepagelimit{1}` warns above one page; the experienced starter uses `2`. Change the number for an intentional extra page, or remove the line to disable the warning. It does not change the layout.
 
 If LaTeX asks you to rerun, recompile before checking length. Its temporary rerun pages are not counted by this reminder.
 
@@ -47,4 +47,4 @@ Long organizations and locations wrap beside the dates. Keep dates short; use `{
 
 Use `\documentclass[a4paper]{resume}` for A4 or `\documentclass[letterpaper]{resume}` for US Letter. Recompile and inspect all pages after changing paper size.
 
-[Bullet examples](https://github.com/deepdave98/swe-resume-templates/blob/main/examples/engineering-bullets.md) · [Section order](https://github.com/deepdave98/swe-resume-templates/blob/main/docs/section-order.md)
+[Bullet examples](https://github.com/deepdave98/latex-resume-and-cv-templates/blob/main/examples/engineering-bullets.md) · [Section order](https://github.com/deepdave98/latex-resume-and-cv-templates/blob/main/docs/section-order.md)

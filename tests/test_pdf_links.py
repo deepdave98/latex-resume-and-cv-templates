@@ -6,7 +6,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RAW_ROOT = "https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/"
+RAW_ROOT = "https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/"
 
 
 class PublishedPDFLinks(unittest.TestCase):

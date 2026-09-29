@@ -14,6 +14,8 @@ body:
         - Experienced
         - AI Engineer
         - ML Engineer
+        - Graduate Admissions
+        - PDF reviewer
         - Multiple templates
     validations:
       required: true

@@ -190,10 +190,10 @@ class ReadmeDownloadTests(unittest.TestCase):
         readme = (packager.ROOT / "README.md").read_text(encoding="utf-8")
         self.links = re.findall(r"\]\((https://[^\s)]+)\)", readme)
         self.downloads = [
-            f"https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/downloads/{template}-resume.zip"
+            f"https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/{template}-resume.zip"
             for template in packager.TEMPLATE_SOURCES
         ]
-        self.application_download = "https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/downloads/application-versions.zip"
+        self.application_download = "https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/application-versions.zip"
 
     def test_overleaf_buttons_import_each_current_zip_with_xelatex(self):
         imports = []

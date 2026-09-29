@@ -8,13 +8,13 @@ Choose by the work in the job description, not the title alone.
 | Training, evaluating, and operating models | [ML engineer](../templates/ml-engineer-resume.tex) | Data, baseline, evaluation split, model choice, and deployment |
 | Research or applied science | Adapt the ML starter | Your research question, experiments, contribution, and relevant publications |
 
-These are one-page industry resumes, not academic CVs. Follow the employer's instructions if it asks for a CV.
+For academic applications, use the [graduate-admissions CV](graduate-admissions.md).
 
 ## Degree requirements differ
 
 An MLE title does not always require graduate research. Google's [AI/ML engineering posting](https://www.google.com/about/careers/applications/jobs/results/95693255462527686-software-engineer-iii-aiml-foundational-lanes) lists a bachelor's degree or equivalent experience as a minimum; a master's or PhD is preferred. By contrast, Amazon's [Applied Scientist posting](https://www.amazon.jobs/en/jobs/10491577/applied-scientist-prime-video-science) requires a PhD or a master's plus experience, along with publications or patents. These are examples checked in September 2026, not a survey of the market.
 
-AI application work also has an engineering route. Google's [Applied AI Engineer posting](https://www.google.com/about/careers/applications/jobs/results/133517804614623942-applied-ai-engineer) asks for software development and deployed AI systems. It does not require a graduate degree. Check each role's requirements; do not rename past jobs or add a degree to fit the template.
+Google's [Applied AI Engineer posting](https://www.google.com/about/careers/applications/jobs/results/133517804614623942-applied-ai-engineer) asks for software development and deployed AI systems. It does not require a graduate degree. Check each role's requirements.
 
 ## Put the relevant work first
 
@@ -22,11 +22,11 @@ AI application work also has an engineering route. Google's [Applied AI Engineer
 - **Working engineer:** experience, selected projects if useful, skills, education. Keep backend and data work that explains your ability to build the system.
 - **Research applicant:** bring relevant research forward. Add selected publications with title, authorship, venue, year, and an honest status: published, accepted, preprint, or submitted.
 
-Keep jobs newest first. Remove sections you cannot fill. Use a second page only for relevant work, not to list more frameworks. See [section order](section-order.md).
+Keep jobs newest first and delete unused sections. See [section order and length](section-order.md).
 
 ## Make the evaluation understandable
 
-For AI applications, “improved accuracy” leaves too much out. Name the task, test cases, scoring rule, and baseline. Distinguish retrieval failures from bad answers. If a model graded outputs, say how you checked its judgments against human labels. An offline score is not a customer outcome.
+For AI applications, name the task, test cases, scoring rule, and baseline. Distinguish retrieval failures from bad answers. If a model graded outputs, explain how you checked its judgments against human labels. Label offline results as offline.
 
 For ML, name the prediction target and how data was split. A random row split may leak information when the same user, document, or future event appears on both sides. Fit preprocessing on training data. Use validation data for choices and reserve test data for evaluation. [scikit-learn's leakage examples](https://scikit-learn.org/stable/common_pitfalls.html#data-leakage) explain why.
 
@@ -34,7 +34,7 @@ Keep measurements comparable: dataset, hardware, load, and units. “p95 latency
 
 ## Bullet prompts
 
-Replace the brackets with your work. Keep only the details needed to understand it.
+Replace the brackets with your work; delete details that do not apply.
 
 ### AI engineering
 
@@ -63,7 +63,7 @@ Use your actual role and institution. A reproduction is not a novel method. A pr
 \end{jobduties}
 ```
 
-## Reading behind the examples
+## Sources
 
 - [Eugene Yan and Jason Liu: How to Interview and Hire ML/AI Engineers](https://eugeneyan.com/writing/how-to-interview/) - software, data literacy, evaluation, and the additional depth expected in research roles.
 - [Hamel Husain: Your AI Product Needs Evals](https://hamel.dev/blog/posts/evals/) - test cases, error inspection, and human evaluation rather than judging a demo by feel.

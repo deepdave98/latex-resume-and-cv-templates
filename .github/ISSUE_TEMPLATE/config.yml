@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Report a security issue privately
-    url: https://github.com/deepdave98/swe-resume-templates/security/advisories/new
+    url: https://github.com/deepdave98/latex-resume-and-cv-templates/security/advisories/new
     about: Do not post security reports or sensitive information in a public issue.

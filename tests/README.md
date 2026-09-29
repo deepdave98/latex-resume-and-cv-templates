@@ -1,12 +1,12 @@
 # Template Checks
 
-The optional browser reviewer has a separate [test suite and setup](../tools/pdf-review/README.md#development). It renders every page of every published PDF in Chromium, Firefox, and WebKit, including the three shared-content versions. It also checks offline extraction, link destinations and their preview positions, invalid and password-protected files, cancellation, clipboard fallback, keyboard controls, narrow screens, and the self-contained download. Its Node/browser dependencies are not needed for `make test` or for using the reviewer. These tests do not exercise GitHub's PDF viewer.
+The browser reviewer has a separate [test suite](../tools/pdf-review/README.md#development) for Chromium, Firefox, and WebKit. Its dependencies are not needed for `make test`. Neither suite tests GitHub's embedded PDF viewer.
 
 `make test` builds all starters, runs unit tests, checks PDFs, headings, and contact links, compiles the starter ZIPs, tests placeholder and page-limit warnings, and exercises the personal PDF checker. It needs XeLaTeX, `latexmk`, Python 3.9+, and Poppler's `pdftotext` and `pdfinfo` on `PATH`; no pip packages.
 
 The check compares every page with `expected/*.txt` using Poppler's `-layout` reading order. Missing or reordered words, changed punctuation, unmapped characters, and extra or missing pages fail. Whitespace and Unicode ligature differences are ignored. Line-end hyphens are preserved.
 
-This checks one extractor. It does not score a resume or guarantee how an ATS will parse it. Inspect the PDF too; text extraction cannot catch every visual defect.
+Inspect the PDF too: extraction tests cannot catch every visual defect or predict how other parsers read it.
 
 ## Run without make
 
@@ -78,9 +78,7 @@ The default role templates contain no research or publication claims. Their sour
 
 `make test-graduate-admissions` checks the default CV on Letter and A4, optional publication/presentation blocks, a two-degree CV, and a project-first adaptation without research or teaching. It checks page counts, text bounds, contact destinations, and placeholder warnings. `make preview-graduate-admissions` refreshes only this starter's PDF and PNG; its text baseline is `expected/graduate-admissions-1.txt`.
 
-## Change a baseline
-
-### Shared-content application versions
+## Shared-content application versions
 
 `make test-application-versions` checks the optional project separately from the regular starters. It checks the ZIP against an explicit source allowlist, compiles all three source and downloaded versions, and compares their text with `expected/application-*-1.txt`.
 
@@ -96,7 +94,7 @@ python3 tests/check_application_versions.py --published
 
 After changing the example, run `make preview-application-versions` and inspect all three pages. Review their extracted text before updating the matching baselines. Run `make application-download`, then `make test-application-versions`. The other starter baselines should not change.
 
-### Regular starters
+## Change a baseline
 
 After an intentional template edit:
 

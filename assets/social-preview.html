@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280">
+<title>LaTeX Resume and CV Templates</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 1280px; height: 640px; background: #f7f7f5; color: #293e49; font-family: Arial, sans-serif; }
+  main { display: grid; grid-template-columns: 520px 1fr; gap: 40px; height: 100%; padding: 64px; }
+  .intro { display: flex; flex-direction: column; }
+  .format { margin: 0 0 42px; font-size: 16px; letter-spacing: 1px; color: #003b73; }
+  h1 { margin: 0; font: bold 58px/1.1 Georgia, serif; letter-spacing: -1.4px; }
+  .roles { margin: 32px 0 0; font-size: 20px; line-height: 1.65; }
+  .repo { margin: auto 0 0; font-size: 16px; color: #606f77; }
+  .previews { display: grid; grid-template-columns: 1fr 1fr; align-content: center; gap: 20px; }
+  figure { margin: 0; min-width: 0; }
+  figcaption { margin-bottom: 16px; font-size: 14px; color: #606f77; }
+  img { display: block; width: 100%; border: 1px solid #dde1e2; box-shadow: 0 8px 18px #293e4910; }
+</style>
+<main>
+  <section class="intro">
+    <p class="format">OVERLEAF / XELATEX</p>
+    <h1>LaTeX resumes<br>and CV templates</h1>
+    <p class="roles">Software, AI &amp; ML engineering<br>Master's &amp; PhD admissions</p>
+    <p class="repo">deepdave98/latex-resume-and-cv-templates</p>
+  </section>
+  <section class="previews" aria-label="Template previews">
+    <figure>
+      <figcaption>New-grad resume</figcaption>
+      <img src="../preview/new-grad-resume.png" alt="One-page new-grad resume">
+    </figure>
+    <figure>
+      <figcaption>Graduate-admissions CV</figcaption>
+      <img src="../preview/graduate-admissions-resume.png" alt="One-page graduate-admissions CV">
+    </figure>
+  </section>
+</main>
+</html>

@@ -1,5 +1,5 @@
 name: Improvement idea
-description: Suggest a focused improvement to the templates or documentation.
+description: Suggest a change to a template, tool, or guide.
 title: "[Idea]: "
 labels:
   - enhancement
@@ -8,7 +8,7 @@ body:
     id: problem
     attributes:
       label: What problem would this solve?
-      description: Explain the problem or use case before proposing a solution.
+      description: Describe what you are trying to do and what gets in the way.
     validations:
       required: true
   - type: textarea
@@ -27,6 +27,8 @@ body:
         - Experienced template
         - AI Engineer template
         - ML Engineer template
+        - Graduate Admissions template
+        - PDF reviewer
         - Multiple templates
         - Repository or documentation
     validations:

@@ -1,14 +1,14 @@
 # Graduate admissions CV
 
-For PhD and research-based master's applications, with prompts suited to computing and quantitative research. [Source](../templates/graduate-admissions-resume.tex) · [Starter ZIP](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/downloads/graduate-admissions-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/swe-resume-templates/main/output/pdf/graduate-admissions-resume.pdf).
+For PhD and research-based master's applications, with prompts suited to computing and quantitative research. [Source](../templates/graduate-admissions-resume.tex) · [Starter ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/graduate-admissions-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/graduate-admissions-resume.pdf).
 
 ## Check the program first
 
-There is no single format for selective programs. Check whether a CV is requested, its page limit, and any required fields. Oxford removes unrequested CVs; its guide asks for one or two pages where a CV is required. [Oxford application guide](https://www.ox.ac.uk/admissions/graduate/application-guide/supporting-documents/cv-resume).
+Check whether a CV is requested, its page limit, and required fields. Oxford removes unrequested CVs and asks for one or two pages where required. [Oxford application guide](https://www.ox.ac.uk/admissions/graduate/application-guide/supporting-documents/cv-resume).
 
 This starter fits one page. Add a second only if your content and the program's rules warrant it; change `\resumepagelimit{1}` to `{2}`. Do not shrink the type to force a fit.
 
-The CV records your work. Use the statement of purpose for your research direction and reasons for applying; it is a separate document. [CMU SCS requirements](https://www.cs.cmu.edu/education/graduate-admissions).
+Put your research direction and reasons for applying in the statement of purpose. [CMU SCS requirements](https://www.cs.cmu.edu/education/graduate-admissions).
 
 ## What to keep
 
@@ -25,13 +25,13 @@ For a taught or professional master's, adapt the emphasis to its selection crite
 
 Keep substantive thesis or research work even if it has not produced a publication. MIT Physics explicitly says publications are not necessary for admission to its program. [Research and publication guidance](https://physics.mit.edu/academic-programs/graduate-students/graduate-admissions-additional-guidance/).
 
-Write what you can support. For unfinished work, state the completed method or analysis and what remains unresolved. A negative finding needs its conditions, not a fabricated improvement.
+For unfinished work, state the completed method or analysis and what remains unresolved. Include negative findings with the conditions you tested.
 
 Illustrative rewrite, not a claim to copy:
 
 > Implemented the paper's baseline and repeated the comparison across five random seeds. The reported improvement did not persist across runs; documented the variance and differences from the published setup.
 
-Use that level of detail only if it describes your work. A useful bullet can explain a comparison without a percentage.
+Use this only if it describes your work.
 
 ## Papers and presentations
 
