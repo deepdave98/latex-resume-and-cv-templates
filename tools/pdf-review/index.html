@@ -66,21 +66,31 @@
             </div>
           </div>
 
-          <details class="all-text-panel">
-            <summary>Text for application forms</summary>
-            <div class="all-text-content">
-              <div class="text-toolbar">
-                <label for="all-text">Text copy</label>
-                <div class="review-actions">
-                  <button id="reset-text" class="button button--small" type="button" disabled>Reset text</button>
-                  <button id="save-text" class="button button--small" type="button" disabled>Save .txt</button>
+          <div class="review-tools">
+            <details class="all-text-panel">
+              <summary>Text for application forms</summary>
+              <div class="all-text-content">
+                <div class="text-toolbar">
+                  <label for="all-text">Text copy</label>
+                  <div class="review-actions">
+                    <button id="reset-text" class="button button--small" type="button" disabled>Reset text</button>
+                    <button id="save-text" class="button button--small" type="button" disabled>Save .txt</button>
+                  </div>
                 </div>
+                <p class="field-hint" id="all-text-hint">Edit spacing or wording here, then copy or save. Changes affect this text copy, not the PDF. Opening another file or clearing the review discards edits.</p>
+                <p id="draft-warning" class="notice notice--warning" hidden>Some PDF text was not extracted. Compare this copy with every page before using it.</p>
+                <textarea id="all-text" class="page-text all-text" rows="12" readonly spellcheck="false" aria-describedby="all-text-hint"></textarea>
               </div>
-              <p class="field-hint" id="all-text-hint">Edit spacing or wording here, then copy or save. Changes affect this text copy, not the PDF. Opening another file or clearing the review discards edits.</p>
-              <p id="draft-warning" class="notice notice--warning" hidden>Some PDF text was not extracted. Compare this copy with every page before using it.</p>
-              <textarea id="all-text" class="page-text all-text" rows="12" readonly spellcheck="false" aria-describedby="all-text-hint"></textarea>
-            </div>
-          </details>
+            </details>
+
+            <details id="file-properties" class="file-properties" hidden>
+              <summary>File properties</summary>
+              <p class="field-hint">Check for old names or template titles. These values are not shown on the page. This tool does not remove them.</p>
+              <p id="properties-status" class="field-hint" role="status"></p>
+              <dl id="properties-list" class="properties-list"></dl>
+              <p class="field-hint">PDF and XMP values are listed separately. This is not a complete privacy check.</p>
+            </details>
+          </div>
 
           <div id="pages" class="pages"></div>
         </section>

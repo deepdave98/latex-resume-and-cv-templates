@@ -679,6 +679,75 @@ test('a download failure preserves edits and offers copying', async ({ page, con
   await assertPrivate(context, page, observations);
 });
 
+test('file properties are read on demand and keep PDF and XMP values separate', async ({ page, context }) => {
+  const observations = await openReview(page, context, artifactURL);
+  const xmp = `<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Older XMP title</rdf:li></rdf:Alt></dc:title><dc:creator><rdf:Seq><rdf:li>Previous Author</rdf:li><rdf:li>Another Author</rdf:li></rdf:Seq></dc:creator></rdf:Description></rdf:RDF></x:xmpmeta>`;
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Visible resume text' }], {
+    title: 'Current PDF title', info: { Author: 'Zoë', Creator: 'Test writer', CreationDate: 'D:20260928120000Z' }, xmp,
+  })));
+  await expect(page.locator('#file-properties')).not.toHaveAttribute('open');
+  await expect(page.locator('#properties-list')).toBeEmpty();
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list')).toContainText('Current PDF title');
+  await expect(page.locator('#properties-list')).toContainText('Older XMP title');
+  await expect(page.locator('#properties-list')).toContainText('Previous Author; Another Author');
+  await expect(page.locator('#properties-list')).toContainText('Zoë');
+  await expect(page.locator('#properties-list')).toContainText('Title (PDF)');
+  await expect(page.locator('#properties-list')).toContainText('Title (XMP)');
+  await expect(page.locator('#properties-list')).toContainText('D:20260928120000Z');
+  await expect(page.locator('#all-text')).toHaveValue('Visible resume text');
+  await page.locator('#file-properties > summary').click();
+  const count = await page.locator('#properties-list > div').count();
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list > div')).toHaveCount(count);
+  await assertPrivate(context, page, observations);
+});
+
+test('property values are inert text with visible controls and bounded length', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  const title = '<img src="https://example.test/metadata" onerror="globalThis.metadataExecuted=true">';
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Safe page' }], {
+    title, info: { Author: 'Name\u202eHidden', Subject: 'x'.repeat(2000) },
+  })));
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list')).toContainText(title);
+  await expect(page.locator('#properties-list')).toContainText('Name\\u202eHidden');
+  await expect(page.locator('#properties-list img, #properties-list a, #properties-list script')).toHaveCount(0);
+  await expect(page.locator('#properties-status')).toContainText('cut short');
+  expect(await page.evaluate(() => globalThis.metadataExecuted)).toBeUndefined();
+  const subject = page.locator('#properties-list > div').filter({ hasText: 'Subject (PDF)' });
+  await expect(subject.locator('dd')).toHaveText('x'.repeat(1024) + 'Value cut short.');
+  await assertPrivate(context, page, observations);
+});
+
+test('missing properties are scoped to checked fields and do not imply a clean file', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'A document without common properties' }], { title: null, info: { CustomField: 'Not part of this inspection' } })));
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-status')).toHaveText('No values reported for the fields checked.');
+  await expect(page.locator('#file-properties')).toContainText('not a complete privacy check');
+  await expect(page.locator('#properties-list')).toBeEmpty();
+  await assertPrivate(context, page, observations);
+});
+
+test('clearing and replacing a file discard its properties', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'First PDF' }], { title: 'Old private title' })));
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list')).toContainText('Old private title');
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Second PDF' }], { title: 'Replacement title' })));
+  await expect(page.locator('#properties-list')).toBeEmpty();
+  await expect(page.locator('#file-properties')).not.toHaveAttribute('open');
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list')).toContainText('Replacement title');
+  await expect(page.locator('#properties-list')).not.toContainText('Old private title');
+  await page.locator('#clear-file').click();
+  await expect(page.locator('#file-properties')).toBeHidden();
+  await expect(page.locator('#properties-list')).toBeEmpty();
+  await expect(page.locator('#properties-status')).toHaveText('');
+  await assertPrivate(context, page, observations);
+});
+
 test("remains usable at a narrow viewport", async ({ page, context }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const observations = await openReview(page, context);
@@ -690,6 +759,9 @@ test("remains usable at a narrow viewport", async ({ page, context }) => {
   await page.locator('.all-text-panel > summary').click();
   await expect(page.locator('#save-text')).toBeVisible();
   await expect(page.locator('#all-text')).toBeEditable();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list')).toContainText('Resume fixture');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await assertPrivate(context, page, observations);
 });

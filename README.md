@@ -83,6 +83,8 @@ In a clone, `make` builds all starters to `build/`; `make new-grad` builds one. 
 
 Compare pages with extracted text and inspect link destinations. Edit a separate text copy for application forms, then copy it or save a `.txt` file. The PDF is unchanged. Processing stays in your browser; the download works offline.
 
+Inspect stored titles and authors under **File properties**. Values are shown, not removed.
+
 Limit: 20 MB and 20 pages. No OCR or ATS score. [Review limits and privacy](tools/pdf-review/README.md) · [Terminal checker](tests/README.md#check-your-own-resume).
 
 ## Tailor Without Duplicating

@@ -39,7 +39,7 @@ function writePdf(objects, trailer = "") {
   return Buffer.concat(parts);
 }
 
-export function pdfFixture(pages = [{ text: "Resume fixture" }], { title = "Resume fixture" } = {}) {
+export function pdfFixture(pages = [{ text: "Resume fixture" }], { title = "Resume fixture", info = {}, xmp } = {}) {
   const objects = [null, "", "", "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"];
   const add = (value) => objects.push(value) - 1;
   const pageIds = pages.map(() => add(""));
@@ -94,9 +94,14 @@ export function pdfFixture(pages = [{ text: "Resume fixture" }], { title = "Resu
     const contentId = add(stream(content));
     objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [${page.mediaBox ?? "0 0 612 792"}] /Rotate ${page.rotation ?? 0} /Resources << /Font << /F1 3 0 R ${extraFont} >> ${imageResource} >> /Contents ${contentId} 0 R /Annots [${annotations.map((id) => `${id} 0 R`).join(" ")}] >>`;
   }
-  objects[1] = `<< /Type /Catalog /Pages 2 0 R${fields.length ? ` /AcroForm << /Fields [${fields.map((id) => `${id} 0 R`).join(" ")}] /DA (/F1 12 Tf 0 g) /DR << /Font << /F1 3 0 R >> >> >>` : ""} >>`;
+  const xmpId = typeof xmp === 'string' ? add(stream(Buffer.from(xmp, 'utf8'), '/Type /Metadata /Subtype /XML')) : null;
+  objects[1] = `<< /Type /Catalog /Pages 2 0 R${xmpId ? ` /Metadata ${xmpId} 0 R` : ''}${fields.length ? ` /AcroForm << /Fields [${fields.map((id) => `${id} 0 R`).join(" ")}] /DA (/F1 12 Tf 0 g) /DR << /Font << /F1 3 0 R >> >> >>` : ""} >>`;
   objects[2] = `<< /Type /Pages /Count ${pages.length} /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] >>`;
-  const metadata = add(`<< /Title ${literal(title)} >>`);
+  const values = Object.entries({ Title: title, ...info }).filter(([, value]) => typeof value === 'string');
+  const metadata = add(`<< ${values.map(([key, value]) => {
+    const encoded = /^[\x00-\x7f]*$/.test(value) ? literal(value) : `<feff${Buffer.from(value, 'utf16le').swap16().toString('hex')}>`;
+    return `/${key} ${encoded}`;
+  }).join(' ')} >>`);
   return writePdf(objects, `/Info ${metadata} 0 R`);
 }
 
