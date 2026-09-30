@@ -2,6 +2,7 @@ import { getDocument, PDFWorker, AnnotationMode, PasswordResponses } from 'pdfjs
 import { reviewDocument, displayDestination } from './review.mjs';
 import { linkRegion } from './link-region.mjs';
 import { createTextDownload, MAX_DRAFT_CHARS } from './text-download.mjs';
+import { checkUploadLimits, formatFileSize } from './upload-limits.mjs';
 
 const assets = __PDF_ASSETS__;
 class EmbeddedBinaryDataFactory {
@@ -13,7 +14,7 @@ class EmbeddedBinaryDataFactory {
 }
 
 const byId = id => document.getElementById(id);
-const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help'].map(id => [id, byId(id)]));
+const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help', 'upload-limits', 'file-size', 'max-pages', 'max-mb', 'page-limit-result', 'size-limit-result'].map(id => [id, byId(id)]));
 ui['all-text'].maxLength = MAX_DRAFT_CHARS;
 let generation = 0;
 let current;
@@ -44,7 +45,7 @@ function dispose(state) {
   void Promise.resolve(state.ready).catch(() => {}).then(() => state.loading?.destroy()).catch(() => {}).finally(finish);
 }
 
-function clearReview(message = '') {
+function clearReview(message = '', { keepLimits = false } = {}) {
   generation += 1;
   const old = current;
   current = null;
@@ -71,6 +72,15 @@ function clearReview(message = '') {
   document.querySelector('.all-text-panel').open = false;
   ui.filename.textContent = '';
   ui.summary.textContent = '';
+  ui['upload-limits'].hidden = true;
+  ui['file-size'].textContent = '';
+  if (!keepLimits) {
+    ui['max-pages'].value = '';
+    ui['max-mb'].value = '';
+    ui['upload-limits'].open = false;
+  }
+  for (const id of ['max-pages', 'max-mb']) ui[id].removeAttribute('aria-invalid');
+  for (const id of ['page-limit-result', 'size-limit-result']) ui[id].textContent = '';
   ui.error.textContent = '';
   ui.error.hidden = true;
   ui.status.textContent = message;
@@ -118,6 +128,35 @@ function updateTextControls() {
   ui['copy-all'].disabled = !hasText;
   ui['save-text'].disabled = !hasText;
   ui['reset-text'].disabled = !ready || ui['all-text'].value === current.originalText;
+}
+
+function updateUploadLimits() {
+  if (!current?.pageCount) return;
+  const checks = checkUploadLimits({ bytes: current.fileBytes, pages: current.pageCount }, {
+    maxPages: ui['max-pages'].value, maxMB: ui['max-mb'].value,
+  });
+  const pageMessages = {
+    unset: 'No page limit set.',
+    invalid: 'Enter a positive whole number of pages, or leave blank.',
+    unknown: 'Page count unavailable; compare with the original PDF.',
+    within: `Page count: ${current.pageCount}. Limit: ${checks.pages.limit}. Within the limit.`,
+    over: `${current.pageCount} pages; limit ${checks.pages.limit}. Over the limit.`,
+  };
+  const sizeMessages = {
+    unset: 'No file-size limit set.',
+    invalid: 'Enter a positive MB value (for example, 0.5), up to 6 decimal places, or leave blank.',
+    unknown: 'File size unavailable; check the file on your device.',
+    within: `Within the ${checks.size.limit / 1_000_000} MB limit.`,
+    over: `Over the ${checks.size.limit / 1_000_000} MB limit by ${(current.fileBytes - checks.size.limit).toLocaleString('en-US')} ${current.fileBytes - checks.size.limit === 1 ? 'byte' : 'bytes'}.`,
+  };
+  for (const [check, input, output, messages] of [
+    [checks.pages, ui['max-pages'], ui['page-limit-result'], pageMessages],
+    [checks.size, ui['max-mb'], ui['size-limit-result'], sizeMessages],
+  ]) {
+    input.setAttribute('aria-invalid', String(check.status === 'invalid'));
+    output.textContent = messages[check.status];
+    output.classList.toggle('limit-warning', ['invalid', 'over', 'unknown'].includes(check.status));
+  }
 }
 
 function saveText() {
@@ -301,12 +340,12 @@ function appearsBlank(context, width, height) {
 }
 
 async function openFile(file) {
-  clearReview();
+  clearReview('', { keepLimits: true });
   if (!file) return;
   if (!file.size) return fail('This file is empty. Choose a finished PDF.');
-  if (file.size > MAX_BYTES) return fail('Choose a PDF under 20 MB. Larger files can use too much browser memory.');
+  if (file.size > MAX_BYTES) return fail('Choose a PDF no larger than 20 MiB. Larger files can use too much browser memory.');
   const token = generation;
-  const state = { controller: new AbortController(), fileName: file.name };
+  const state = { controller: new AbortController(), fileName: file.name, fileBytes: file.size };
   current = state;
   armTimeout(state);
   ui.review.hidden = false;
@@ -367,6 +406,10 @@ async function openFile(file) {
     ui.status.textContent = 'Reading text and link destinations…';
     const result = await reviewDocument(pdf, { signal: state.controller.signal });
     if (token !== generation) return;
+    state.pageCount = result.pageCount;
+    ui['file-size'].textContent = `File size: ${formatFileSize(state.fileBytes)}`;
+    updateUploadLimits();
+    ui['upload-limits'].hidden = false;
     ui['all-text'].value = result.text;
     state.originalText = result.text;
     ui['all-text'].readOnly = false;
@@ -429,6 +472,7 @@ ui['pdf-file'].addEventListener('change', event => void openFile(event.target.fi
 ui['clear-file'].addEventListener('click', () => { clearReview('Review cleared.'); ui['pdf-file'].focus(); });
 ui['copy-all'].addEventListener('click', () => void copyText(ui['all-text'], ui['copy-all']));
 ui['all-text'].addEventListener('input', updateTextControls);
+for (const id of ['max-pages', 'max-mb']) ui[id].addEventListener('input', updateUploadLimits);
 ui['save-text'].addEventListener('click', saveText);
 ui['reset-text'].addEventListener('click', () => {
   if (typeof current?.originalText !== 'string') return;
