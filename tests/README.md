@@ -2,6 +2,8 @@
 
 The browser reviewer has a separate [test suite](../tools/pdf-review/README.md#development) for Chromium, Firefox, and WebKit. Its dependencies are not needed for `make test`. Neither suite tests GitHub's embedded PDF viewer.
 
+Upload-limit checks cover exact byte boundaries, fractional MB, invalid inputs, replacement files, clearing, keyboard use, and narrow screens. File and hosted-page tests also check for network requests and browser storage.
+
 `make test` builds all starters, runs unit tests, checks PDFs, headings, and contact links, compiles the starter ZIPs, tests placeholder and page-limit warnings, and exercises the personal PDF checker. It needs XeLaTeX, `latexmk`, Python 3.9+, and Poppler's `pdftotext` and `pdfinfo` on `PATH`; no pip packages.
 
 The check compares every page with `expected/*.txt` using Poppler's `-layout` reading order. Missing or reordered words, changed punctuation, unmapped characters, and extra or missing pages fail. Whitespace and Unicode ligature differences are ignored. Line-end hyphens are preserved.
