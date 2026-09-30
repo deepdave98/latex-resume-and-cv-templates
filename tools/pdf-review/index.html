@@ -24,7 +24,7 @@
               <input id="pdf-file" class="visually-hidden" type="file" accept="application/pdf,.pdf" aria-describedby="file-limits">
               <label class="button button--primary" for="pdf-file">Open PDF</label>
             </div>
-            <p class="upload-hint" id="file-limits">or drop it here <span>20 MB / 20 pages max</span></p>
+            <p class="upload-hint" id="file-limits">or drop it here <span>20 MiB / 20 pages max</span></p>
             <a class="help-link" href="#review-help">Help</a>
           </div>
 
@@ -66,6 +66,29 @@
             </div>
           </div>
 
+          <div class="review-options">
+          <details id="upload-limits" class="upload-limits-panel" hidden>
+            <summary>Application upload limits</summary>
+            <div class="all-text-content">
+              <p id="file-size" class="file-size"></p>
+              <p id="upload-limits-hint" class="field-hint">Use the limits in your application instructions. Leave either blank to skip it. 1 MB = 1,000,000 bytes. These checks do not guarantee the portal will accept the file.</p>
+              <div class="limit-fields">
+                <div>
+                  <label for="max-pages">Maximum pages</label>
+                  <input id="max-pages" type="text" inputmode="numeric" maxlength="32" autocomplete="off" spellcheck="false" aria-describedby="upload-limits-hint page-limit-result">
+                </div>
+                <div>
+                  <label for="max-mb">Maximum file size (MB)</label>
+                  <input id="max-mb" type="text" inputmode="decimal" maxlength="32" autocomplete="off" spellcheck="false" aria-describedby="upload-limits-hint size-limit-result">
+                </div>
+              </div>
+              <div class="limit-results" role="status" aria-live="polite" aria-atomic="true">
+                <p id="page-limit-result"></p>
+                <p id="size-limit-result"></p>
+              </div>
+            </div>
+          </details>
+
           <details class="all-text-panel">
             <summary>Text for application forms</summary>
             <div class="all-text-content">
@@ -81,6 +104,8 @@
               <textarea id="all-text" class="page-text all-text" rows="12" readonly spellcheck="false" aria-describedby="all-text-hint"></textarea>
             </div>
           </details>
+
+          </div>
 
           <div id="pages" class="pages"></div>
         </section>

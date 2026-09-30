@@ -141,6 +141,104 @@ test("reviews both pages of the experienced starter", async ({ page, context }) 
   await assertPrivate(context, page, observations);
 });
 
+for (const [label, location] of [["downloaded file", artifactURL], ["hosted page", "/"]]) {
+  test(`${label}: checks applicant-supplied upload limits without rounding away excess bytes`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    const buffer = pdfFixture([{ text: "First page" }, { text: "Second page" }]);
+    await reviewFile(page, filePayload(buffer));
+    await expect(page.locator('#upload-limits')).not.toHaveAttribute('open');
+    await page.getByText('Application upload limits', { exact: true }).click();
+    await expect(page.locator('#file-size')).toContainText(`${buffer.length.toLocaleString('en-US')} bytes`);
+    await expect(page.locator('#page-limit-result')).toHaveText('No page limit set.');
+    await expect(page.locator('#size-limit-result')).toHaveText('No file-size limit set.');
+    await page.getByLabel('Maximum pages', { exact: true }).fill('1');
+    await expect(page.locator('#page-limit-result')).toHaveText('2 pages; limit 1. Over the limit.');
+    await page.getByLabel('Maximum pages', { exact: true }).fill('2');
+    await expect(page.locator('#page-limit-result')).toContainText('Within the limit.');
+    await page.getByLabel('Maximum file size (MB)', { exact: true }).fill((buffer.length / 1_000_000).toFixed(6));
+    await expect(page.locator('#size-limit-result')).toContainText('Within the');
+    await page.getByLabel('Maximum file size (MB)', { exact: true }).fill(((buffer.length - 1) / 1_000_000).toFixed(6));
+    await expect(page.locator('#size-limit-result')).toContainText('by 1 byte.');
+    // The check does not modify the extracted text, preview, or original file.
+    await expect(page.locator('#all-text')).toHaveValue('First page\n\nSecond page');
+    await expect(page.locator('#pages canvas')).toHaveCount(2);
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('upload limits reject invalid entries and allow either check to be removed', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture()));
+  await page.getByText('Application upload limits', { exact: true }).click();
+  await page.getByLabel('Maximum pages', { exact: true }).fill('1.5');
+  await page.getByLabel('Maximum file size (MB)', { exact: true }).fill('-2');
+  await expect(page.locator('#max-pages')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#max-mb')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#page-limit-result')).toContainText('positive whole number');
+  await expect(page.locator('#size-limit-result')).toContainText('positive MB value');
+  await page.getByLabel('Maximum pages', { exact: true }).fill('');
+  await page.getByLabel('Maximum file size (MB)', { exact: true }).fill('0.5');
+  await expect(page.locator('#max-pages')).toHaveAttribute('aria-invalid', 'false');
+  await expect(page.locator('#max-mb')).toHaveAttribute('aria-invalid', 'false');
+  await expect(page.locator('#page-limit-result')).toHaveText('No page limit set.');
+  await expect(page.locator('#size-limit-result')).toHaveText('Within the 0.5 MB limit.');
+  await assertPrivate(context, page, observations);
+});
+
+test('upload limits recheck a replacement PDF and clear with the file', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'First' }, { text: 'Second' }])));
+  await page.getByText('Application upload limits', { exact: true }).click();
+  await page.getByLabel('Maximum pages', { exact: true }).fill('1');
+  await page.getByLabel('Maximum file size (MB)', { exact: true }).fill('1');
+  await expect(page.locator('#page-limit-result')).toContainText('Over the limit.');
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Shortened' }]), 'shortened.pdf'));
+  await expect(page.locator('#max-pages')).toHaveValue('1');
+  await expect(page.locator('#max-mb')).toHaveValue('1');
+  await expect(page.locator('#page-limit-result')).toHaveText('Page count: 1. Limit: 1. Within the limit.');
+  await page.getByRole('button', { name: 'Clear file', exact: true }).click();
+  await expect(page.locator('#upload-limits')).toBeHidden();
+  await expect(page.locator('#file-size')).toBeEmpty();
+  await expect(page.locator('#max-pages')).toHaveValue('');
+  await expect(page.locator('#max-mb')).toHaveValue('');
+  await reviewFile(page, filePayload(pdfFixture()));
+  await expect(page.locator('#upload-limits')).not.toHaveAttribute('open');
+  await page.getByText('Application upload limits', { exact: true }).click();
+  await expect(page.locator('#page-limit-result')).toHaveText('No page limit set.');
+  await assertPrivate(context, page, observations);
+});
+
+test('an unreadable replacement clears upload-limit results', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture()));
+  await page.getByText('Application upload limits', { exact: true }).click();
+  await page.getByLabel('Maximum pages', { exact: true }).fill('1');
+  await page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('%PDF-broken')));
+  await expect(page.locator('#error')).toBeVisible();
+  await expect(page.locator('#upload-limits')).toBeHidden();
+  await expect(page.locator('#page-limit-result')).toBeEmpty();
+  await expect(page.locator('#size-limit-result')).toBeEmpty();
+  await assertPrivate(context, page, observations);
+});
+
+test('upload limits work by keyboard on a narrow screen', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await page.setViewportSize({ width: 320, height: 700 });
+  await reviewFile(page, filePayload(pdfFixture()));
+  const summary = page.getByText('Application upload limits', { exact: true });
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#max-pages')).toBeFocused();
+  await page.keyboard.type('1');
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#max-mb')).toBeFocused();
+  await page.keyboard.type('0.5');
+  await expect(page.locator('#size-limit-result')).toContainText('Within the');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await assertPrivate(context, page, observations);
+});
+
 test("distinguishes blank pages from image and vector pages without text", async ({ page, context }) => {
   const observations = await openReview(page, context);
   await reviewFile(page, filePayload(pdfFixture([
@@ -422,7 +520,10 @@ test("warns about form values that page-text extraction may omit", async ({ page
   const observations = await openReview(page, context);
   await reviewFile(page, filePayload(pdfFixture([{ text: "Form resume", formValue: "Stored form value" }])));
   await expect(page.locator("#review")).toContainText(/form/i);
-  await expect(page.locator("#review input, #review form")).toHaveCount(0);
+  // PDF form widgets must not become active inputs. The only review inputs
+  // belong to our optional upload-limit controls, not the document.
+  await expect(page.locator("#pages input, #pages form")).toHaveCount(0);
+  await expect(page.locator("#review input")).toHaveCount(2);
   await assertPrivate(context, page, observations);
 });
 

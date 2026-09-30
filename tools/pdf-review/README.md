@@ -12,7 +12,15 @@ Read a resume PDF beside its extracted text. Check where each link points and wh
 
 The download works offline. The PDF engine, fonts, and decoders are included in the HTML file.
 
-One PDF at a time, up to 20 MB and 20 pages. Password-protected files ask for the password locally. **Clear file** discards the review and text edits; choosing another file replaces them. Copy or save edits first.
+One PDF at a time, up to 20 MiB (20,971,520 bytes) and 20 pages. Password-protected files ask for the password locally. **Clear file** discards the review and text edits; choosing another file replaces them. Copy or save edits first.
+
+## Application upload limits
+
+Open **Application upload limits** and enter the maximum pages and file size from the portal's instructions. Leave either blank to skip that check. Limits are inclusive; a file even one byte over is flagged. Nothing is trimmed or compressed.
+
+File size uses decimal MB (1 MB = 1,000,000 bytes); the exact byte count is also shown. Use a whole number for pages and a positive number such as `0.5` for MB. Portals may use different units or additional rules, so these checks do not guarantee acceptance.
+
+Open a revised PDF to check it against the same limits. Clearing, reloading, or closing the page discards the limits; an unreadable or rejected file also resets them. The reviewer's own 20 MiB / 20-page cap still applies.
 
 ## What to check
 
@@ -64,6 +72,7 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/review.mjs` | Bounded text and annotation inspection |
 | `src/link-region.mjs` | Annotation coordinates clipped to the rendered page |
 | `src/text-download.mjs` | UTF-8 text exports and safe download names |
+| `src/upload-limits.mjs` | Optional page and file-size comparisons |
 | `build.mjs` | Embedded PDF.js resources, CSP hashes, and ZIP |
 | `tests/` | Unit, package, privacy, and browser checks |
 
