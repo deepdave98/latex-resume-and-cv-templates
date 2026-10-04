@@ -112,10 +112,12 @@ Do not accept a new baseline just to clear a failure. Check it against the sourc
 The snapshots above describe the shipped templates, not your edited resume. Use the separate checker instead:
 
 ```bash
-python3 scripts/check_resume.py "path/to/your-resume.pdf" --max-pages 1
+python3 scripts/check_resume.py "path/to/your-resume.pdf" --max-pages 1 --max-size-mb 2
 ```
 
-It requires only Python 3.9+ and Poppler, not TeX or the snapshot files. [Install the dependencies](../docs/local-setup.md#pdf-checker-dependencies). Omit `--max-pages` for no page limit. For a filename starting with a dash, use `python3 scripts/check_resume.py --max-pages 1 -- -resume.pdf`.
+It requires only Python 3.9+ and Poppler, not TeX or the snapshot files. [Install the dependencies](../docs/local-setup.md#pdf-checker-dependencies). Both limits are optional. Use the limits in your application instructions; omit either flag to skip that check. For a filename starting with a dash, use `python3 scripts/check_resume.py --max-pages 1 --max-size-mb 2 -- -resume.pdf`.
+
+`--max-size-mb` uses decimal MB: 1 MB = 1,000,000 bytes. Values such as `0.5` work. The exact byte count is checked before text extraction; a file at the limit passes, and one byte over fails. Fractional-byte limits round down to a whole byte. The minimum limit is one byte (`0.000001` MB). The checker does not compress or rewrite the PDF, and passing does not guarantee that a portal will accept it.
 
 The check fails on unreadable or empty files, Poppler errors or warnings, empty text pages, replacement/private-use/control characters, and a page count above your chosen limit. Whitespace, ligatures, punctuation, and language-specific format characters are allowed. Errors name the page or character code, not the surrounding text. Exit codes: `0` passed these checks, `1` failed a check, `2` invalid command arguments.
 
