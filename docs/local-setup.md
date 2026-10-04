@@ -34,10 +34,21 @@ The bundled `latexmkrc` selects XeLaTeX. Output: `resume.pdf`.
 ```bash
 git clone https://github.com/deepdave98/latex-resume-and-cv-templates.git
 cd latex-resume-and-cv-templates
+make doctor
 make
 ```
 
 Edit files in `templates/`. `make` builds all starters to `build/`. To build one, use `make no-internship`, `make new-grad`, `make experienced`, `make ai-engineer`, `make ml-engineer`, or `make graduate-admissions`.
+
+`make doctor` checks Python, XeLaTeX, `latexmk`, the required LaTeX packages, and Latin Modern fonts. It reports missing tools and files without compiling or changing your resume. Poppler is optional for building; to require the tools used by `make test`, run:
+
+```bash
+python3 scripts/check_setup.py --pdf-checks
+```
+
+The command exits with `1` if a required dependency is missing or cannot run. Install missing packages with your TeX distribution's package manager, check `PATH`, then rerun it. A successful check confirms availability; `make` still needs to compile your content.
+
+Without `make`, use `python3 scripts/check_setup.py` from the repository root. On Windows, use `py -3` in place of `python3`.
 
 On Windows or without `make`, run the relevant command from the repository root:
 
