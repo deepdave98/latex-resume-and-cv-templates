@@ -33,6 +33,8 @@ latexmk resume.tex
 
 Output: `resume.pdf`. In a clone, `make` builds all starters to `build/`.
 
+Run `make doctor` in a clone to check for missing tools, LaTeX packages, and fonts.
+
 ## Optional tools
 
 - **[PDF reviewer](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/pdf-review.zip):** unzip and open `pdf-review.html`. Inspect pages, text, and links; check upload limits or edit a text copy for application forms. Works offline; the PDF stays unchanged. [Limits and privacy](tools/pdf-review/README.md).
