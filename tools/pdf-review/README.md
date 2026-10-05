@@ -32,6 +32,9 @@ Open a revised PDF to check it against the same limits. Clearing, reloading, or 
 - **Link destinations:** select **Show on page** beside a destination. Its clickable area is highlighted in the preview so you can compare it with the printed label. **Back to link** returns to that row. Select the same button again to clear the highlight. Destinations remain text only; the tool never follows them or checks whether a website is online. Hidden control characters are shown as escapes. Internal links and unsupported PDF actions are identified separately.
 - **Pages without text:** a scan or outlined lettering may look fine but copy nothing. This tool does not run OCR.
 - **Pages that appear blank:** this is a preview-based hint, not proof. Very faint content can be missed. A failed preview is never counted as a blank page.
+- **Paper size:** each page shows its dimensions and orientation. A4, US Letter, and US Legal are named; other dimensions show as **Custom size**. Compare each page with your application's instructions, especially if you combined PDFs.
+
+Dimensions use the visible page after cropping, rotation, and PDF scale. Values are rounded to 0.1 mm or 0.01 inches; enlarging the preview leaves them unchanged.
 
 Form fields, incomplete extraction, and truncated results get warnings. Check missing text against the original PDF. Extraction can differ between PDF.js, Poppler, and application forms; this is not an ATS test.
 
@@ -75,6 +78,7 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/app.mjs` | File lifecycle, worker, previews, clipboard, and DOM |
 | `src/review.mjs` | Bounded text and annotation inspection |
 | `src/link-region.mjs` | Annotation coordinates clipped to the rendered page |
+| `src/page-size.mjs` | Paper names, dimensions, and orientation from PDF page geometry |
 | `src/text-download.mjs` | UTF-8 text exports and safe download names |
 | `src/upload-limits.mjs` | Optional page and file-size comparisons |
 | `build.mjs` | Embedded PDF.js resources, CSP hashes, and ZIP |

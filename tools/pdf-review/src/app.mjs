@@ -3,6 +3,7 @@ import { reviewDocument, displayDestination } from './review.mjs';
 import { linkRegion } from './link-region.mjs';
 import { createTextDownload, MAX_DRAFT_CHARS } from './text-download.mjs';
 import { checkUploadLimits, formatFileSize } from './upload-limits.mjs';
+import { formatPageSize } from './page-size.mjs';
 
 const assets = __PDF_ASSETS__;
 class EmbeddedBinaryDataFactory {
@@ -201,7 +202,10 @@ function saveText() {
 function showPage(record) {
   const card = element('section', 'page-card');
   const heading = element('div', 'page-heading');
-  heading.append(element('h3', '', `Page ${record.number}`));
+  const title = element('div', 'page-title');
+  const paperSize = element('p', 'page-size', 'Page size unavailable');
+  title.append(element('h3', '', `Page ${record.number}`), paperSize);
+  heading.append(title);
   const badge = element('span', 'badge', 'Checking preview…');
   heading.append(badge);
   const layout = element('div', 'page-layout');
@@ -286,7 +290,7 @@ function showPage(record) {
   layout.append(preview, content);
   card.append(heading, layout);
   ui.pages.append(card);
-  return { canvas, badge, preview, sheet, viewportContainer, selection, back, enlarge, locations };
+  return { canvas, badge, paperSize, preview, sheet, viewportContainer, selection, back, enlarge, locations };
 }
 
 function connectLinkLocations(display, viewport, pageNumber) {
@@ -447,6 +451,7 @@ async function openFile(file) {
         const page = await pdf.getPage(record.number);
         if (token !== generation) return;
         const size = page.getViewport({ scale: 1 });
+        display.paperSize.textContent = formatPageSize(size.width, size.height);
         if (![size.width, size.height].every(value => Number.isFinite(value) && value > 0 && value <= 14400)) throw new Error('Unsupported page size');
         const scale = Math.min(1.5, 1200 / size.width, 2000 / size.height, Math.sqrt(900_000 / (size.width * size.height)));
         const viewport = page.getViewport({ scale });

@@ -142,6 +142,70 @@ for (const filename of publishedPDFs) {
   });
 }
 
+for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
+  test(`${label}: shows each page's paper size and orientation`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    await reviewFile(page, filePayload(pdfFixture([
+      { text: 'Letter page' },
+      { text: 'A4 page', mediaBox: '0 0 595.2756 841.8898' },
+      { text: 'Landscape Letter page', rotation: 90 },
+      { text: 'Legal page', mediaBox: '0 0 612 1008' },
+    ])));
+    await expect(page.locator('.page-size')).toHaveText([
+      'US Letter · 8.5 × 11 in · Portrait',
+      'A4 · 210 × 297 mm · Portrait',
+      'US Letter · 11 × 8.5 in · Landscape',
+      'US Legal · 8.5 × 14 in · Portrait',
+    ]);
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('paper dimensions include crop bounds, PDF scale, and rotation', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([
+    { text: 'Cropped to Letter', mediaBox: '0 0 700 900', cropBox: '44 54 656 846' },
+    { mediaBox: '0 0 306 396', userUnit: 2, rotation: 270,
+      content: 'BT /F1 12 Tf 30 60 Td (Scaled page) Tj ET' },
+    { mediaBox: '0 0 432 648', content: 'BT /F1 12 Tf 30 60 Td (Custom page) Tj ET' },
+  ])));
+  await expect(page.locator('.page-size')).toHaveText([
+    'US Letter · 8.5 × 11 in · Portrait',
+    'US Letter · 11 × 8.5 in · Landscape',
+    'Custom size · 152.4 × 228.6 mm · Portrait',
+  ]);
+  await assertPrivate(context, page, observations);
+});
+
+test('page size remains readable when a large preview cannot render', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Large page', mediaBox: '0 0 20000 20400' }])));
+  await expect(page.locator('.page-size')).toHaveText('Custom size · 7055.6 × 7196.7 mm · Portrait');
+  await expect(page.locator('.page-card canvas')).toHaveCount(0);
+  await expect(page.locator('.badge')).toHaveText('Preview needs manual review');
+  await assertPrivate(context, page, observations);
+});
+
+test('paper labels survive zoom and narrow screens, then update with the file', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'A4 page', mediaBox: '0 0 595.2756 841.8898' }])));
+  await page.setViewportSize({ width: 390, height: 844 });
+  const label = page.locator('.page-size');
+  await expect(label).toHaveText('A4 · 210 × 297 mm · Portrait');
+  await expect(label).toBeVisible();
+  await page.getByRole('button', { name: 'Enlarge page 1 preview' }).click();
+  await expect(label).toHaveText('A4 · 210 × 297 mm · Portrait');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const bounds = await label.boundingBox();
+  expect(bounds.x).toBeGreaterThanOrEqual(0);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Replacement Letter page' }])));
+  await expect(label).toHaveText('US Letter · 8.5 × 11 in · Portrait');
+  await page.locator('#clear-file').click();
+  await expect(label).toHaveCount(0);
+  await assertPrivate(context, page, observations);
+});
+
 test("reviews both pages of the experienced starter", async ({ page, context }) => {
   const observations = await openReview(page, context);
   await reviewFile(page, resumePath("experienced-resume"));
