@@ -2,6 +2,7 @@
 .PHONY: application-versions application-download preview-application-versions test-application-versions clean-application-versions
 .PHONY: ai-engineer ml-engineer preview-ai-ml test-ai-ml
 .PHONY: graduate-admissions preview-graduate-admissions test-graduate-admissions
+.PHONY: doctor
 
 LATEXMK := latexmk
 PYTHON := python3
@@ -19,6 +20,9 @@ WATCH_TARGETS := $(addprefix watch-,$(WATCH_TEMPLATES))
 .PHONY: $(WATCH_TARGETS)
 
 all: no-internship new-grad experienced ai-engineer ml-engineer graduate-admissions
+
+doctor:
+	$(PYTHON) scripts/check_setup.py
 
 ai-engineer ml-engineer graduate-admissions:
 	@mkdir -p "$(BUILD_DIR)/$@"
