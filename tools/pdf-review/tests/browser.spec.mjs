@@ -37,6 +37,17 @@ async function reviewFile(page, payload) {
   await expect(page.locator("#review")).toBeVisible();
 }
 
+async function discardDecision(page, action, accept) {
+  const response = page.waitForEvent('dialog').then(async dialog => {
+    expect(dialog.type()).toBe('confirm');
+    expect(dialog.message()).toContain('Discard your text edits?');
+    if (accept) await dialog.accept();
+    else await dialog.dismiss();
+  });
+  await action();
+  await response;
+}
+
 async function assertPrivate(context, page, observations) {
   expect(observations.requests).toEqual([]);
   expect(observations.errors).toEqual([]);
@@ -130,6 +141,70 @@ for (const filename of publishedPDFs) {
     await assertPrivate(context, page, observations);
   });
 }
+
+for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
+  test(`${label}: shows each page's paper size and orientation`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    await reviewFile(page, filePayload(pdfFixture([
+      { text: 'Letter page' },
+      { text: 'A4 page', mediaBox: '0 0 595.2756 841.8898' },
+      { text: 'Landscape Letter page', rotation: 90 },
+      { text: 'Legal page', mediaBox: '0 0 612 1008' },
+    ])));
+    await expect(page.locator('.page-size')).toHaveText([
+      'US Letter · 8.5 × 11 in · Portrait',
+      'A4 · 210 × 297 mm · Portrait',
+      'US Letter · 11 × 8.5 in · Landscape',
+      'US Legal · 8.5 × 14 in · Portrait',
+    ]);
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('paper dimensions include crop bounds, PDF scale, and rotation', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([
+    { text: 'Cropped to Letter', mediaBox: '0 0 700 900', cropBox: '44 54 656 846' },
+    { mediaBox: '0 0 306 396', userUnit: 2, rotation: 270,
+      content: 'BT /F1 12 Tf 30 60 Td (Scaled page) Tj ET' },
+    { mediaBox: '0 0 432 648', content: 'BT /F1 12 Tf 30 60 Td (Custom page) Tj ET' },
+  ])));
+  await expect(page.locator('.page-size')).toHaveText([
+    'US Letter · 8.5 × 11 in · Portrait',
+    'US Letter · 11 × 8.5 in · Landscape',
+    'Custom size · 152.4 × 228.6 mm · Portrait',
+  ]);
+  await assertPrivate(context, page, observations);
+});
+
+test('page size remains readable when a large preview cannot render', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Large page', mediaBox: '0 0 20000 20400' }])));
+  await expect(page.locator('.page-size')).toHaveText('Custom size · 7055.6 × 7196.7 mm · Portrait');
+  await expect(page.locator('.page-card canvas')).toHaveCount(0);
+  await expect(page.locator('.badge')).toHaveText('Preview needs manual review');
+  await assertPrivate(context, page, observations);
+});
+
+test('paper labels survive zoom and narrow screens, then update with the file', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'A4 page', mediaBox: '0 0 595.2756 841.8898' }])));
+  await page.setViewportSize({ width: 390, height: 844 });
+  const label = page.locator('.page-size');
+  await expect(label).toHaveText('A4 · 210 × 297 mm · Portrait');
+  await expect(label).toBeVisible();
+  await page.getByRole('button', { name: 'Enlarge page 1 preview' }).click();
+  await expect(label).toHaveText('A4 · 210 × 297 mm · Portrait');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const bounds = await label.boundingBox();
+  expect(bounds.x).toBeGreaterThanOrEqual(0);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Replacement Letter page' }])));
+  await expect(label).toHaveText('US Letter · 8.5 × 11 in · Portrait');
+  await page.locator('#clear-file').click();
+  await expect(label).toHaveCount(0);
+  await assertPrivate(context, page, observations);
+});
 
 test("reviews both pages of the experienced starter", async ({ page, context }) => {
   const observations = await openReview(page, context);
@@ -696,7 +771,7 @@ for (const [label, location] of [["downloaded file", artifactURL], ["hosted page
     for await (const chunk of await download.createReadStream()) chunks.push(chunk);
     expect(Buffer.concat(chunks).toString('utf8')).toBe(edited);
     expect(await download.failure()).toBeNull();
-    await page.locator('#reset-text').click();
+    await discardDecision(page, () => page.locator('#reset-text').click(), true);
     await expect(draft).toHaveValue(original);
     await expect(page.locator('#reset-text')).toBeDisabled();
     await assertPrivate(context, page, observations);
@@ -728,21 +803,21 @@ test('empty drafts disable copy and save but can be reset', async ({ page, conte
   await expect(page.locator('#copy-all')).toBeDisabled();
   await expect(page.locator('#save-text')).toBeDisabled();
   await expect(page.locator('#reset-text')).toBeEnabled();
-  await page.locator('#reset-text').click();
+  await discardDecision(page, () => page.locator('#reset-text').click(), true);
   await expect(page.locator('#all-text')).toHaveValue('Recover this extraction');
   await assertPrivate(context, page, observations);
 });
 
-test('text edits are discarded on replacement, clearing, and reload', async ({ page, context }) => {
+test('confirmed replacement and clearing discard edits without saving them', async ({ page, context }) => {
   const observations = await openReview(page, context, artifactURL);
   await reviewFile(page, filePayload(pdfFixture([{ text: 'First document' }])));
   await page.locator('.all-text-panel > summary').click();
   await page.locator('#all-text').fill('Private edited draft');
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Replacement document' }])));
+  await discardDecision(page, () => reviewFile(page, filePayload(pdfFixture([{ text: 'Replacement document' }]))), true);
   await expect(page.locator('#all-text')).toHaveValue('Replacement document');
   await page.locator('.all-text-panel > summary').click();
   await page.locator('#all-text').fill('Another draft');
-  await page.locator('#clear-file').click();
+  await discardDecision(page, () => page.locator('#clear-file').click(), true);
   await expect(page.locator('#all-text')).toHaveValue('');
   await expect(page.locator('#all-text')).toHaveAttribute('readonly', '');
   await expect(page.locator('#save-text')).toBeDisabled();
@@ -750,6 +825,98 @@ test('text edits are discarded on replacement, clearing, and reload', async ({ p
   await page.reload();
   await expect(page.locator('#all-text')).toHaveValue('');
   await expect(page.locator('#review')).toBeHidden();
+  await assertPrivate(context, page, observations);
+});
+
+for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
+  test(`${label}: cancelling replacement keeps edits, pages, and upload limits`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'Original document' }]), 'original.pdf'));
+    await page.locator('#upload-limits > summary').click();
+    await page.locator('#max-pages').fill('1');
+    await page.locator('.all-text-panel > summary').click();
+    await page.locator('#all-text').fill('Keep these edits');
+    const replacement = filePayload(pdfFixture([{ text: 'Replacement document' }]), 'replacement.pdf');
+    await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(replacement), false);
+    await expect(page.locator('#filename')).toHaveText('original.pdf');
+    await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
+    await expect(page.locator('.page-card textarea')).toHaveValue('Original document');
+    await expect(page.locator('#max-pages')).toHaveValue('1');
+    expect(await page.locator('#pdf-file').inputValue()).toBe('');
+    // Selecting the same replacement again must still fire the change event.
+    await discardDecision(page, () => reviewFile(page, replacement), true);
+    await expect(page.locator('#all-text')).toHaveValue('Replacement document');
+    await expect(page.locator('#max-pages')).toHaveValue('1');
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('keyboard cancellation preserves edited text on clear and reset', async ({ page, context }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original document' }])));
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Keep these edits');
+  for (const id of ['clear-file', 'reset-text']) {
+    await page.locator(`#${id}`).focus();
+    await discardDecision(page, () => page.keyboard.press('Enter'), false);
+    await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
+    await expect(page.locator(`#${id}`)).toBeFocused();
+  }
+  await discardDecision(page, () => page.locator('#reset-text').click(), true);
+  await expect(page.locator('#all-text')).toHaveValue('Original document');
+  // Restored text needs no confirmation to clear.
+  await page.locator('#clear-file').click();
+  await expect(page.locator('#review')).toBeHidden();
+  await assertPrivate(context, page, observations);
+});
+
+test('cancelled and multi-file drops keep the current draft', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original document' }])));
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Keep these edits');
+  const bytes = [...pdfFixture([{ text: 'Dropped document' }])];
+  const drop = count => page.locator('#drop-zone').evaluate((zone, { bytes, count }) => {
+    const transfer = new DataTransfer();
+    for (let i = 0; i < count; i += 1) transfer.items.add(new File([new Uint8Array(bytes)], `resume-${i}.pdf`));
+    zone.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+  }, { bytes, count });
+  await discardDecision(page, () => drop(1), false);
+  await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
+  await drop(2);
+  await expect(page.locator('#error')).toHaveText('Choose one PDF at a time.');
+  await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
+  await expect(page.locator('.page-card textarea')).toHaveValue('Original document');
+  await discardDecision(page, () => drop(1), true);
+  await expect(page.locator('#all-text')).toHaveValue('Dropped document');
+  await expect(page.locator('#error')).toBeHidden();
+  await expect(page.locator('#status')).toHaveText('Review ready.');
+  await assertPrivate(context, page, observations);
+});
+
+test('unload protection follows edits and is removed after reset or clear', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  const protectedFromUnload = () => page.evaluate(() => {
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  });
+  expect(await protectedFromUnload()).toBe(false);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original document' }])));
+  await page.locator('.all-text-panel > summary').click();
+  expect(await protectedFromUnload()).toBe(false);
+  await page.locator('#all-text').fill('Edited text');
+  expect(await protectedFromUnload()).toBe(true);
+  await page.locator('#all-text').fill('Original document');
+  expect(await protectedFromUnload()).toBe(false);
+  await page.locator('#all-text').fill('');
+  expect(await protectedFromUnload()).toBe(true);
+  await discardDecision(page, () => page.locator('#reset-text').click(), true);
+  expect(await protectedFromUnload()).toBe(false);
+  await page.locator('#all-text').fill('More edits');
+  await discardDecision(page, () => page.locator('#clear-file').click(), true);
+  expect(await protectedFromUnload()).toBe(false);
   await assertPrivate(context, page, observations);
 });
 
@@ -761,7 +928,7 @@ test('incomplete text stays visible beside the editable copy', async ({ page, co
   await expect(page.locator('#draft-warning')).toContainText('Some PDF text was not extracted');
   await page.locator('#all-text').fill('A manual text copy');
   await expect(page.locator('#draft-warning')).toBeVisible();
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Complete extraction' }])));
+  await discardDecision(page, () => reviewFile(page, filePayload(pdfFixture([{ text: 'Complete extraction' }]))), true);
   await page.locator('.all-text-panel > summary').click();
   await expect(page.locator('#draft-warning')).toBeHidden();
   await assertPrivate(context, page, observations);
