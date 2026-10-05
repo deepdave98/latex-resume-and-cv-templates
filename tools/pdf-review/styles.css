@@ -83,6 +83,8 @@ summary { cursor: pointer; }
 .page-card { min-width: 0; border: 1px solid var(--line); }
 .page-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 11px 16px; border-bottom: 1px solid var(--line); }
 .page-heading h3 { font-size: 13px; }
+.page-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-width: 0; }
+.page-size { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .badge { color: var(--muted); font-size: 12px; }
 .badge--warning { color: var(--warning); }
 .page-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

@@ -15,6 +15,9 @@ EXPERIENCED_SOURCE := templates/experienced-resume.tex
 NEW_GRAD_BUILD_DIR := $(BUILD_DIR)/new-grad
 NO_INTERNSHIP_BUILD_DIR := $(BUILD_DIR)/no-internship
 EXPERIENCED_BUILD_DIR := $(BUILD_DIR)/experienced
+WATCH_TEMPLATES := no-internship new-grad experienced ai-engineer ml-engineer graduate-admissions
+WATCH_TARGETS := $(addprefix watch-,$(WATCH_TEMPLATES))
+.PHONY: $(WATCH_TARGETS)
 
 all: no-internship new-grad experienced ai-engineer ml-engineer graduate-admissions
 
@@ -139,6 +142,10 @@ clean-application-versions:
 		version_build_dir="$$(cd "$(BUILD_DIR)/application-versions" && pwd)" && \
 		cd examples/application-versions && $(LATEXMK) -C -outdir="$$version_build_dir" backend.tex frontend.tex infrastructure.tex; \
 	fi
+
+$(WATCH_TARGETS): watch-%: templates/%-resume.tex
+	@mkdir -p "$(BUILD_DIR)/$*"
+	$(LATEXMK) -pvc -view=none -xelatex -interaction=nonstopmode -halt-on-error -file-line-error -outdir="$(BUILD_DIR)/$*" "$<"
 
 preview: all preview-ai-ml preview-graduate-admissions
 	@mkdir -p "$(PREVIEW_DIR)" "$(OUTPUT_DIR)"

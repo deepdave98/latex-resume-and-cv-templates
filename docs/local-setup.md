@@ -63,6 +63,26 @@ latexmk -xelatex -outdir=build/graduate-admissions templates/graduate-admissions
 
 `make preview` refreshes published PDFs in `output/pdf/` and PNGs in `preview/`; it also needs Poppler or ImageMagick. See [contributing](../CONTRIBUTING.md) before changing published files.
 
+## Rebuild while editing
+
+In a clone, start a watcher for the template you are editing:
+
+```bash
+make watch-new-grad
+```
+
+Open `build/new-grad/new-grad-resume.pdf` in your PDF reader. Saving the template, `resume.cls`, or an included content file rebuilds that PDF. The watcher stays running after a compile error; fix the source and save again. Press **Ctrl+C** to stop it.
+
+Other targets: `watch-no-internship`, `watch-experienced`, `watch-ai-engineer`, `watch-ml-engineer`, and `watch-graduate-admissions`. Each writes to its own folder under `build/`. These commands do not refresh the published downloads or open a PDF reader automatically.
+
+Inside an extracted starter, use `latexmk` directly with the bundled `latexmkrc`:
+
+```bash
+latexmk -pvc -view=none resume.tex
+```
+
+Output: `resume.pdf`. If your PDF reader does not reload changed files, reopen the PDF after each successful build.
+
 ## PDF checker dependencies
 
 The [terminal checker](../tests/README.md#check-your-own-resume) needs Python 3.9+ and Poppler's `pdftotext` on `PATH`. No pip packages.
