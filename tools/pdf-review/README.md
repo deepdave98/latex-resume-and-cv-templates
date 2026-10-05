@@ -12,7 +12,11 @@ Read a resume PDF beside its extracted text. Check where each link points and wh
 
 The download works offline. The PDF engine, fonts, and decoders are included in the HTML file.
 
-One PDF at a time, up to 20 MiB (20,971,520 bytes) and 20 pages. Password-protected files ask for the password locally. **Clear file** discards the review and text edits; choosing another file replaces them. Copy or save edits first.
+One PDF at a time, up to 20 MiB (20,971,520 bytes) and 20 pages. Password-protected files ask for the password locally.
+
+Opening another file, **Clear file**, and **Reset text** ask before discarding edited text, including edits you have already copied or saved. Cancel keeps the current review. Unchanged text needs no confirmation. Dropping several files also leaves the current review intact.
+
+Reloading or closing the page requests the browser's leave-page warning while text differs from the extraction. Browsers may suppress that warning, so copy or save edits you need before leaving. Nothing is saved automatically.
 
 ## Application upload limits
 

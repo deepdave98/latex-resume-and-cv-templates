@@ -47,6 +47,7 @@ function dispose(state) {
 }
 
 function clearReview(message = '', { keepLimits = false } = {}) {
+  window.removeEventListener('beforeunload', warnBeforeUnload);
   generation += 1;
   const old = current;
   current = null;
@@ -123,12 +124,27 @@ async function copyText(textarea, button) {
   }
 }
 
+function hasTextEdits() {
+  return typeof current?.originalText === 'string' && ui['all-text'].value !== current.originalText;
+}
+
+function confirmDiscardText() {
+  return !hasTextEdits() || window.confirm('Discard your text edits? Copy or save them first if you need them.');
+}
+
+function warnBeforeUnload(event) {
+  event.preventDefault();
+  event.returnValue = '';
+}
+
 function updateTextControls() {
   const ready = typeof current?.originalText === 'string';
   const hasText = ready && Boolean(ui['all-text'].value.trim());
   ui['copy-all'].disabled = !hasText;
   ui['save-text'].disabled = !hasText;
   ui['reset-text'].disabled = !ready || ui['all-text'].value === current.originalText;
+  window.removeEventListener('beforeunload', warnBeforeUnload);
+  if (hasTextEdits()) window.addEventListener('beforeunload', warnBeforeUnload);
 }
 
 function updateUploadLimits() {
@@ -344,8 +360,12 @@ function appearsBlank(context, width, height) {
 }
 
 async function openFile(file) {
-  clearReview('', { keepLimits: true });
   if (!file) return;
+  if (!confirmDiscardText()) {
+    ui['pdf-file'].value = '';
+    return;
+  }
+  clearReview('', { keepLimits: true });
   if (!file.size) return fail('This file is empty. Choose a finished PDF.');
   if (file.size > MAX_BYTES) return fail('Choose a PDF no larger than 20 MiB. Larger files can use too much browser memory.');
   const token = generation;
@@ -474,13 +494,18 @@ async function openFile(file) {
 }
 
 ui['pdf-file'].addEventListener('change', event => void openFile(event.target.files[0]));
-ui['clear-file'].addEventListener('click', () => { clearReview('Review cleared.'); ui['pdf-file'].focus(); });
+ui['clear-file'].addEventListener('click', () => {
+  if (!confirmDiscardText()) return;
+  clearReview('Review cleared.');
+  ui['pdf-file'].focus();
+});
 ui['copy-all'].addEventListener('click', () => void copyText(ui['all-text'], ui['copy-all']));
 ui['all-text'].addEventListener('input', updateTextControls);
 for (const id of ['max-pages', 'max-mb']) ui[id].addEventListener('input', updateUploadLimits);
 ui['save-text'].addEventListener('click', saveText);
 ui['reset-text'].addEventListener('click', () => {
   if (typeof current?.originalText !== 'string') return;
+  if (!confirmDiscardText()) return;
   ui['all-text'].value = current.originalText;
   updateTextControls();
   ui.status.textContent = 'Text restored from the PDF.';
@@ -499,7 +524,11 @@ ui['drop-zone'].addEventListener('dragover', () => ui['drop-zone'].classList.add
 ui['drop-zone'].addEventListener('dragleave', () => ui['drop-zone'].classList.remove('is-dragging'));
 ui['drop-zone'].addEventListener('drop', event => {
   ui['drop-zone'].classList.remove('is-dragging');
-  if (event.dataTransfer.files.length !== 1) return fail('Choose one PDF at a time.');
+  if (event.dataTransfer.files.length !== 1) {
+    ui.error.textContent = 'Choose one PDF at a time.';
+    ui.error.hidden = false;
+    return;
+  }
   void openFile(event.dataTransfer.files[0]);
 });
 window.addEventListener('pagehide', () => clearReview());
