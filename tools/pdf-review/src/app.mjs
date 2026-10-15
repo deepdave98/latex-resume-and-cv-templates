@@ -4,6 +4,7 @@ import { linkRegion } from './link-region.mjs';
 import { createTextDownload, MAX_DRAFT_CHARS } from './text-download.mjs';
 import { checkUploadLimits, formatFileSize } from './upload-limits.mjs';
 import { formatPageSize } from './page-size.mjs';
+import { checkTextLimit } from './text-limits.mjs';
 
 const assets = __PDF_ASSETS__;
 class EmbeddedBinaryDataFactory {
@@ -15,7 +16,7 @@ class EmbeddedBinaryDataFactory {
 }
 
 const byId = id => document.getElementById(id);
-const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help', 'upload-limits', 'file-size', 'max-pages', 'max-mb', 'page-limit-result', 'size-limit-result'].map(id => [id, byId(id)]));
+const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help', 'upload-limits', 'file-size', 'max-pages', 'max-mb', 'page-limit-result', 'size-limit-result', 'max-characters', 'text-limit-result'].map(id => [id, byId(id)]));
 ui['all-text'].maxLength = MAX_DRAFT_CHARS;
 let generation = 0;
 let current;
@@ -65,6 +66,7 @@ function clearReview(message = '', { keepLimits = false } = {}) {
   ui['all-text'].readOnly = true;
   ui['reset-text'].disabled = true;
   ui['save-text'].disabled = true;
+  ui['max-characters'].disabled = true;
   ui['draft-warning'].hidden = true;
   ui['pdf-file'].value = '';
   ui.password.value = '';
@@ -79,10 +81,11 @@ function clearReview(message = '', { keepLimits = false } = {}) {
   if (!keepLimits) {
     ui['max-pages'].value = '';
     ui['max-mb'].value = '';
+    ui['max-characters'].value = '';
     ui['upload-limits'].open = false;
   }
-  for (const id of ['max-pages', 'max-mb']) ui[id].removeAttribute('aria-invalid');
-  for (const id of ['page-limit-result', 'size-limit-result']) ui[id].textContent = '';
+  for (const id of ['max-pages', 'max-mb', 'max-characters']) ui[id].removeAttribute('aria-invalid');
+  for (const id of ['page-limit-result', 'size-limit-result', 'text-limit-result']) ui[id].textContent = '';
   ui.error.textContent = '';
   ui.error.hidden = true;
   ui.status.textContent = message;
@@ -143,8 +146,25 @@ function updateTextControls() {
   ui['copy-all'].disabled = !hasText;
   ui['save-text'].disabled = !hasText;
   ui['reset-text'].disabled = !ready || ui['all-text'].value === current.originalText;
+  ui['max-characters'].disabled = !ready;
+  updateTextLimit();
   window.removeEventListener('beforeunload', warnBeforeUnload);
   if (hasTextEdits()) window.addEventListener('beforeunload', warnBeforeUnload);
+}
+
+function updateTextLimit() {
+  if (typeof current?.originalText !== 'string') return;
+  const check = checkTextLimit(ui['all-text'].value, ui['max-characters'].value);
+  const characters = count => `${count.toLocaleString('en-US')} ${count === 1 ? 'character' : 'characters'}`;
+  const messages = {
+    unset: `${characters(check.count)}.`,
+    invalid: `${characters(check.count)}. Enter a positive whole number for the limit, or leave blank.`,
+    within: `${characters(check.count)}. ${characters(check.limit - check.count)} remaining.`,
+    over: `${characters(check.count)}. ${characters(check.count - check.limit)} over the limit.`,
+  };
+  ui['max-characters'].setAttribute('aria-invalid', String(check.status === 'invalid'));
+  ui['text-limit-result'].textContent = messages[check.status];
+  ui['text-limit-result'].classList.toggle('limit-warning', ['invalid', 'over'].includes(check.status));
 }
 
 function updateUploadLimits() {
@@ -501,6 +521,7 @@ ui['clear-file'].addEventListener('click', () => {
 });
 ui['copy-all'].addEventListener('click', () => void copyText(ui['all-text'], ui['copy-all']));
 ui['all-text'].addEventListener('input', updateTextControls);
+ui['max-characters'].addEventListener('input', updateTextLimit);
 for (const id of ['max-pages', 'max-mb']) ui[id].addEventListener('input', updateUploadLimits);
 ui['save-text'].addEventListener('click', saveText);
 ui['reset-text'].addEventListener('click', () => {
