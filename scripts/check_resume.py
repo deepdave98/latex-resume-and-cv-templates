@@ -2,7 +2,9 @@
 """Check a personal PDF for basic text-extraction failures, without a baseline."""
 
 import argparse
+from decimal import Decimal
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -16,7 +18,7 @@ class CheckError(Exception):
     """A failed check, with a message that does not contain resume text."""
 
 
-def extract_text(pdf):
+def extract_text(pdf, max_bytes=None):
     """Run Poppler locally. Never include its output in error messages."""
     try:
         resolved = pdf.expanduser().resolve(strict=True)
@@ -26,6 +28,9 @@ def extract_text(pdf):
         with resolved.open("rb") as source:
             if not source.read(1):
                 raise CheckError("The input file is empty.")
+        size = resolved.stat().st_size
+        if max_bytes is not None and size > max_bytes:
+            raise CheckError(f"File size is {size:,} bytes; limit {max_bytes:,} bytes.")
     except FileNotFoundError as error:
         raise CheckError("PDF not found. Check the file path.") from error
     except (OSError, RuntimeError, ValueError) as error:
@@ -91,8 +96,20 @@ def check_text(text, max_pages=None):
     return len(pages)
 
 
-def check_pdf(pdf, max_pages=None):
-    return check_text(extract_text(pdf), max_pages=max_pages)
+def check_pdf(pdf, max_pages=None, max_bytes=None):
+    return check_text(extract_text(pdf, max_bytes=max_bytes), max_pages=max_pages)
+
+
+def megabyte_limit(value):
+    message = "Use a positive decimal MB value of at least 0.000001 (one byte)."
+    if len(value) > 32 or not re.fullmatch(r"(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)", value):
+        raise argparse.ArgumentTypeError(message)
+    numerator, denominator = Decimal(value).as_integer_ratio()
+    # Compare whole bytes without binary floats or Decimal context rounding.
+    limit = numerator * 1_000_000 // denominator
+    if limit < 1:
+        raise argparse.ArgumentTypeError(message)
+    return limit
 
 
 def positive_integer(value):
@@ -119,14 +136,20 @@ def main(argv=None):
         "--max-pages", type=positive_integer, metavar="N",
         help="fail above this page count; no limit by default",
     )
+    parser.add_argument(
+        "--max-size-mb", type=megabyte_limit, dest="max_bytes", metavar="MB",
+        help="fail above this file size; 1 MB = 1,000,000 bytes; no limit by default",
+    )
     args = parser.parse_args(argv)
     try:
-        pages = check_pdf(args.pdf, max_pages=args.max_pages)
+        pages = check_pdf(args.pdf, max_pages=args.max_pages, max_bytes=args.max_bytes)
     except CheckError as error:
         print(f"FAIL: {error}", file=sys.stderr)
         return 1
     label = "page" if pages == 1 else "pages"
     print(f"PASS: {pages} {label}; text found on every page; no flagged characters.")
+    if args.max_bytes is not None:
+        print(f"File size is within the {args.max_bytes:,}-byte limit.")
     print("Extraction only. Review the PDF and its text before sending.")
     return 0
 

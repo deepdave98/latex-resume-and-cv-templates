@@ -80,4 +80,12 @@ The [terminal checker](../tests/README.md#check-your-own-resume) needs Python 3.
 - Ubuntu/Debian: `sudo apt install python3 poppler-utils`
 - Windows: install Python and Poppler, add Poppler's `bin` directory to `PATH`, and use `py -3` instead of `python3`.
 
+To check an exported PDF against an application's page and file-size limits:
+
+```bash
+python3 scripts/check_resume.py "path/to/your-resume.pdf" --max-pages 1 --max-size-mb 2
+```
+
+Both flags are optional. File size uses decimal MB (1 MB = 1,000,000 bytes). The checker also checks for empty text pages and extraction errors; it does not change the PDF.
+
 [Back to the README](../README.md#build-locally)
