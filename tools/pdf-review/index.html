@@ -101,7 +101,17 @@
               </div>
               <p class="field-hint" id="all-text-hint">Edit spacing or wording here, then copy or save. Changes affect this text copy, not the PDF. Opening another file, clearing, or resetting asks before discarding edits.</p>
               <p id="draft-warning" class="notice notice--warning" hidden>Some PDF text was not extracted. Compare this copy with every page before using it.</p>
-              <textarea id="all-text" class="page-text all-text" rows="12" readonly spellcheck="false" aria-describedby="all-text-hint"></textarea>
+              <textarea id="all-text" class="page-text all-text" rows="12" readonly spellcheck="false" aria-describedby="all-text-hint text-limit-result"></textarea>
+              <div class="text-limit-controls">
+                <div class="limit-fields">
+                  <div>
+                    <label for="max-characters">Character limit (optional)</label>
+                    <input id="max-characters" type="text" inputmode="numeric" maxlength="32" autocomplete="off" spellcheck="false" aria-describedby="text-limit-hint text-limit-result" disabled>
+                  </div>
+                </div>
+                <p id="text-limit-result" role="status" aria-live="polite" aria-atomic="true"></p>
+              </div>
+              <p class="field-hint" id="text-limit-hint">Includes spaces and line breaks. Check the form's own counter before submitting. Text is never shortened to fit.</p>
             </div>
           </details>
 

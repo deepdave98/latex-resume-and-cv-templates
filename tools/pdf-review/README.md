@@ -26,6 +26,14 @@ File size uses decimal MB (1 MB = 1,000,000 bytes); the exact byte count is also
 
 Open a revised PDF to check it against the same limits. Clearing, reloading, or closing the page discards the limits; an unreadable or rejected file also resets them. The reviewer's own 20 MiB / 20-page cap still applies.
 
+## Application text limits
+
+**Text for application forms** shows a character count as you edit. Enter a **Character limit (optional)** to see how many characters remain or how far over you are. Leave it blank to show only the count. The limit never cuts text or blocks copying and saving.
+
+Counts use UTF-16 code units, like [native browser text fields](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/maxlength). Spaces and line breaks count; emoji and some accented characters can use more than one unit. Check the form's own counter before submitting. An incomplete extraction still needs checking against the PDF, even when its text fits the limit.
+
+Resetting text or opening a revised PDF keeps the limit. Clearing, reloading, closing, or rejecting a file discards it along with the review. Nothing is saved automatically.
+
 ## What to check
 
 - **Extracted text:** look for missing words, odd symbols, and wrong reading order. Ligatures such as `ﬁ` become ordinary letters for copying.
@@ -80,6 +88,7 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/link-region.mjs` | Annotation coordinates clipped to the rendered page |
 | `src/page-size.mjs` | Paper names, dimensions, and orientation from PDF page geometry |
 | `src/text-download.mjs` | UTF-8 text exports and safe download names |
+| `src/text-limits.mjs` | Character counts and optional application-text limits |
 | `src/upload-limits.mjs` | Optional page and file-size comparisons |
 | `build.mjs` | Embedded PDF.js resources, CSP hashes, and ZIP |
 | `tests/` | Unit, package, privacy, and browser checks |

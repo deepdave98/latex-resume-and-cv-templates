@@ -596,9 +596,10 @@ test("warns about form values that page-text extraction may omit", async ({ page
   await reviewFile(page, filePayload(pdfFixture([{ text: "Form resume", formValue: "Stored form value" }])));
   await expect(page.locator("#review")).toContainText(/form/i);
   // PDF form widgets must not become active inputs. The only review inputs
-  // belong to our optional upload-limit controls, not the document.
+  // belong to our optional limit controls, not the document.
   await expect(page.locator("#pages input, #pages form")).toHaveCount(0);
-  await expect(page.locator("#review input")).toHaveCount(2);
+  expect(await page.locator('#review input').evaluateAll(inputs => inputs.map(input => input.id).sort()))
+    .toEqual(['max-characters', 'max-mb', 'max-pages']);
   await assertPrivate(context, page, observations);
 });
 
@@ -792,6 +793,136 @@ test('copy all uses the edited draft while copy page retains the PDF text', asyn
   await page.locator('#copy-all').click();
   await page.getByRole('button', { name: 'Copy page text' }).click();
   expect(await page.evaluate(() => globalThis.copiedValues)).toEqual(['Edited text for the form', 'Original PDF text']);
+  await assertPrivate(context, page, observations);
+});
+
+for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
+  test(`${label}: counts application text as it is edited and reset`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'Draft' }])));
+    await page.locator('.all-text-panel > summary').click();
+    const draft = page.locator('#all-text');
+    const limit = page.getByLabel('Character limit (optional)');
+    const result = page.locator('#text-limit-result');
+    await expect(result).toHaveText('5 characters.');
+    await limit.fill('5');
+    await expect(result).toHaveText('5 characters. 0 characters remaining.');
+    await draft.focus();
+    await draft.press('End');
+    await page.keyboard.type('!');
+    await expect(result).toHaveText('6 characters. 1 character over the limit.');
+    await expect(draft).toHaveValue('Draft!');
+    await expect(draft).toHaveAttribute('maxlength', '500100');
+    await draft.fill('A😀é\ne\u0301');
+    await limit.fill('7');
+    await expect(result).toHaveText('7 characters. 0 characters remaining.');
+    await expect(result).not.toHaveClass(/limit-warning/);
+    await draft.fill('');
+    await expect(result).toHaveText('0 characters. 7 characters remaining.');
+    await expect(page.locator('#copy-all')).toBeDisabled();
+    await expect(page.locator('#save-text')).toBeDisabled();
+    await discardDecision(page, () => page.locator('#reset-text').click(), true);
+    await expect(result).toHaveText('5 characters. 2 characters remaining.');
+    await expect(limit).toHaveValue('7');
+    await limit.fill('');
+    await expect(result).toHaveText('5 characters.');
+    await expect(page.locator('.page-card textarea')).toHaveValue('Draft');
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('invalid and exceeded text limits leave the whole draft available to copy and save', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original text' }])));
+  await page.locator('.all-text-panel > summary').click();
+  const edited = 'Zoë\nA😀';
+  await page.locator('#all-text').fill(edited);
+  await page.locator('#max-characters').fill('1e3');
+  await expect(page.locator('#max-characters')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#text-limit-result')).toHaveText('7 characters. Enter a positive whole number for the limit, or leave blank.');
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true, value: { writeText: async value => { globalThis.copiedText = value; } },
+    });
+  });
+  await page.locator('#copy-all').click();
+  expect(await page.evaluate(() => globalThis.copiedText)).toBe(edited);
+  await page.locator('#max-characters').fill('6');
+  await expect(page.locator('#max-characters')).toHaveAttribute('aria-invalid', 'false');
+  await expect(page.locator('#text-limit-result')).toHaveText('7 characters. 1 character over the limit.');
+  const pending = page.waitForEvent('download');
+  await page.locator('#save-text').click();
+  const download = await pending;
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  expect(Buffer.concat(chunks).toString('utf8')).toBe(edited);
+  expect(await download.failure()).toBeNull();
+  await expect(page.locator('#all-text')).toHaveValue(edited);
+  await assertPrivate(context, page, observations);
+});
+
+test('text limits survive replacement and cancellation, then clear with the review', async ({ page, context }) => {
+  const observations = await openReview(page, context, artifactURL);
+  const original = filePayload(pdfFixture([{ text: 'First' }]));
+  const replacement = filePayload(pdfFixture([{ text: 'Second PDF' }]));
+  await reviewFile(page, original);
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#max-characters').fill('6');
+  await page.locator('#all-text').fill('My draft');
+  for (const action of [
+    () => page.locator('#pdf-file').setInputFiles(replacement),
+    () => page.locator('#clear-file').click(),
+    () => page.locator('#reset-text').click(),
+  ]) {
+    await discardDecision(page, action, false);
+    await expect(page.locator('#text-limit-result')).toHaveText('8 characters. 2 characters over the limit.');
+    await expect(page.locator('#max-characters')).toHaveValue('6');
+    await expect(page.locator('#all-text')).toHaveValue('My draft');
+  }
+  await discardDecision(page, () => reviewFile(page, replacement), true);
+  await page.locator('.all-text-panel > summary').click();
+  await expect(page.locator('#text-limit-result')).toHaveText('10 characters. 4 characters over the limit.');
+  await expect(page.locator('#max-characters')).toHaveValue('6');
+  await page.locator('#clear-file').click();
+  await expect(page.locator('#max-characters')).toHaveValue('');
+  await expect(page.locator('#max-characters')).toBeDisabled();
+  await expect(page.locator('#text-limit-result')).toBeEmpty();
+  await reviewFile(page, original);
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#max-characters').fill('6');
+  await page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF')));
+  await expect(page.locator('#error')).toBeVisible();
+  await expect(page.locator('#max-characters')).toHaveValue('');
+  await expect(page.locator('#text-limit-result')).toBeEmpty();
+  await reviewFile(page, original);
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#max-characters').fill('6');
+  await page.reload();
+  await expect(page.locator('#max-characters')).toHaveValue('');
+  await expect(page.locator('#text-limit-result')).toBeEmpty();
+  await assertPrivate(context, page, observations);
+});
+
+test('the text limit is reachable by keyboard and fits narrow screens', async ({ page, context }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Draft' }])));
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').focus();
+  await page.keyboard.press('Tab');
+  const limit = page.getByLabel('Character limit (optional)');
+  await expect(limit).toBeFocused();
+  await page.keyboard.type('4');
+  await expect(page.locator('#text-limit-result')).toHaveText('5 characters. 1 character over the limit.');
+  await expect(page.locator('#text-limit-result')).toHaveAttribute('role', 'status');
+  await limit.fill('9007199254740991');
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const bounds = await limit.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+  }
   await assertPrivate(context, page, observations);
 });
 
