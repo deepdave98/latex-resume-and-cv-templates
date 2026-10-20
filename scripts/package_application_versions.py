@@ -13,13 +13,13 @@ ARCHIVE_NAME = "application-versions.zip"
 # Keep this explicit. A directory walk could publish someone's private resume,
 # an old PDF, or a build log alongside the example.
 SOURCES = {
+    "resume.tex": "examples/application-versions/resume.tex",
     "backend.tex": "examples/application-versions/backend.tex",
-    "frontend.tex": "examples/application-versions/frontend.tex",
-    "infrastructure.tex": "examples/application-versions/infrastructure.tex",
     "setup.tex": "examples/application-versions/setup.tex",
     "latexmkrc": "examples/application-versions/latexmkrc",
     "README.md": "examples/application-versions/README.md",
     "content/profile.tex": "examples/application-versions/content/profile.tex",
+    "content/projects.tex": "examples/application-versions/content/projects.tex",
     "content/experience.tex": "examples/application-versions/content/experience.tex",
     "content/education.tex": "examples/application-versions/content/education.tex",
     "content/skills.tex": "examples/application-versions/content/skills.tex",

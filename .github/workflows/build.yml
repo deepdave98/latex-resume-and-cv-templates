@@ -98,6 +98,5 @@ jobs:
             downloads/ml-engineer-resume.zip
             downloads/graduate-admissions-resume.zip
             downloads/application-versions.zip
+            output/pdf/application-resume.pdf
             output/pdf/application-backend.pdf
-            output/pdf/application-frontend.pdf
-            output/pdf/application-infrastructure.pdf

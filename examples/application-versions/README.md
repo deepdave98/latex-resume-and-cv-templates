@@ -1,66 +1,98 @@
-# One source, three application versions
+# One resume, tailored applications
 
-Share contacts, dates, and work history across backend, frontend, and infrastructure applications. Each version selects its own bullets. Recompile to pick up shared edits.
+Keep contacts, dates, projects, and work history in one place. Each application chooses which entries and bullets to show.
+
+[Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fapplication-versions.zip&engine=xelatex&main_document=resume.tex) · [Download ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/application-versions.zip) · [Base PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-resume.pdf) · [Backend PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-backend.pdf)
 
 ## Start
 
-[Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fapplication-versions.zip&engine=xelatex&main_document=backend.tex) or [download the ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/application-versions.zip).
+Extract the ZIP into a folder for your own resume, outside a public repository. In Overleaf, keep all its files in one project and use XeLaTeX.
 
-The ZIP contains all three versions and their shared files. Keep them in one project; three separate Overleaf projects would stop sharing edits.
+- `resume.tex` is your base selection. It starts with education, two projects, and skills; no job is required.
+- `backend.tex` uses the same facts, brings query work first, and leaves out one interface bullet.
+- `content/` holds the actual text. Nothing appears in a PDF until an entry file selects it.
 
-In Overleaf, go to **Settings > Compiler > Main document** and choose `backend.tex`, `frontend.tex`, or `infrastructure.tex`. The import starts with `backend.tex` and XeLaTeX. Recompile after changing the selection. An open file with its own `\documentclass` can compile instead of the selected main document, so confirm the PDF contains the version you intend to send. [Main document settings](https://docs.overleaf.com/getting-started/recompiling-your-project/the-main-document)
-
-Locally, run this inside the extracted ZIP or `examples/application-versions/`:
-
-```bash
-latexmk -outdir=build backend.tex frontend.tex infrastructure.tex
-```
-
-The included `latexmkrc` selects XeLaTeX. The PDFs are `build/backend.pdf`, `build/frontend.pdf`, and `build/infrastructure.pdf`. To build only one, pass only that file. This command also works on Windows with `latexmk` on `PATH`.
-
-From the repository root, `make application-versions` writes the PDFs to `build/application-versions/`.
+Replace the example content with your own work. The base resume is a selection too; it does not automatically print every bullet you add.
 
 ## Edit facts once
 
-| File | Edit here |
+| File | What belongs here |
 | --- | --- |
-| `content/profile.tex` | Name, city, contacts, and profile links |
-| `content/experience.tex` | Titles, employers, dates, and the full set of work bullets |
-| `content/education.tex` | Education |
-| `content/skills.tex` | Skills |
-| `backend.tex`, `frontend.tex`, `infrastructure.tex` | Bullet selection and order for each application |
-| `setup.tex` | Shared imports and the one-page warning |
-| `resume.cls` | Styling; supplied in the ZIP, reused from the root in a clone |
+| `content/profile.tex` | Name, city, contacts, and links inside `\SharedHeader` |
+| `content/education.tex` | Degrees and dates inside `\SharedEducation` |
+| `content/projects.tex` | Project headings and their named bullets |
+| `content/experience.tex` | Optional job headings and their named bullets |
+| `content/skills.tex` | Skills inside `\SharedSkills` |
+| `resume.tex`, `backend.tex` | Section order, selected entries, and selected bullets |
+| `setup.tex` | Shared imports and page budget |
+| `resume.cls` | Layout; included in the ZIP |
 
-Replace every example with your own facts. Do not change your title or employer to match a job posting. Select work that is relevant and that you can explain.
+Change a shared fact here, then rebuild the versions that use it. PDFs you already downloaded stay unchanged.
 
-## Select bullets
+## Make an application version
 
-Each named command in `content/experience.tex` holds one bullet. The version files list the commands to include inside `jobduties`. Remove a command to omit a bullet; move it to change the order. The text stays in the shared file.
+Copy `resume.tex` to a name such as `company-role.tex`. Keep it beside the original so it uses the same shared files.
 
-To add a bullet, define it once in `content/experience.tex`:
+In the copy, move whole section or entry blocks to change their order. Inside a `jobduties` list, remove a command to omit a bullet or move it to change the order. For example:
 
 ```latex
-\newcommand{\BulletExportRecovery}{%
-  \ResumeBullet{Fixed [export failure] by [change]; verified [recovery behavior] with [test].}%
+\SharedToolProject
+\begin{jobduties}
+  \ToolStorage
+  \ToolWorkflow
+\end{jobduties}
+```
+
+This selects two bullets in that order. It leaves `\ToolRecovery` out of this PDF without deleting it from `content/projects.tex` or changing your base resume.
+
+To omit a project or job, remove its heading command and the following `jobduties` block from that version. Changing a selection never changes the shared facts.
+
+## Bring your existing resume
+
+Start from a copy of your completed starter. Move the content rather than rewriting your achievements to fit these examples.
+
+1. Put your `\resumename` and `\resumecontact` block inside `\SharedHeader` in `content/profile.tex`.
+2. Put your education entries inside `\SharedEducation` and your skills list inside `\SharedSkills`, replacing the examples.
+3. Move each project heading into a named command in `content/projects.tex`. Move each bullet into its own command, replacing `\item` with `\ResumeBullet{...}`:
+
+```latex
+\newcommand{\SharedMyProject}{%
+  \jobentry{[Project type and tools]}{[Project name]}{}{[Dates]}
+}
+\newcommand{\MyProjectFeature}{%
+  \ResumeBullet{[Your existing bullet text]}
 }
 ```
 
-Then select it inside the relevant role's `jobduties` list:
+4. Select those commands in `resume.tex` and each application that needs them:
 
 ```latex
-\BulletExportRecovery
+\SharedMyProject
+\begin{jobduties}
+  \MyProjectFeature
+\end{jobduties}
 ```
 
-Use a unique command name containing letters only. Keep `\ResumeBullet{...}` around the text: it adds the list item and checks that selected bullet for placeholders. Do not add another `\item` before it. An unknown command is a compile error, not an omitted bullet.
+Use unique command names containing letters only. Keep `\ResumeBullet` around literal bullet text so selected placeholders are checked. A misspelled command stops compilation.
 
-To add a role, copy one shared role command and define it under a new name. Add that command and its selected bullet list to each version where the role belongs. Keep entries in reverse chronological order. The versions choose content explicitly; new roles and bullets are not included automatically.
+**From the no-internship starter:** move your projects using the steps above. Keep Other Experience only if relevant; a paid job, club role, or volunteer entry can use the same pattern in `content/experience.tex`. There is no requirement to add software employment.
 
-## Check before sending
+**From the new-grad starter:** also move your job heading and bullets into `content/experience.tex`. The example provides `\SharedRole`, `\RoleFeature`, and `\RoleFix` to replace with your content. In each entry file, remove the leading `% ` from the lines between `BEGIN OPTIONAL EXPERIENCE` and `END OPTIONAL EXPERIENCE`. Move that whole section above Projects when your work experience is more relevant. Keep the original title and dates across versions.
 
-Rebuild every version you plan to send. Editing a shared file does not update a PDF you already downloaded.
+To add another job or project, repeat the heading-and-bullets pattern with new command names. Select it only in the versions that need it.
 
-- Read each PDF, including contacts, dates, links, and page breaks.
-- Check the compile log for placeholders and the one-page limit.
-- Unselected bullets are not checked. Review them when you select them later. Text hidden inside your own commands may also escape the checks.
-- Only a PDF contains the selected version. The source ZIP contains the entire bullet bank, including unselected material. Do not send it with an application or post private work in a public fork.
+## Build and check
+
+In Overleaf, choose an entry file under **Settings > Compiler > Main document** and recompile. An open file containing `\documentclass` may compile instead of the selected main document; confirm the resulting PDF is the application you intend to send. [Overleaf's main-document behavior](https://docs.overleaf.com/getting-started/recompiling-your-project/the-main-document)
+
+Locally, with XeLaTeX and `latexmk` installed:
+
+```bash
+latexmk -outdir=build resume.tex backend.tex
+```
+
+The bundled `latexmkrc` selects XeLaTeX. Outputs are `build/resume.pdf` and `build/backend.pdf`. Build a new application by passing its filename, such as `latexmk -outdir=build company-role.tex`. These commands work from the extracted folder; a repository clone also provides `make application-versions`.
+
+Read the exported PDF, check contacts and links, and resolve placeholder and page-limit warnings. The one-page budget is in `setup.tex`; change it when a longer resume is intentional. Only selected content is checked, so review an unused bullet when you choose it later.
+
+Send the PDF. The source ZIP includes your whole collection of facts and bullets, including work omitted from that application.

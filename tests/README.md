@@ -82,9 +82,9 @@ The default role templates contain no research or publication claims. Their sour
 
 ## Shared-content application versions
 
-`make test-application-versions` checks the optional project separately from the regular starters. It checks the ZIP against an explicit source allowlist, compiles all three source and downloaded versions, and compares their text with `expected/application-*-1.txt`.
+`make test-application-versions` checks the optional project separately from the regular starters. It checks the ZIP against an explicit source allowlist, compiles the base resume and backend application from source and download, and compares their text with `expected/application-*-1.txt`.
 
-Fixtures cover shared contact, date, and education edits; selected and unselected bullets; changed selection order; unknown commands; placeholder warnings; and Letter/A4 page bounds. The source ZIP contains the full bullet bank, while each PDF must contain only its selected bullets.
+Fixtures compile the guide's selection and migration examples and cover shared facts, the optional work section, a new named application, selected and unselected bullets, unknown commands, placeholder warnings, and Letter/A4 page bounds. Both examples work without employment. The source ZIP contains the full bullet bank, while each PDF must contain only its selected bullets.
 
 Without make:
 
@@ -94,7 +94,7 @@ python3 tests/check_application_versions.py
 python3 tests/check_application_versions.py --published
 ```
 
-After changing the example, run `make preview-application-versions` and inspect all three pages. Review their extracted text before updating the matching baselines. Run `make application-download`, then `make test-application-versions`. The other starter baselines should not change.
+After changing the example, run `make preview-application-versions` and inspect both pages. Review their extracted text before updating the matching baselines. Run `make application-download`, then `make test-application-versions`. The other starter baselines should not change.
 
 ## Change a baseline
 

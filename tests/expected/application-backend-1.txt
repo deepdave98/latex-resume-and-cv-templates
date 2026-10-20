@@ -1,31 +1,27 @@
 Your Name
 City, Region ⋄ +1 (555) 555-5555 ⋄ hello@example.com ⋄ LinkedIn ⋄ GitHub
 
-Experience
 
-Company A – City, Region Month Year – Present
-Software Engineer
-• Made [operation] safe to retry with [idempotency key and storage rule]; tested duplicate requests and a timeout after
-commit.
-• Profiled [query] on [dataset], changed [index or access pattern], and compared latency under [the same workload].
-• Changed [API contract] without breaking [existing consumer], using [versioning or compatibility approach] and contract
-tests.
-• Traced [recurring failure] to [cause], fixed [component], and added a regression test covering [trigger].
+Education
 
-Company B – City, Region Month Year – Month Year
-Software Engineer
-• Implemented [endpoint] with [authorization rule]; tested denied access, invalid input, and [successful operation].
-• Added [background job] with bounded retries and [failed-job handling]; tested [partial failure] without repeating [side
-effect].
-• Shipped [change] behind [flag or staged rollout], checked [success signal], and documented [rollback trigger].
+[University] – [City, Region]                                                                 [Graduation Month Year]
+[Degree]
+
+Projects
+
+[Course project]                                                                                        [Month Year]
+Course project; [Language and tools]
+• Owned [component] in a [N]-person course project; integrated it with [another component].
+• Changed [query or index] to handle [workload]; compared runtime on [the same dataset].
+• Tested [operation] with [boundary condition] and fixed [failure].
+
+[Personal project]                                                                                      [Month Year]
+Personal project; [Language and tools]
+• Built [application] so [users] could [task].
+• Stored [records] in [database]; enforced [constraint] to prevent [invalid state].
 
 Skills
 
 • Languages: [Language], [Language].
 • Systems: [Database], [Cloud or Runtime], [Framework].
 • Tooling: [Testing], [Observability], [CI/CD].
-
-Education
-
-[University] – [City, Region] [Graduation Month Year]
-[Degree]

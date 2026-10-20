@@ -204,8 +204,7 @@ class ReadmeDownloadTests(unittest.TestCase):
             params = parse_qs(url.query, keep_blank_values=True)
             self.assertEqual(params.get("engine"), ["xelatex"])
             self.assertEqual(len(params.get("snip_uri", [])), 1)
-            main_document = "backend.tex" if params["snip_uri"] == [self.application_download] else "resume.tex"
-            self.assertEqual(params.get("main_document"), [main_document])
+            self.assertEqual(params.get("main_document"), ["resume.tex"])
             imports.extend(params["snip_uri"])
         self.assertCountEqual(imports, self.downloads + [self.application_download])
 
@@ -224,7 +223,7 @@ class ReadmeDownloadTests(unittest.TestCase):
         self.assertEqual(parse_qs(imports[0].query), {
             "snip_uri": [self.application_download],
             "engine": ["xelatex"],
-            "main_document": ["backend.tex"],
+            "main_document": ["resume.tex"],
         })
 
 

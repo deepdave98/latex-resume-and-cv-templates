@@ -6,6 +6,7 @@ BUILD_DIR := build
 PREVIEW_DIR := preview
 OUTPUT_DIR := output/pdf
 TEMPLATES := no-internship new-grad experienced ai-engineer ml-engineer graduate-admissions
+APPLICATION_VERSIONS := resume backend
 
 .PHONY: all $(TEMPLATES) preview $(addprefix preview-,$(TEMPLATES)) preview-ai-ml downloads clean
 .PHONY: test test-unit test-pdf-text test-personal-pdf test-downloads test-starters test-placeholders test-layout test-page-limits test-contacts test-ai-ml test-graduate-admissions
@@ -78,7 +79,7 @@ $(addprefix preview-,$(TEMPLATES)): preview-%: %
 application-versions:
 	@mkdir -p "$(BUILD_DIR)/application-versions"
 	@version_build_dir="$$(cd "$(BUILD_DIR)/application-versions" && pwd)" && \
-		cd examples/application-versions && $(LATEXMK) -xelatex -interaction=nonstopmode -halt-on-error -file-line-error -outdir="$$version_build_dir" backend.tex frontend.tex infrastructure.tex
+		cd examples/application-versions && $(LATEXMK) -xelatex -interaction=nonstopmode -halt-on-error -file-line-error -outdir="$$version_build_dir" $(addsuffix .tex,$(APPLICATION_VERSIONS))
 
 application-download:
 	$(PYTHON) scripts/package_application_versions.py
@@ -90,7 +91,7 @@ test-application-versions:
 
 preview-application-versions: application-versions
 	@mkdir -p "$(PREVIEW_DIR)" "$(OUTPUT_DIR)"
-	@for version in backend frontend infrastructure; do \
+	@for version in $(APPLICATION_VERSIONS); do \
 		cp "$(BUILD_DIR)/application-versions/$$version.pdf" "$(OUTPUT_DIR)/application-$$version.pdf" || exit 1; \
 		if command -v pdftoppm >/dev/null 2>&1; then \
 			pdftoppm -png -singlefile -f 1 -l 1 -r 180 "$(BUILD_DIR)/application-versions/$$version.pdf" "$(PREVIEW_DIR)/application-$$version" || exit 1; \
@@ -105,7 +106,7 @@ preview-application-versions: application-versions
 clean-application-versions:
 	@if test -d "$(BUILD_DIR)/application-versions"; then \
 		version_build_dir="$$(cd "$(BUILD_DIR)/application-versions" && pwd)" && \
-		cd examples/application-versions && $(LATEXMK) -C -outdir="$$version_build_dir" backend.tex frontend.tex infrastructure.tex; \
+		cd examples/application-versions && $(LATEXMK) -C -outdir="$$version_build_dir" $(addsuffix .tex,$(APPLICATION_VERSIONS)); \
 	fi
 
 clean:
