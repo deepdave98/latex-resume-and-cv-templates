@@ -32,6 +32,7 @@ python3 tests/check_page_limits.py
 python3 tests/check_contacts.py
 python3 tests/check_ai_ml.py
 python3 tests/check_graduate_admissions.py
+python3 tests/check_final_review.py
 ```
 
 On Windows, use `py -3` instead of `python3`. The PDF checker accepts `--no-internship`, `--new-grad`, `--experienced`, `--ai-engineer`, `--ml-engineer`, and `--graduate-admissions` for other locations.
@@ -128,3 +129,9 @@ pdftotext -layout "path/to/your-resume.pdf" -
 Check your name, email, dates, headings, bullet order, and text split across pages. This manual command prints personal data; redact it before opening an issue. Do the same with snapshot failure diffs, which quote template text.
 
 `make test-personal-pdf` runs the checker against all published starter PDFs. Unit tests cover blank pages, character handling, corrupt/locked files, timeouts, missing tools, command arguments, standalone use, and private-data suppression. Neither check writes to the input PDF.
+
+## Final review command
+
+`make test-final-review` runs real one-source builds through `scripts/review_resume.py`. It covers an extracted starter in a folder with spaces, a named application with shared facts, stale PDFs after a failed compile, placeholder and page-limit reminders, and a PDF with a blank text page. It also checks separate logs for `build.tex` and isolated output despite project compiler settings. An entrypoint check invokes the script from outside the checkout and verifies that published PDFs, previews, and downloads stay unchanged.
+
+Unit tests cover missing tools, invalid inputs, failed builds and extraction, and incomplete logs. The customer sequence is in [Before you send](../docs/before-you-send.md).

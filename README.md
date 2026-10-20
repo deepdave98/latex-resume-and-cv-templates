@@ -27,7 +27,7 @@ For AI or ML jobs, use the role starter when its work matches yours; move educat
 2. Replace contacts, education, and sample work in `resume.tex`. The bullets are prompts, not a checklist of things you must have done. Delete unused entries.
 3. Recompile. Check placeholder warnings, every page, and the PDF's links. Warnings can miss unfinished text.
 
-[Editing reference](docs/editing.md) · [Bullet examples](examples/engineering-bullets.md). Styling lives in `resume.cls`.
+[Editing reference](docs/editing.md) · [Bullet examples](examples/engineering-bullets.md) · [Before you send](docs/before-you-send.md). Styling lives in `resume.cls`.
 
 ## Build locally
 

@@ -9,7 +9,7 @@ TEMPLATES := no-internship new-grad experienced ai-engineer ml-engineer graduate
 APPLICATION_VERSIONS := resume backend
 
 .PHONY: all $(TEMPLATES) preview $(addprefix preview-,$(TEMPLATES)) preview-ai-ml downloads clean
-.PHONY: test test-unit test-pdf-text test-personal-pdf test-downloads test-starters test-placeholders test-layout test-page-limits test-contacts test-ai-ml test-graduate-admissions
+.PHONY: test test-unit test-pdf-text test-personal-pdf test-downloads test-starters test-placeholders test-layout test-page-limits test-contacts test-ai-ml test-graduate-admissions test-final-review
 .PHONY: application-versions application-download preview-application-versions test-application-versions clean-application-versions
 
 all: $(TEMPLATES)
@@ -22,7 +22,7 @@ downloads:
 	$(PYTHON) scripts/package_templates.py
 	$(PYTHON) scripts/package_application_versions.py
 
-test: test-unit test-pdf-text test-personal-pdf test-downloads test-starters test-placeholders test-layout test-page-limits test-contacts test-application-versions test-ai-ml test-graduate-admissions
+test: test-unit test-pdf-text test-personal-pdf test-downloads test-starters test-placeholders test-layout test-page-limits test-contacts test-application-versions test-ai-ml test-graduate-admissions test-final-review
 
 test-unit:
 	$(PYTHON) -m unittest discover -s tests -p 'test_*.py'
@@ -35,6 +35,9 @@ test-personal-pdf:
 	@for template in $(TEMPLATES); do \
 		$(PYTHON) scripts/check_resume.py "$(OUTPUT_DIR)/$$template-resume.pdf" --max-pages 1 || exit 1; \
 	done
+
+test-final-review:
+	$(PYTHON) tests/check_final_review.py
 
 test-downloads:
 	$(PYTHON) scripts/package_templates.py --check

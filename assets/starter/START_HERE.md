@@ -5,7 +5,7 @@ Edit `resume.tex`. Styling lives in `resume.cls`.
 1. Replace the name, contacts, links, education, and credentials with your own.
 2. Replace each example and `[placeholder]` with work you can explain. Delete sections you do not need.
 3. Compile and check the log for placeholders and extra pages. Replace flagged text or delete unused entries, then recompile.
-4. Inspect every page, then download the PDF. Warnings do not catch every unfinished example.
+4. Follow [Before you send](https://github.com/deepdave98/latex-resume-and-cv-templates/blob/main/docs/before-you-send.md) to review the extracted text, final PDF, and links. Warnings do not catch every unfinished example.
 
 In the no-internship starter, label course projects and your part of team work. Delete **Other Experience** if it does not apply.
 
