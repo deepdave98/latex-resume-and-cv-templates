@@ -12,7 +12,7 @@ Read a resume PDF beside its extracted text. Check where each link points and wh
 
 The download works offline. The PDF engine, fonts, and decoders are included in the HTML file.
 
-One PDF at a time, up to 20 MiB (20,971,520 bytes) and 20 pages. Password-protected files ask for the password locally. **Clear file** discards the review and text edits; choosing another file replaces them. Copy or save edits first.
+One PDF at a time, up to 20 MiB (20,971,520 bytes) and 20 pages. Password-protected files ask for the password locally. If you edit the text copy, replacing or clearing the file and resetting the text ask before discarding those edits. Cancelling keeps the current review. Copy or save edits before leaving; browsers may warn on reload or close, but that warning is not guaranteed on every device.
 
 ## Application upload limits
 
@@ -45,7 +45,7 @@ If someone hosts this page, their host can receive normal page-request data; it 
 
 ## Development
 
-Requires Node.js 24+:
+Requires Node.js 22.13+; CI uses Node.js 24:
 
 ```bash
 cd tools/pdf-review
@@ -61,7 +61,7 @@ npm run check
 
 Tests run in Chromium, Firefox, and WebKit. Chromium and Firefox use offline emulation. WebKit blocks all HTTP(S) instead because its offline emulation also blocks local blob workers. Every engine checks for zero post-load network requests and no browser storage.
 
-Interface checks cover file selection, copying without opening the text disclosure, clipboard failure, link highlighting, keyboard controls, rotation, clearing, and narrow screens. For visual review, open the public one- and two-page PDFs at desktop and phone widths. Check the first page is visible without scrolling past instructions, text and URLs wrap, and selecting a link identifies the right area. Repeat with an unreadable PDF and a scan; neither should look like a successful text check.
+Interface checks cover file selection, copying without opening the text disclosure, clipboard failure, link highlighting, keyboard controls, rotation, clearing, and narrow screens. Synthetic fixtures cover multi-page PDFs. For visual review, open the public PDFs at desktop and phone widths. Check the first page is visible without scrolling past instructions, text and URLs wrap, and selecting a link identifies the right area. Repeat with an unreadable PDF and a scan; neither should look like a successful text check.
 
 For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. The server serves only the generated page; it has no upload route.
 
