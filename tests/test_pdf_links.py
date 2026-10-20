@@ -25,12 +25,10 @@ class PublishedPDFLinks(unittest.TestCase):
         document = ROOT / "output/pdf/README.md"
         links = re.findall(r"\]\(([^)]+\.png)\)", document.read_text(encoding="utf-8"))
         actual = {(document.parent / link).resolve() for link in links}
-        expected = set()
-        for pdf in (ROOT / "output/pdf").glob("*.pdf"):
-            if pdf.stem == "experienced-resume":
-                expected.update(ROOT / f"preview/{pdf.stem}-page-{page}.png" for page in (1, 2))
-            else:
-                expected.add(ROOT / f"preview/{pdf.stem}.png")
+        expected = {
+            ROOT / f"preview/{pdf.stem}.png"
+            for pdf in (ROOT / "output/pdf").glob("*.pdf")
+        }
         self.assertEqual(actual, expected)
         for path in actual:
             with self.subTest(preview=path.name):

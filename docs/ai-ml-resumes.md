@@ -10,11 +10,7 @@ Choose by the work in the job description, not the title alone.
 
 For academic applications, use the [graduate-admissions CV](graduate-admissions.md).
 
-## Degree requirements differ
-
-An MLE title does not always require graduate research. Google's [AI/ML engineering posting](https://www.google.com/about/careers/applications/jobs/results/95693255462527686-software-engineer-iii-aiml-foundational-lanes) lists a bachelor's degree or equivalent experience as a minimum; a master's or PhD is preferred. By contrast, Amazon's [Applied Scientist posting](https://www.amazon.jobs/en/jobs/10491577/applied-scientist-prime-video-science) requires a PhD or a master's plus experience, along with publications or patents. These are examples checked in September 2026, not a survey of the market.
-
-Google's [Applied AI Engineer posting](https://www.google.com/about/careers/applications/jobs/results/133517804614623942-applied-ai-engineer) asks for software development and deployed AI systems. It does not require a graduate degree. Check each role's requirements.
+Check the job description's degree and research requirements before choosing what to emphasize. Use your actual titles and qualifications.
 
 ## Put the relevant work first
 

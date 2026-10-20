@@ -8,7 +8,7 @@ Share contacts, dates, and work history across backend, frontend, and infrastruc
 
 The ZIP contains all three versions and their shared files. Keep them in one project; three separate Overleaf projects would stop sharing edits.
 
-In Overleaf, go to **Settings > Compiler > Main document** and choose `backend.tex`, `frontend.tex`, or `infrastructure.tex`. The import starts with `backend.tex` and XeLaTeX. Recompile after changing the selection. When editing a shared file, Overleaf builds the selected main document. [Main document settings](https://docs.overleaf.com/getting-started/recompiling-your-project/the-main-document)
+In Overleaf, go to **Settings > Compiler > Main document** and choose `backend.tex`, `frontend.tex`, or `infrastructure.tex`. The import starts with `backend.tex` and XeLaTeX. Recompile after changing the selection. An open file with its own `\documentclass` can compile instead of the selected main document, so confirm the PDF contains the version you intend to send. [Main document settings](https://docs.overleaf.com/getting-started/recompiling-your-project/the-main-document)
 
 Locally, run this inside the extracted ZIP or `examples/application-versions/`:
 

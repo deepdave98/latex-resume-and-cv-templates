@@ -15,7 +15,7 @@ class TextChecks(unittest.TestCase):
     def test_page_count_registry_covers_all_starters(self):
         self.assertEqual(
             checker.PAGE_COUNTS,
-            {"new-grad": 1, "no-internship": 1, "experienced": 2,
+            {"new-grad": 1, "no-internship": 1, "experienced": 1,
              "ai-engineer": 1, "ml-engineer": 1, "graduate-admissions": 1},
         )
 

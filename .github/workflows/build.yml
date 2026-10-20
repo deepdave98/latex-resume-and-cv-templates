@@ -43,25 +43,23 @@ jobs:
             python3 tests/check_pdf_text.py --no-internship output/pdf/no-internship-resume.pdf --new-grad output/pdf/new-grad-resume.pdf --experienced output/pdf/experienced-resume.pdf --ai-engineer output/pdf/ai-engineer-resume.pdf --ml-engineer output/pdf/ml-engineer-resume.pdf --graduate-admissions output/pdf/graduate-admissions-resume.pdf
             python3 scripts/check_resume.py output/pdf/no-internship-resume.pdf --max-pages 1
             python3 scripts/check_resume.py output/pdf/new-grad-resume.pdf --max-pages 1
-            python3 scripts/check_resume.py output/pdf/experienced-resume.pdf --max-pages 2
+            python3 scripts/check_resume.py output/pdf/experienced-resume.pdf --max-pages 1
             python3 scripts/check_resume.py output/pdf/ai-engineer-resume.pdf --max-pages 1
             python3 scripts/check_resume.py output/pdf/ml-engineer-resume.pdf --max-pages 1
             python3 scripts/check_resume.py output/pdf/graduate-admissions-resume.pdf --max-pages 1
             test "$(pdfinfo no-internship-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
             test "$(pdfinfo new-grad-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
-            test "$(pdfinfo experienced-resume.pdf | awk '/^Pages:/ {print $2}')" = "2"
+            test "$(pdfinfo experienced-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
             test "$(pdfinfo ai-engineer-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
             test "$(pdfinfo ml-engineer-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
             test "$(pdfinfo graduate-admissions-resume.pdf | awk '/^Pages:/ {print $2}')" = "1"
             mkdir -p /tmp/resume-previews
             pdftoppm -png -singlefile -f 1 -l 1 -r 72 no-internship-resume.pdf /tmp/resume-previews/no-internship
             pdftoppm -png -singlefile -f 1 -l 1 -r 72 new-grad-resume.pdf /tmp/resume-previews/new-grad
-            pdftoppm -png -singlefile -f 1 -l 1 -r 72 experienced-resume.pdf /tmp/resume-previews/experienced-page-1
-            pdftoppm -png -singlefile -f 2 -l 2 -r 72 experienced-resume.pdf /tmp/resume-previews/experienced-page-2
+            pdftoppm -png -singlefile -f 1 -l 1 -r 72 experienced-resume.pdf /tmp/resume-previews/experienced
             test -s /tmp/resume-previews/new-grad.png
             test -s /tmp/resume-previews/no-internship.png
-            test -s /tmp/resume-previews/experienced-page-1.png
-            test -s /tmp/resume-previews/experienced-page-2.png
+            test -s /tmp/resume-previews/experienced.png
             pdftoppm -png -singlefile -f 1 -l 1 -r 72 ai-engineer-resume.pdf /tmp/resume-previews/ai-engineer
             pdftoppm -png -singlefile -f 1 -l 1 -r 72 ml-engineer-resume.pdf /tmp/resume-previews/ml-engineer
             test -s /tmp/resume-previews/ai-engineer.png

@@ -4,35 +4,35 @@ City, Region ⋄ +1 (555) 555-5555 ⋄ hello@example.com ⋄ LinkedIn ⋄ GitHub
 
 Experience
 
-Company A – City, Region                                                                                Month Year – Present
-Staff Software Engineer
+Company A – City, Region                                                                               Month Year – Present
+[Current role]
 • Chose [architecture] for [service] over [alternative] because [constraint]; split the migration into [stages] with [rollback
   condition].
 • Defined [shared API contract] with [consumer teams]; migrated [N] integrations and kept [old behavior] working until
   clients moved.
 • Traced [recurring outage] to [failure mode]; changed [isolation or recovery mechanism] and verified recovery with [failure
   test].
-• Coached [engineers] through [design or on-call responsibility]; documented [decision process] they used to take ownership
-  of [system].
 
-Company B – City, Region                                                                           Month Year – Month Year
-Senior Software Engineer
-• Designed [service] for [peak load]; bounded [queue or resource use] so [dependency failure] did not exhaust [shared resource].
+Company B – City, Region                                                                          Month Year – Month Year
+[Previous role]
 • Migrated [schema or datastore] with [dual-write or backfill method]; reconciled [records] before cutover and tested rollback.
 • Removed [bottleneck] in [request path], reducing production p99 latency from [A] to [B] ms at [comparable load].
 • Staged [release] behind [flag or canary]; paused rollout when [signal] crossed [threshold] and fixed [cause] before resuming.
 
-Company C – City, Region                                                                           Month Year – Month Year
-Software Engineer II
+Company C – City, Region                                                                          Month Year – Month Year
+[Earlier role]
 • Moved [slow operation] to [background worker]; made writes safe to replay and added handling for jobs that exhausted
   retries.
-• Profiled [query] on [dataset]; changed [index or access pattern] and compared runtime on the same workload.
 • Automated [manual workflow] with [validation check]; gave [operator] a way to inspect and rerun failed steps.
-
-Company D – City, Region                                                                           Month Year – Month Year
-Software Engineer
-• Built [workflow] with recovery from [failed request]; preserved [user input or operation state] and tested retry behavior.
-• Added [API operation] with [authorization rule]; tested permitted access and attempts to read another user’s records.
 • Fixed [defect] caused by [state or timing condition] and kept the failing case as a regression test.
-• Resolved [on-call incident], added an alert for [early warning signal], and tested the recovery steps with [teammate or
-  exercise].
+
+Skills
+
+• Languages: [Language], [Language], [Language].
+• Systems: [Framework], [Database], [Cloud or Runtime].
+• Tooling: [Testing], [Observability], [CI/CD].
+
+Education
+
+[University] – [City, Region]                                                                      [Graduation Month Year]
+[Degree and Major]

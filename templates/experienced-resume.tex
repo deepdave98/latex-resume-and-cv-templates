@@ -1,13 +1,8 @@
 % !TeX program = xelatex
 \documentclass{resume}
 
-% Warn in the compile log if this grows past two pages; nothing is resized.
-\resumepagelimit{2}
-
-\hypersetup{
-  pdftitle={Experienced Software Engineer Resume Template},
-  pdfsubject={Two-page resume template for experienced software engineers}
-}
+% Add a second page only when your relevant work needs it; use \resumepagelimit{2}.
+\resumepagelimit{1}
 
 \begin{document}
 
@@ -23,71 +18,41 @@
 
 \section{Experience}
 
-\jobentry{Staff Software Engineer}{Company A}{City, Region}{Month Year -- Present}
+% Use your actual titles. Delete unused roles; give recent work the most space.
+\jobentry{[Current role]}{Company A}{City, Region}{Month Year -- Present}
 \begin{jobduties}
   \item Chose [architecture] for [service] over [alternative] because [constraint]; split the migration into [stages] with [rollback condition].
   \item Defined [shared API contract] with [consumer teams]; migrated [N] integrations and kept [old behavior] working until clients moved.
   \item Traced [recurring outage] to [failure mode]; changed [isolation or recovery mechanism] and verified recovery with [failure test].
-  \item Coached [engineers] through [design or on-call responsibility]; documented [decision process] they used to take ownership of [system].
 \end{jobduties}
 
-\jobentry{Senior Software Engineer}{Company B}{City, Region}{Month Year -- Month Year}
+\jobentry{[Previous role]}{Company B}{City, Region}{Month Year -- Month Year}
 \begin{jobduties}
-  \item Designed [service] for [peak load]; bounded [queue or resource use] so [dependency failure] did not exhaust [shared resource].
   \item Migrated [schema or datastore] with [dual-write or backfill method]; reconciled [records] before cutover and tested rollback.
   \item Removed [bottleneck] in [request path], reducing production p99 latency from [A] to [B] ms at [comparable load].
   \item Staged [release] behind [flag or canary]; paused rollout when [signal] crossed [threshold] and fixed [cause] before resuming.
 \end{jobduties}
 
-\jobentry{Software Engineer II}{Company C}{City, Region}{Month Year -- Month Year}
+\jobentry{[Earlier role]}{Company C}{City, Region}{Month Year -- Month Year}
 \begin{jobduties}
   \item Moved [slow operation] to [background worker]; made writes safe to replay and added handling for jobs that exhausted retries.
-  \item Profiled [query] on [dataset]; changed [index or access pattern] and compared runtime on the same workload.
   \item Automated [manual workflow] with [validation check]; gave [operator] a way to inspect and rerun failed steps.
-\end{jobduties}
-
-\jobentry{Software Engineer}{Company D}{City, Region}{Month Year -- Month Year}
-\begin{jobduties}
-  \item Built [workflow] with recovery from [failed request]; preserved [user input or operation state] and tested retry behavior.
-  \item Added [API operation] with [authorization rule]; tested permitted access and attempts to read another user's records.
   \item Fixed [defect] caused by [state or timing condition] and kept the failing case as a regression test.
-  \item Resolved [on-call incident], added an alert for [early warning signal], and tested the recovery steps with [teammate or exercise].
-\end{jobduties}
-
-% This sample uses five roles across two pages. Delete roles you have not held.
-% Remove this break and Experience Continued if your relevant work fits one page.
-\newpage
-
-\section{Experience Continued}
-
-\jobentry{Associate Software Engineer}{Company E}{City, Region}{Month Year -- Month Year}
-\begin{jobduties}
-  \item Built [component] with [technology] for [workflow]; tested [acceptance condition] before release.
-  \item Reproduced [defect] from [safe test case], fixed [cause], and added it to the test suite.
-  \item Replaced [duplicated code] with [shared component]; checked that [existing callers] retained their behavior.
 \end{jobduties}
 
 \section{Skills}
 \begin{skillitems}
   \item \textbf{Languages}: [Language], [Language], [Language].
-  \item \textbf{Frameworks \& Libraries}: [Framework], [Framework], [Library].
-  \item \textbf{Platforms}: [Cloud], [Runtime], [Database], [Messaging].
+  \item \textbf{Systems}: [Framework], [Database], [Cloud or Runtime].
   \item \textbf{Tooling}: [Testing], [Observability], [CI/CD].
 \end{skillitems}
 
 \section{Education}
 
-\jobentry{BS Computer Science}{Dalhousie University}{Halifax, NS}{January 2019 -- December 2022}
-\begin{jobduties}
-  \item Teaching Assistant for Server-side Scripting and Web Development.
-\end{jobduties}
+\jobentry{[Degree and Major]}{[University]}{[City, Region]}{[Graduation Month Year]}
 
-\jobentry{Computing Science Coursework}{Simon Fraser University}{Vancouver, BC}{May 2018 -- December 2019}
-
-\section{Certifications}
-
-% Delete this section if you do not have relevant credentials.
-\jobentry{Issuing Organization}{Professional Certification}{}{Year}
-\jobentry{Issuing Organization}{Additional Certification}{}{Year}
+% Optional: uncomment only if you hold a credential relevant to the role.
+% \section{Certifications}
+% \jobentry{[Issuing Organization]}{[Certification]}{}{[Year]}
 
 \end{document}

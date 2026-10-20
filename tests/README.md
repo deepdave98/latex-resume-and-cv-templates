@@ -20,7 +20,7 @@ python3 tests/check_pdf_text.py
 python3 tests/check_pdf_text.py --no-internship output/pdf/no-internship-resume.pdf --new-grad output/pdf/new-grad-resume.pdf --experienced output/pdf/experienced-resume.pdf --ai-engineer output/pdf/ai-engineer-resume.pdf --ml-engineer output/pdf/ml-engineer-resume.pdf --graduate-admissions output/pdf/graduate-admissions-resume.pdf
 python3 scripts/check_resume.py output/pdf/no-internship-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/new-grad-resume.pdf --max-pages 1
-python3 scripts/check_resume.py output/pdf/experienced-resume.pdf --max-pages 2
+python3 scripts/check_resume.py output/pdf/experienced-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/ai-engineer-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/ml-engineer-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/graduate-admissions-resume.pdf --max-pages 1
@@ -62,7 +62,7 @@ Wrapped columns can interleave in layout-mode extraction. These stress tests che
 
 `make test-page-limits` checks one- and two-page budgets, extra pages, changed budgets, and invalid inputs. Fixtures cover a first build, a shortened rebuild, reset page numbers, discarded pages, and content added at the end of a document. It also checks that enabling reminders leaves extracted text unchanged.
 
-The class reads LaTeX's shipped-page counter after the final page. It does not infer length from printed page numbers or a previous build. A missing budget disables the check; invalid values warn without replacing the last valid budget. Starters use one page, except the experienced template's two.
+The class reads LaTeX's shipped-page counter after the final page. It does not infer length from printed page numbers or a previous build. A missing budget disables the check; invalid values warn without replacing the last valid budget. All shipped starters use one page; the fixtures also verify two-page and longer documents.
 
 Resolve LaTeX rerun warnings before checking the final length. When a last-page hook needs another run, the kernel can append a temporary page outside its shipped-page counter. A regression covers a two-page document shortened to one: the temporary page disappears on the next run and the settled count is correct.
 

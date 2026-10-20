@@ -36,10 +36,10 @@
   colorlinks=true,
   urlcolor=linkblue,
   linkcolor=linkblue,
-  pdftitle={LaTeX Resume Template},
+  pdftitle={Resume},
   pdfauthor={},
-  pdfsubject={Software engineering resume template},
-  pdfkeywords={resume, curriculum vitae, LaTeX, template},
+  pdfsubject={},
+  pdfkeywords={},
   pdfcreator={XeLaTeX},
   pdfproducer={}
 }

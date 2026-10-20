@@ -5,7 +5,7 @@
 ## Checklist
 
 - [ ] `make` passes with XeLaTeX.
-- [ ] The starters are one page each, except the two-page experienced resume.
+- [ ] The shipped starters are one page each.
 - [ ] I refreshed the PDFs and previews if the rendered output changed.
 - [ ] `make downloads` and `make test` pass.
 - [ ] I did not add real contact details, employers, or private information to the software engineering examples.
