@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+import re
 import shutil
 import stat
 import subprocess
@@ -20,49 +21,36 @@ import check_placeholders
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = ROOT
 DOWNLOADS_DIR = ROOT / "downloads"
-VARIANTS = ("backend", "frontend", "infrastructure")
+VARIANTS = ("resume", "backend")
 CONTACT_URLS = [
     "tel:+15555555555", "mailto:hello@example.com",
     "https://www.linkedin.com/in/your-handle", "https://github.com/your-handle",
 ]
 ARCHIVE_FILES = frozenset({
-    "backend.tex", "frontend.tex", "infrastructure.tex", "setup.tex",
+    "resume.tex", "backend.tex", "setup.tex",
     "latexmkrc", "README.md", "resume.cls", "LICENSE",
     "content/profile.tex", "content/experience.tex", "content/education.tex",
-    "content/skills.tex",
+    "content/skills.tex", "content/projects.tex",
 })
 SELECTIONS = {
+    "resume": (
+        "ToolWorkflow", "ToolRecovery", "ToolStorage",
+        "CourseContribution", "CourseQueries", "CourseChecks",
+    ),
     "backend": (
-        "CurrentIdempotency", "CurrentQuery", "CurrentCompatibility", "CurrentRegression",
-        "PreviousAuthorization", "PreviousWorker", "PreviousRollout",
-    ),
-    "frontend": (
-        "CurrentRecovery", "CurrentAccessibility", "CurrentRegression", "CurrentRendering",
-        "PreviousValidation", "PreviousComponent", "PreviousRollout",
-    ),
-    "infrastructure": (
-        "CurrentDeployment", "CurrentRestore", "CurrentCapacity", "CurrentRegression",
-        "PreviousBuild", "PreviousAlert", "PreviousRollout",
+        "CourseContribution", "CourseQueries", "CourseChecks",
+        "ToolWorkflow", "ToolStorage",
     ),
 }
 BULLET_STARTS = {
-    "CurrentIdempotency": "Made [operation] safe to retry",
-    "CurrentQuery": "Profiled [query] on [dataset]",
-    "CurrentCompatibility": "Changed [API contract]",
-    "CurrentRegression": "Traced [recurring failure]",
-    "CurrentRecovery": "Built [workflow] with loading",
-    "CurrentAccessibility": "Fixed [keyboard or screen-reader barrier]",
-    "CurrentRendering": "Profiled [slow interaction]",
-    "CurrentDeployment": "Rolled out [service change]",
-    "CurrentRestore": "Restored [service or dataset]",
-    "CurrentCapacity": "Load-tested [service]",
-    "PreviousAuthorization": "Implemented [endpoint]",
-    "PreviousWorker": "Added [background job]",
-    "PreviousRollout": "Shipped [change] behind",
-    "PreviousValidation": "Added validation to [form]",
-    "PreviousComponent": "Replaced [duplicated UI]",
-    "PreviousBuild": "Automated [build or deployment step]",
-    "PreviousAlert": "Replaced [noisy alert]",
+    "ToolWorkflow": "Built [application] so [users] could [task]",
+    "ToolRecovery": "Preserved [user input] after failed requests",
+    "ToolStorage": "Stored [records] in [database]",
+    "CourseContribution": "Owned [component] in a [N]-person course project",
+    "CourseQueries": "Changed [query or index] to handle [workload]",
+    "CourseChecks": "Tested [operation] with [boundary condition]",
+    "RoleFeature": "Built [feature] for [team or users]",
+    "RoleFix": "Fixed [failure] in [workflow]",
 }
 
 
@@ -212,6 +200,12 @@ class ApplicationVersionTests(unittest.TestCase):
         write_project(self.files, path)
         return path
 
+    def guide_block(self, starts_with):
+        blocks = re.findall(r"```latex\n(.*?)```", self.files["README.md"].decode("utf-8"), re.DOTALL)
+        matching = [block for block in blocks if block.startswith(starts_with)]
+        self.assertEqual(len(matching), 1, f"Expected one guide example beginning with {starts_with}")
+        return matching[0]
+
     def test_source_and_exact_download_build_all_versions(self):
         downloaded = read_archive(DOWNLOADS_DIR / "application-versions.zip")
         self.assertEqual(downloaded, self.files, "The ZIP does not match the current source; run make downloads")
@@ -233,7 +227,9 @@ class ApplicationVersionTests(unittest.TestCase):
                     check_selection(text, SELECTIONS[variant])
                     check_bounds(pdf)
                     self.assertEqual(check_contacts.extract_urls(pdf), CONTACT_URLS)
-                    self.assertEqual(check_placeholders.reminders(log).count("selected bullet."), 7)
+                    self.assertEqual(check_placeholders.reminders(log).count("selected bullet."), len(SELECTIONS[variant]))
+                    self.assertNotIn("Experience", text)
+                    self.assertNotIn("[Employer]", text)
 
     def test_all_versions_fit_a4_without_overlap(self):
         for variant in VARIANTS:
@@ -245,21 +241,22 @@ class ApplicationVersionTests(unittest.TestCase):
                 check_selection(text, SELECTIONS[variant])
                 check_bounds(pdf, "a4paper")
 
-    def test_shared_contact_employment_and_education_edits_reach_every_version(self):
+    def test_shared_contact_education_and_project_edits_reach_every_version(self):
         for before, after in (
             ("Your Name", "Alex Morgan"), ("hello@example.com", "alex_morgan+jobs@domain.test"),
             ("+1 (555) 555-5555", "+44 (20) 5555-0123"),
         ):
             replace_once(self.files, "content/profile.tex", before, after)
-        replace_once(self.files, "content/experience.tex", "Month Year -- Present", "January 2022 -- Present")
         replace_once(self.files, "content/education.tex", "[University]", "Example Institute")
         replace_once(self.files, "content/education.tex", "[Graduation Month Year]", "May 2021")
+        replace_once(self.files, "content/projects.tex", "[Personal project]", "Reading List")
+        replace_once(self.files, "content/projects.tex", "[Course project]", "Course Scheduler")
         project = self.project()
         for variant in VARIANTS:
             with self.subTest(variant=variant):
                 pdf, text, _ = compile_project(project, variant)
                 flat = " ".join(check_pdf_text.words(text))
-                for phrase in ("Alex Morgan", "alex_morgan+jobs@domain.test", "+44 (20) 5555-0123", "January 2022 – Present", "Example Institute", "May 2021"):
+                for phrase in ("Alex Morgan", "alex_morgan+jobs@domain.test", "+44 (20) 5555-0123", "Example Institute", "May 2021", "Reading List", "Course Scheduler"):
                     self.assertIn(phrase, flat)
                 self.assertNotIn("Your Name", text)
                 self.assertNotIn("hello@example.com", text)
@@ -267,40 +264,109 @@ class ApplicationVersionTests(unittest.TestCase):
                 self.assertIn("tel:+442055550123", check_contacts.extract_urls(pdf))
                 check_bounds(pdf)
 
+    def test_optional_work_uses_shared_role_facts_and_selected_bullets(self):
+        for variant in VARIANTS:
+            name = f"{variant}.tex"
+            source = self.files[name].decode("utf-8")
+            start = source.index("% BEGIN OPTIONAL EXPERIENCE\n") + len("% BEGIN OPTIONAL EXPERIENCE\n")
+            stop = source.index("% END OPTIONAL EXPERIENCE", start)
+            commented = source[start:stop]
+            self.assertTrue(all(line.startswith("% ") for line in commented.splitlines()))
+            replace_once(self.files, name, commented, "".join(line[2:] for line in commented.splitlines(keepends=True)))
+        for before, after in (
+            ("[Actual role]", "Software Engineering Intern"),
+            ("[Employer]", "Example Cooperative"),
+            ("[City, Region]", "Toronto, Ontario"),
+            ("[Month Year] -- [Month Year]", "May 2025 -- August 2025"),
+        ):
+            replace_once(self.files, "content/experience.tex", before, after)
+        project = self.project()
+        for variant in VARIANTS:
+            with self.subTest(variant=variant):
+                pdf, text, log = compile_project(project, variant)
+                flat = " ".join(check_pdf_text.words(text))
+                for phrase in ("Experience", "Software Engineering Intern", "Example Cooperative", "Toronto, Ontario", "May 2025 – August 2025"):
+                    self.assertIn(phrase, flat)
+                selection = (*SELECTIONS[variant], "RoleFeature", "RoleFix")
+                check_selection(text, selection)
+                self.assertEqual(check_placeholders.reminders(log).count("selected bullet."), len(selection))
+                check_bounds(pdf)
+
     def test_bullet_edits_reach_only_versions_selecting_them(self):
-        replace_once(self.files, "content/experience.tex", "Traced [recurring failure]", "Traced shared regression sentinel")
-        replace_once(self.files, "content/experience.tex", "Made [operation] safe to retry", "Made backend retry sentinel safe to retry")
+        replace_once(self.files, "content/projects.tex", "Built [application] so [users] could [task]", "Built a shared reading list")
+        replace_once(self.files, "content/projects.tex", "Preserved [user input] after failed requests", "Preserved a reading-list draft after failed requests")
         project = self.project()
         for variant in VARIANTS:
             with self.subTest(variant=variant):
                 _, text, _ = compile_project(project, variant)
                 flat = " ".join(check_pdf_text.words(text))
-                self.assertEqual(flat.count("shared regression sentinel"), 1)
-                self.assertEqual(flat.count("backend retry sentinel"), int(variant == "backend"))
-                self.assertNotIn("Traced [recurring failure]", flat)
+                self.assertEqual(flat.count("Built a shared reading list"), 1)
+                self.assertEqual(flat.count("Preserved a reading-list draft"), int(variant == "resume"))
+                self.assertNotIn("Built [application]", flat)
 
-    def test_wrapper_can_reorder_and_drop_bullets(self):
-        replace_once(self.files, "backend.tex", "  \\CurrentIdempotency\n  \\CurrentQuery\n  \\CurrentCompatibility\n  \\CurrentRegression", "  \\CurrentRegression\n  \\CurrentIdempotency")
-        _, text, _ = compile_project(self.project(), "backend")
-        check_selection(text, ("CurrentRegression", "CurrentIdempotency", "PreviousAuthorization", "PreviousWorker", "PreviousRollout"))
+    def test_named_application_can_reorder_and_drop_bullets_independently(self):
+        project = self.project()
+        named = project / "company-backend.tex"
+        shutil.copyfile(project / "resume.tex", named)
+        source = named.read_text(encoding="utf-8")
+        original = "\\SharedToolProject\n\\begin{jobduties}\n  \\ToolWorkflow\n  \\ToolRecovery\n  \\ToolStorage\n\\end{jobduties}\n"
+        self.assertEqual(source.count(original), 1)
+        named.write_text(source.replace(original, self.guide_block(r"\SharedToolProject")), encoding="utf-8")
+        pdf, text, _ = compile_project(project, "company-backend")
+        check_selection(text, ("ToolStorage", "ToolWorkflow", "CourseContribution", "CourseQueries", "CourseChecks"))
+        check_bounds(pdf)
+        for variant in VARIANTS:
+            with self.subTest(variant=variant):
+                _, text, _ = compile_project(project, variant)
+                check_selection(text, SELECTIONS[variant])
+
+    def test_migration_guide_compiles_existing_project_text_in_both_versions(self):
+        definitions = self.guide_block(r"\newcommand{\SharedMyProject}")
+        for before, after in (
+            ("[Project type and tools]", "Personal project; Python, SQLite"),
+            ("[Project name]", "Reading Notes"),
+            ("[Dates]", "September 2025"),
+            ("[Your existing bullet text]", "Saved notes in SQLite and tested persistence after restarting the app."),
+        ):
+            self.assertEqual(definitions.count(before), 1)
+            definitions = definitions.replace(before, after)
+        self.files["content/projects.tex"] += definitions.encode("utf-8")
+        selected = self.guide_block(r"\SharedMyProject")
+        for variant in VARIANTS:
+            name = f"{variant}.tex"
+            source = self.files[name].decode("utf-8")
+            start = source.index("\\section{Projects}\n") + len("\\section{Projects}\n")
+            stop = source.index("% BEGIN OPTIONAL EXPERIENCE", start)
+            replace_once(self.files, name, source[start:stop], selected + "\n")
+        project = self.project()
+        for variant in VARIANTS:
+            with self.subTest(variant=variant):
+                pdf, text, log = compile_project(project, variant)
+                flat = " ".join(check_pdf_text.words(text))
+                for phrase in ("Reading Notes", "Personal project; Python, SQLite", "September 2025", "Saved notes in SQLite and tested persistence after restarting the app."):
+                    self.assertIn(phrase, flat)
+                check_selection(text, ())
+                self.assertNotIn("selected bullet.", check_placeholders.reminders(log))
+                self.assertNotIn("Experience", text)
+                check_bounds(pdf)
 
     def test_misspelled_bullet_stops_compilation(self):
-        replace_once(self.files, "backend.tex", r"\CurrentIdempotency", r"\CurrentTypoSentinel")
+        replace_once(self.files, "backend.tex", r"\ToolWorkflow", r"\ToolTypoSentinel")
         log = compile_project(self.project(), "backend", expect_failure=True)
         self.assertIn("Undefined control sequence", log)
-        self.assertIn("CurrentTypoSentinel", log)
+        self.assertIn("ToolTypoSentinel", log)
 
     def test_only_selected_bullets_emit_placeholder_reminders(self):
         self.files["backend.tex"] = (
             r"\documentclass{resume}\input{setup}\begin{document}"
-            r"\begin{jobduties}\CurrentRegression\end{jobduties}\end{document}"
+            r"\begin{jobduties}\ToolWorkflow\end{jobduties}\end{document}"
         ).encode("utf-8")
         _, text, log = compile_project(self.project("selected prompt"), "backend")
         self.assertEqual(check_placeholders.reminders(log), ["selected bullet."])
-        self.assertIn("[recurring failure]", text)
-        replace_once(self.files, "content/experience.tex",
-                     "Traced [recurring failure] to [cause], fixed [component], and added a regression test covering [trigger].",
-                     "Traced a duplicate charge to a retry and added a regression test.")
+        self.assertIn("[application]", text)
+        replace_once(self.files, "content/projects.tex",
+                     "Built [application] so [users] could [task].",
+                     "Built a reading list so classmates could share course references.")
         _, text, log = compile_project(self.project("unused prompts"), "backend")
         self.assertEqual(check_placeholders.reminders(log), [])
         self.assertNotIn("[", text)

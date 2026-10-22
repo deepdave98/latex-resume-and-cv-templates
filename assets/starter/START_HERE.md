@@ -5,7 +5,7 @@ Edit `resume.tex`. Styling lives in `resume.cls`.
 1. Replace the name, contacts, links, education, and credentials with your own.
 2. Replace each example and `[placeholder]` with work you can explain. Delete sections you do not need.
 3. Compile and check the log for placeholders and extra pages. Replace flagged text or delete unused entries, then recompile.
-4. Inspect every page, then download the PDF. Warnings do not catch every unfinished example.
+4. Follow [Before you send](https://github.com/deepdave98/latex-resume-and-cv-templates/blob/main/docs/before-you-send.md) to review the extracted text, final PDF, and links. Warnings do not catch every unfinished example.
 
 In the no-internship starter, label course projects and your part of team work. Delete **Other Experience** if it does not apply.
 
@@ -19,13 +19,13 @@ Unsupported formats warn and print without a link. Use `\resumelink{destination}
 
 ## Overleaf
 
-Use [New Project > Upload Project](https://www.overleaf.com/learn/latex/Kb/Uploading_a_project) and upload the ZIP. Set the compiler to **XeLaTeX** and the main document to `resume.tex`. Click **Recompile**.
+Use [New project > Existing project (.zip)](https://docs.overleaf.com/managing-projects-and-files/uploading-a-project) and upload the ZIP. Set the compiler to **XeLaTeX** and the main document to `resume.tex`. Click **Recompile**.
 
 Open **View logs** beside **Recompile** (**Logs and output files** in the older editor). Checks flag sample contacts, known example fields, and `[prompts]` in headers, entries, and lists. Literal brackets may trigger warnings; unmarked examples and text inside custom commands may be missed.
 
 ## Page limit
 
-`\resumepagelimit{1}` warns above one page; the experienced starter uses `2`. Change the number for an intentional extra page, or remove the line to disable the warning. It does not change the layout.
+All starters use `\resumepagelimit{1}` to warn above one page. If relevant content needs a second page, change it to `\resumepagelimit{2}` and let LaTeX paginate naturally. Removing the command disables the warning; it does not change the layout.
 
 If LaTeX asks you to rerun, recompile before checking length. Its temporary rerun pages are not counted by this reminder.
 

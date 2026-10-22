@@ -6,6 +6,8 @@ Upload-limit checks cover exact byte boundaries, fractional MB, invalid inputs, 
 
 `make test` builds all starters, runs unit tests, checks PDFs, headings, and contact links, compiles the starter ZIPs, tests placeholder and page-limit warnings, and exercises the personal PDF checker. It needs XeLaTeX, `latexmk`, Python 3.9+, and Poppler's `pdftotext` and `pdfinfo` on `PATH`; no pip packages.
 
+Submission archive tests use temporary directories to check byte-for-byte copies, hash receipts, duplicate refusal, labels, permissions, symlinks, and failed copies. They do not create personal archives in the checkout.
+
 The check compares every page with `expected/*.txt` using Poppler's `-layout` reading order. Missing or reordered words, changed punctuation, unmapped characters, and extra or missing pages fail. Whitespace and Unicode ligature differences are ignored. Line-end hyphens are preserved.
 
 Inspect the PDF too: extraction tests cannot catch every visual defect or predict how other parsers read it.
@@ -20,7 +22,7 @@ python3 tests/check_pdf_text.py
 python3 tests/check_pdf_text.py --no-internship output/pdf/no-internship-resume.pdf --new-grad output/pdf/new-grad-resume.pdf --experienced output/pdf/experienced-resume.pdf --ai-engineer output/pdf/ai-engineer-resume.pdf --ml-engineer output/pdf/ml-engineer-resume.pdf --graduate-admissions output/pdf/graduate-admissions-resume.pdf
 python3 scripts/check_resume.py output/pdf/no-internship-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/new-grad-resume.pdf --max-pages 1
-python3 scripts/check_resume.py output/pdf/experienced-resume.pdf --max-pages 2
+python3 scripts/check_resume.py output/pdf/experienced-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/ai-engineer-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/ml-engineer-resume.pdf --max-pages 1
 python3 scripts/check_resume.py output/pdf/graduate-admissions-resume.pdf --max-pages 1
@@ -32,6 +34,7 @@ python3 tests/check_page_limits.py
 python3 tests/check_contacts.py
 python3 tests/check_ai_ml.py
 python3 tests/check_graduate_admissions.py
+python3 tests/check_final_review.py
 ```
 
 On Windows, use `py -3` instead of `python3`. The PDF checker accepts `--no-internship`, `--new-grad`, `--experienced`, `--ai-engineer`, `--ml-engineer`, and `--graduate-admissions` for other locations.
@@ -62,7 +65,7 @@ Wrapped columns can interleave in layout-mode extraction. These stress tests che
 
 `make test-page-limits` checks one- and two-page budgets, extra pages, changed budgets, and invalid inputs. Fixtures cover a first build, a shortened rebuild, reset page numbers, discarded pages, and content added at the end of a document. It also checks that enabling reminders leaves extracted text unchanged.
 
-The class reads LaTeX's shipped-page counter after the final page. It does not infer length from printed page numbers or a previous build. A missing budget disables the check; invalid values warn without replacing the last valid budget. Starters use one page, except the experienced template's two.
+The class reads LaTeX's shipped-page counter after the final page. It does not infer length from printed page numbers or a previous build. A missing budget disables the check; invalid values warn without replacing the last valid budget. All shipped starters use one page; the fixtures also verify two-page and longer documents.
 
 Resolve LaTeX rerun warnings before checking the final length. When a last-page hook needs another run, the kernel can append a temporary page outside its shipped-page counter. A regression covers a two-page document shortened to one: the temporary page disappears on the next run and the settled count is correct.
 
@@ -82,9 +85,9 @@ The default role templates contain no research or publication claims. Their sour
 
 ## Shared-content application versions
 
-`make test-application-versions` checks the optional project separately from the regular starters. It checks the ZIP against an explicit source allowlist, compiles all three source and downloaded versions, and compares their text with `expected/application-*-1.txt`.
+`make test-application-versions` checks the optional project separately from the regular starters. It checks the ZIP against an explicit source allowlist, compiles the base resume and backend application from source and download, and compares their text with `expected/application-*-1.txt`.
 
-Fixtures cover shared contact, date, and education edits; selected and unselected bullets; changed selection order; unknown commands; placeholder warnings; and Letter/A4 page bounds. The source ZIP contains the full bullet bank, while each PDF must contain only its selected bullets.
+Fixtures compile the guide's selection and migration examples and cover shared facts, the optional work section, a new named application, selected and unselected bullets, unknown commands, placeholder warnings, and Letter/A4 page bounds. Both examples work without employment. The source ZIP contains the full bullet bank, while each PDF must contain only its selected bullets.
 
 Without make:
 
@@ -94,7 +97,7 @@ python3 tests/check_application_versions.py
 python3 tests/check_application_versions.py --published
 ```
 
-After changing the example, run `make preview-application-versions` and inspect all three pages. Review their extracted text before updating the matching baselines. Run `make application-download`, then `make test-application-versions`. The other starter baselines should not change.
+After changing the example, run `make preview-application-versions` and inspect both pages. Review their extracted text before updating the matching baselines. Run `make application-download`, then `make test-application-versions`. The other starter baselines should not change.
 
 ## Change a baseline
 
@@ -128,3 +131,9 @@ pdftotext -layout "path/to/your-resume.pdf" -
 Check your name, email, dates, headings, bullet order, and text split across pages. This manual command prints personal data; redact it before opening an issue. Do the same with snapshot failure diffs, which quote template text.
 
 `make test-personal-pdf` runs the checker against all published starter PDFs. Unit tests cover blank pages, character handling, corrupt/locked files, timeouts, missing tools, command arguments, standalone use, and private-data suppression. Neither check writes to the input PDF.
+
+## Final review command
+
+`make test-final-review` runs real one-source builds through `scripts/review_resume.py`. It covers an extracted starter in a folder with spaces, a named application with shared facts, stale PDFs after a failed compile, placeholder and page-limit reminders, and a PDF with a blank text page. It also checks separate logs for `build.tex` and isolated output despite project compiler settings. An entrypoint check invokes the script from outside the checkout and verifies that published PDFs, previews, and downloads stay unchanged.
+
+Unit tests cover missing tools, invalid inputs, failed builds and extraction, and incomplete logs. The customer sequence is in [Before you send](../docs/before-you-send.md).

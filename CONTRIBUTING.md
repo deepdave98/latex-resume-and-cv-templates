@@ -5,7 +5,7 @@ Use an issue for a question or bug; open a PR for a change.
 ## Template and documentation changes
 
 - Keep shared layout and styling in `resume.cls`.
-- Keep each starter at one page, except the two-page experienced template.
+- Keep each shipped starter at one page; preserve support for longer resumes and CVs.
 - Keep examples shipped in the resume templates and maintainer-written guides fictional: use placeholder companies, roles, metrics, links, and contact details.
 - Run `make` with XeLaTeX.
 - Run `make preview` and review every page if the output changes.
@@ -17,20 +17,8 @@ Include before-and-after screenshots for layout changes.
 
 For AI/ML examples, distinguish offline evaluation from production results. State the baseline and data split when they affect the claim. Do not invent research, publications, degrees, or metrics. See the [role guide](docs/ai-ml-resumes.md).
 
-## Community resume examples
+## Writing examples
 
-Submit only a bullet you wrote and have the right to share. Choose either path:
+Suggest improvements to the [bullet guide](examples/engineering-bullets.md) in an issue or PR. Use fictional examples that teach one writing decision. Keep claims specific without implying that a phrase or format guarantees interviews.
 
-- No Git required: use the [resume example issue form](https://github.com/deepdave98/latex-resume-and-cv-templates/issues/new?template=resume-example.yml).
-- Pull request: copy [`examples/community/TEMPLATE.md`](examples/community/TEMPLATE.md) into `examples/community/accepted/`, complete the content and permissions, and open a draft PR. Leave the review record for the reviewer.
-
-Before submitting:
-
-- Replace employer, client, product, team, and private system names with clear placeholders.
-- Keep the rewrite faithful to your contribution, scope, and seniority.
-- Explain numbers in safe, non-confidential terms. Never invent a metric or upload private proof.
-- Confirm that the original is yours and that your submission may be published under the MIT License.
-
-Approve the final rewrite and byline before publication. Attribution is optional, but selecting Anonymous does not hide your GitHub account or history. The [review checklist](examples/community/REVIEW.md) covers claim checks, approval, and publication. Only accepted examples enter the [index](examples/community/README.md).
-
-Run `python3 scripts/check_community_examples.py` after completing an entry and its index row. The check also runs in CI; it checks the record, not whether a claim is true.
+Issues, PRs, and their history are public. Remove personal details and confidential work before posting; do not attach someone's resume or private evidence.

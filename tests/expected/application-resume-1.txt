@@ -1,0 +1,28 @@
+Your Name
+City, Region ⋄ +1 (555) 555-5555 ⋄ hello@example.com ⋄ LinkedIn ⋄ GitHub
+
+
+Education
+
+[University] – [City, Region]                                                                 [Graduation Month Year]
+[Degree]
+
+Projects
+
+[Personal project]                                                                                      [Month Year]
+Personal project; [Language and tools]
+• Built [application] so [users] could [task].
+• Preserved [user input] after failed requests so users could retry without starting over.
+• Stored [records] in [database]; enforced [constraint] to prevent [invalid state].
+
+[Course project]                                                                                        [Month Year]
+Course project; [Language and tools]
+• Owned [component] in a [N]-person course project; integrated it with [another component].
+• Changed [query or index] to handle [workload]; compared runtime on [the same dataset].
+• Tested [operation] with [boundary condition] and fixed [failure].
+
+Skills
+
+• Languages: [Language], [Language].
+• Systems: [Database], [Cloud or Runtime], [Framework].
+• Tooling: [Testing], [Observability], [CI/CD].

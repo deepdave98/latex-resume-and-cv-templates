@@ -83,9 +83,11 @@ class SelectionTests(unittest.TestCase):
     def text(self, selection):
         return "\n".join(checker.BULLET_STARTS[name] for name in selection)
 
-    def test_selection_registries_cover_all_defined_bullets(self):
+    def test_each_selection_uses_defined_bullets_once(self):
         self.assertEqual(set(checker.VARIANTS), set(checker.SELECTIONS))
-        self.assertEqual(set(checker.BULLET_STARTS), set().union(*map(set, checker.SELECTIONS.values())))
+        for selection in checker.SELECTIONS.values():
+            self.assertEqual(len(selection), len(set(selection)))
+            self.assertLessEqual(set(selection), set(checker.BULLET_STARTS))
 
     def test_correct_selection_and_order_pass(self):
         for selection in checker.SELECTIONS.values():
@@ -93,7 +95,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_missing_duplicate_and_unselected_bullets_fail(self):
         selection = checker.SELECTIONS["backend"]
-        for actual in (selection[:-1], selection + (selection[0],), selection + ("CurrentRecovery",)):
+        for actual in (selection[:-1], selection + (selection[0],), selection + ("ToolRecovery",), selection + ("RoleFeature",)):
             with self.subTest(actual=actual), self.assertRaisesRegex(checker.ApplicationError, "occurrence"):
                 checker.check_selection(self.text(actual), selection)
 

@@ -206,13 +206,14 @@ test('paper labels survive zoom and narrow screens, then update with the file', 
   await assertPrivate(context, page, observations);
 });
 
-test("reviews both pages of the experienced starter", async ({ page, context }) => {
+test("keeps text and previews for both pages of a two-page PDF", async ({ page, context }) => {
   const observations = await openReview(page, context);
-  await reviewFile(page, resumePath("experienced-resume"));
+  const expected = ['First page experience', 'Second page projects'];
+  await reviewFile(page, filePayload(pdfFixture(expected.map(text => ({ text })))));
   await expect(page.locator(".page-card")).toHaveCount(2);
   const pages = await page.locator(".page-card textarea").evaluateAll((fields) => fields.map((field) => field.value));
-  expect(pages).toHaveLength(2);
-  for (const text of pages) expect(text.trim().length).toBeGreaterThan(100);
+  expect(pages).toEqual(expected);
+  await expect(page.locator(".page-card canvas")).toHaveCount(2);
   await assertPrivate(context, page, observations);
 });
 
@@ -974,6 +975,16 @@ for (const [label, location] of [['downloaded file', artifactURL], ['hosted page
     await expect(page.locator('.page-card textarea')).toHaveValue('Original document');
     await expect(page.locator('#max-pages')).toHaveValue('1');
     expect(await page.locator('#pdf-file').inputValue()).toBe('');
+    // Rejected input must not bypass the choice to keep the current draft.
+    for (const buffer of [Buffer.alloc(0), Buffer.from('not a PDF'), Buffer.alloc(20 * 1024 * 1024 + 1)]) {
+      await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(buffer)), false);
+      await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
+      await expect(page.locator('#filename')).toHaveText('original.pdf');
+      await expect(page.locator('#max-pages')).toHaveValue('1');
+      await expect(page.locator('#error')).toBeHidden();
+    }
+    await page.locator('#pdf-file').setInputFiles([]);
+    await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
     // Selecting the same replacement again must still fire the change event.
     await discardDecision(page, () => reviewFile(page, replacement), true);
     await expect(page.locator('#all-text')).toHaveValue('Replacement document');

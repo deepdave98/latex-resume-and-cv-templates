@@ -1,33 +1,37 @@
 % !TeX program = xelatex
 \documentclass{resume}
 \input{setup}
-\hypersetup{
-  pdftitle={Software Engineer Resume},
-  pdfsubject={Software engineering experience}
-}
 
 \begin{document}
 \SharedHeader
 
-\section{Experience}
-\SharedCurrentRole
+\section{Education}
+\SharedEducation
+
+% This version brings query work first and omits the form-recovery bullet.
+\section{Projects}
+\SharedCourseProject
 \begin{jobduties}
-  \CurrentIdempotency
-  \CurrentQuery
-  \CurrentCompatibility
-  \CurrentRegression
+  \CourseContribution
+  \CourseQueries
+  \CourseChecks
 \end{jobduties}
 
-\SharedPreviousRole
+\SharedToolProject
 \begin{jobduties}
-  \PreviousAuthorization
-  \PreviousWorker
-  \PreviousRollout
+  \ToolWorkflow
+  \ToolStorage
 \end{jobduties}
+
+% BEGIN OPTIONAL EXPERIENCE
+% \section{Experience}
+% \SharedRole
+% \begin{jobduties}
+%   \RoleFeature
+%   \RoleFix
+% \end{jobduties}
+% END OPTIONAL EXPERIENCE
 
 \section{Skills}
 \SharedSkills
-
-\section{Education}
-\SharedEducation
 \end{document}

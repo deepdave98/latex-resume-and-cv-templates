@@ -28,7 +28,7 @@ Omit `[Optional summary]` when unnecessary. Use `{}` for no location. Long organ
 
 Escape special characters in literal text: `\&`, `\%`, `\$`, `\#`, `\_`.
 
-Move whole `\section{...}` blocks to change the order. If shortening the experienced starter to one page, remove `\newpage` and `\section{Experience Continued}`. [Section order guide](section-order.md).
+Move whole `\section{...}` blocks to change the order. Let LaTeX paginate naturally as you add or remove entries. [Section order guide](section-order.md).
 
 ## Paper size
 
@@ -39,7 +39,7 @@ Use `\documentclass[a4paper]{resume}` for A4 or `\documentclass[letterpaper]{res
 Open **View logs** in Overleaf (**Logs and output files** in the older editor), or read the local compile log.
 
 - **Placeholders:** flags sample contacts, known example fields, and `[prompts]` in headers, entries, and lists. Replace flagged text or delete unused entries. Literal square brackets may be flagged; unmarked examples and text inside custom commands may be missed.
-- **Page limit:** `\resumepagelimit{1}` warns above one page; the experienced starter uses `2`. Cut less relevant content first. Change the number for an intentional extra page, or remove the command to disable it.
+- **Page limit:** all starters use `\resumepagelimit{1}` to warn above one page. Cut less relevant content first. Use `\resumepagelimit{2}` when a second page is useful, or remove the command to disable the warning.
 
 Neither warning changes the PDF or stops compilation. Resolve rerun warnings before checking length; temporary rerun pages are not counted by the reminder. Review the final text, layout, and links yourself.
 

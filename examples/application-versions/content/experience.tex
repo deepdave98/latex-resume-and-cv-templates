@@ -1,80 +1,10 @@
-% Keep each employer, title, location, and date range in one place.
-% Add or remove whole roles here and in the entry files as needed.
-\newcommand{\SharedCurrentRole}{%
-  \jobentry{Software Engineer}{Company A}{City, Region}{Month Year -- Present}
+% Optional work history. Nothing here appears until an entry file selects it.
+\newcommand{\SharedRole}{%
+  \jobentry{[Actual role]}{[Employer]}{[City, Region]}{[Month Year] -- [Month Year]}
 }
-\newcommand{\SharedPreviousRole}{%
-  \jobentry{Software Engineer}{Company B}{City, Region}{Month Year -- Month Year}
+\newcommand{\RoleFeature}{%
+  \ResumeBullet{Built [feature] for [team or users] using [tools].}
 }
-
-% These are prompts, not a work history to adopt. Keep only work you did.
-% Rename commands to describe your work; select and order them in backend.tex,
-% frontend.tex, or infrastructure.tex. Do not change facts between versions.
-% Pass literal bullet text to ResumeBullet so unfinished prompts are checked.
-
-% Current role: selected by all three versions.
-\newcommand{\CurrentRegression}{%
-  \ResumeBullet{Traced [recurring failure] to [cause], fixed [component], and added a regression test covering [trigger].}
-}
-
-% Current role: backend emphasis.
-\newcommand{\CurrentIdempotency}{%
-  \ResumeBullet{Made [operation] safe to retry with [idempotency key and storage rule]; tested duplicate requests and a timeout after commit.}
-}
-\newcommand{\CurrentQuery}{%
-  \ResumeBullet{Profiled [query] on [dataset], changed [index or access pattern], and compared latency under [the same workload].}
-}
-\newcommand{\CurrentCompatibility}{%
-  \ResumeBullet{Changed [API contract] without breaking [existing consumer], using [versioning or compatibility approach] and contract tests.}
-}
-
-% Current role: frontend emphasis.
-\newcommand{\CurrentRecovery}{%
-  \ResumeBullet{Built [workflow] with loading and failure states, preserved [user input] after failed requests, and tested the retry path.}
-}
-\newcommand{\CurrentAccessibility}{%
-  \ResumeBullet{Fixed [keyboard or screen-reader barrier] in [flow]; checked focus order, accessible names, and error announcements with [test method].}
-}
-\newcommand{\CurrentRendering}{%
-  \ResumeBullet{Profiled [slow interaction], changed [rendering or loading behavior], and compared [timing] on [the same device and test case].}
-}
-
-% Current role: infrastructure emphasis.
-\newcommand{\CurrentDeployment}{%
-  \ResumeBullet{Rolled out [service change] in stages, checked [health signal] before advancing, and tested rollback under [failure condition].}
-}
-\newcommand{\CurrentRestore}{%
-  \ResumeBullet{Restored [service or dataset] from [backup], checked [data integrity and recovery time], and fixed [gap found in the recovery procedure].}
-}
-\newcommand{\CurrentCapacity}{%
-  \ResumeBullet{Load-tested [service] to find [capacity limit], changed [scaling or resource setting], and verified behavior during [traffic spike].}
-}
-
-% Previous role: selected by all three versions.
-\newcommand{\PreviousRollout}{%
-  \ResumeBullet{Shipped [change] behind [flag or staged rollout], checked [success signal], and documented [rollback trigger].}
-}
-
-% Previous role: backend emphasis.
-\newcommand{\PreviousAuthorization}{%
-  \ResumeBullet{Implemented [endpoint] with [authorization rule]; tested denied access, invalid input, and [successful operation].}
-}
-\newcommand{\PreviousWorker}{%
-  \ResumeBullet{Added [background job] with bounded retries and [failed-job handling]; tested [partial failure] without repeating [side effect].}
-}
-
-% Previous role: frontend emphasis.
-\newcommand{\PreviousValidation}{%
-  \ResumeBullet{Added validation to [form], mapped server errors to the affected fields, and tested [invalid and corrected submissions].}
-}
-\newcommand{\PreviousComponent}{%
-  \ResumeBullet{Replaced [duplicated UI] with [shared component], kept [existing behavior], and tested its use in [two distinct workflows].}
-}
-
-% Previous role: infrastructure emphasis.
-\newcommand{\PreviousBuild}{%
-  \ResumeBullet{Automated [build or deployment step], pinned [dependency or image], and checked that [artifact] could be reproduced from [commit].}
-}
-\newcommand{\PreviousAlert}{%
-  \ResumeBullet{Replaced [noisy alert] with [actionable failure signal], added [diagnostic steps], and tested the alert with [injected failure].}
+\newcommand{\RoleFix}{%
+  \ResumeBullet{Fixed [failure] in [workflow]; added a test for [trigger].}
 }

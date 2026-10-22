@@ -2,6 +2,9 @@
 .context/
 graphify-out/
 
+# Private copies of submitted resumes
+/submissions/
+
 # LaTeX build output
 build/
 templates/*.pdf

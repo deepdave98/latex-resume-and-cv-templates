@@ -4,33 +4,21 @@ City, Region ⋄ +1 (555) 555-5555 ⋄ hello@example.com ⋄ LinkedIn ⋄ GitHub
 
 Education
 
-Dalhousie University – Halifax, NS                                                         January 2019 – December 2022
-BS Computer Science
-• GPA: 4.02/4.30. Sexton Distinction, two-time Sexton Scholar, Dean’s List, Golden Key Scholarship.
-• Teaching: Teaching Assistant, Server-side Scripting and Web Development.
-
-Simon Fraser University – Vancouver, BC                                                        May 2018 – December 2019
-Computing Science Coursework
-
-Certifications
-
-Certification Name                                                                                                     Year
-Issuing Organization
+[University] – [City, Region]                                                                     [Graduation Month Year]
+[Degree and Major]
+• Relevant coursework: [Course], [Course], [Course].
 
 Experience
 
-Company A – City, Region                                                                        Month Year – Month Year
+Company A – City, Region                                                                         Month Year – Month Year
 Software Engineering Intern
-• Added [API operation] for [user task] with [framework and database]; tested denied access, invalid input, and duplicate
-  requests.
-• Built loading and error states for [form]; preserved input after failed requests and checked keyboard navigation and error
-  announcements.
+• Added [API operation] so [users] could [task], using [framework and database].
+• Kept [form input] intact after failed requests so users could retry without starting over.
 • Reproduced [reported bug], traced it to [cause], and added a regression test that failed before the fix.
 
-Company B – City, Region                                                                        Month Year – Month Year
-Junior Software Engineer
-• Automated [manual task] with [script or service]; validated the output against [source] and added a way to retry failed
-  runs.
+Company B – City, Region                                                                         Month Year – Month Year
+[Actual role]
+• Automated [manual task] with [script or service], replacing [previous manual steps].
 • Profiled [endpoint] at [load], changed [query or request path], and reduced benchmark p95 latency from [A] ms to [B] ms.
 
 Projects
