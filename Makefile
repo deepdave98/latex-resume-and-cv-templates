@@ -7,6 +7,9 @@ PREVIEW_DIR := preview
 OUTPUT_DIR := output/pdf
 TEMPLATES := no-internship new-grad experienced ai-engineer ml-engineer graduate-admissions
 APPLICATION_VERSIONS := resume backend
+WATCH_TARGETS := $(addprefix watch-,$(TEMPLATES))
+
+.PHONY: $(WATCH_TARGETS)
 
 .PHONY: all $(TEMPLATES) preview $(addprefix preview-,$(TEMPLATES)) preview-ai-ml downloads clean
 .PHONY: test test-unit test-pdf-text test-personal-pdf test-downloads test-starters test-placeholders test-layout test-page-limits test-contacts test-ai-ml test-graduate-admissions test-final-review
@@ -17,6 +20,10 @@ all: $(TEMPLATES)
 $(TEMPLATES):
 	@mkdir -p "$(BUILD_DIR)/$@"
 	$(LATEXMK) -xelatex -interaction=nonstopmode -halt-on-error -file-line-error -outdir="$(BUILD_DIR)/$@" "templates/$@-resume.tex"
+
+$(WATCH_TARGETS): watch-%: templates/%-resume.tex
+	@mkdir -p "$(BUILD_DIR)/$*"
+	$(LATEXMK) -pvc -view=none -xelatex -interaction=nonstopmode -halt-on-error -file-line-error -outdir="$(BUILD_DIR)/$*" "$<"
 
 downloads:
 	$(PYTHON) scripts/package_templates.py

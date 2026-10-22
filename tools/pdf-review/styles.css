@@ -79,10 +79,14 @@ summary { cursor: pointer; }
 .limit-warning { color: var(--warning); }
 .text-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
 .text-toolbar label { font-size: 13px; font-weight: 600; }
+.text-limit-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; margin-top: 12px; font-size: 13px; }
+.text-limit-controls > p { flex: 1 1 200px; min-width: 0; padding-bottom: 7px; overflow-wrap: anywhere; }
 .pages { display: grid; gap: 32px; }
 .page-card { min-width: 0; border: 1px solid var(--line); }
 .page-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 11px 16px; border-bottom: 1px solid var(--line); }
 .page-heading h3 { font-size: 13px; }
+.page-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; min-width: 0; }
+.page-size { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .badge { color: var(--muted); font-size: 12px; }
 .badge--warning { color: var(--warning); }
 .page-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

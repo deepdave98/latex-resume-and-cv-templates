@@ -142,6 +142,70 @@ for (const filename of publishedPDFs) {
   });
 }
 
+for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
+  test(`${label}: shows each page's paper size and orientation`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    await reviewFile(page, filePayload(pdfFixture([
+      { text: 'Letter page' },
+      { text: 'A4 page', mediaBox: '0 0 595.2756 841.8898' },
+      { text: 'Landscape Letter page', rotation: 90 },
+      { text: 'Legal page', mediaBox: '0 0 612 1008' },
+    ])));
+    await expect(page.locator('.page-size')).toHaveText([
+      'US Letter · 8.5 × 11 in · Portrait',
+      'A4 · 210 × 297 mm · Portrait',
+      'US Letter · 11 × 8.5 in · Landscape',
+      'US Legal · 8.5 × 14 in · Portrait',
+    ]);
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('paper dimensions include crop bounds, PDF scale, and rotation', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([
+    { text: 'Cropped to Letter', mediaBox: '0 0 700 900', cropBox: '44 54 656 846' },
+    { mediaBox: '0 0 306 396', userUnit: 2, rotation: 270,
+      content: 'BT /F1 12 Tf 30 60 Td (Scaled page) Tj ET' },
+    { mediaBox: '0 0 432 648', content: 'BT /F1 12 Tf 30 60 Td (Custom page) Tj ET' },
+  ])));
+  await expect(page.locator('.page-size')).toHaveText([
+    'US Letter · 8.5 × 11 in · Portrait',
+    'US Letter · 11 × 8.5 in · Landscape',
+    'Custom size · 152.4 × 228.6 mm · Portrait',
+  ]);
+  await assertPrivate(context, page, observations);
+});
+
+test('page size remains readable when a large preview cannot render', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Large page', mediaBox: '0 0 20000 20400' }])));
+  await expect(page.locator('.page-size')).toHaveText('Custom size · 7055.6 × 7196.7 mm · Portrait');
+  await expect(page.locator('.page-card canvas')).toHaveCount(0);
+  await expect(page.locator('.badge')).toHaveText('Preview needs manual review');
+  await assertPrivate(context, page, observations);
+});
+
+test('paper labels survive zoom and narrow screens, then update with the file', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'A4 page', mediaBox: '0 0 595.2756 841.8898' }])));
+  await page.setViewportSize({ width: 390, height: 844 });
+  const label = page.locator('.page-size');
+  await expect(label).toHaveText('A4 · 210 × 297 mm · Portrait');
+  await expect(label).toBeVisible();
+  await page.getByRole('button', { name: 'Enlarge page 1 preview' }).click();
+  await expect(label).toHaveText('A4 · 210 × 297 mm · Portrait');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const bounds = await label.boundingBox();
+  expect(bounds.x).toBeGreaterThanOrEqual(0);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Replacement Letter page' }])));
+  await expect(label).toHaveText('US Letter · 8.5 × 11 in · Portrait');
+  await page.locator('#clear-file').click();
+  await expect(label).toHaveCount(0);
+  await assertPrivate(context, page, observations);
+});
+
 test("keeps text and previews for both pages of a two-page PDF", async ({ page, context }) => {
   const observations = await openReview(page, context);
   const expected = ['First page experience', 'Second page projects'];
@@ -533,9 +597,10 @@ test("warns about form values that page-text extraction may omit", async ({ page
   await reviewFile(page, filePayload(pdfFixture([{ text: "Form resume", formValue: "Stored form value" }])));
   await expect(page.locator("#review")).toContainText(/form/i);
   // PDF form widgets must not become active inputs. The only review inputs
-  // belong to our optional upload-limit controls, not the document.
+  // belong to our optional limit controls, not the document.
   await expect(page.locator("#pages input, #pages form")).toHaveCount(0);
-  await expect(page.locator("#review input")).toHaveCount(2);
+  expect(await page.locator('#review input').evaluateAll(inputs => inputs.map(input => input.id).sort()))
+    .toEqual(['max-characters', 'max-mb', 'max-pages']);
   await assertPrivate(context, page, observations);
 });
 
@@ -729,6 +794,136 @@ test('copy all uses the edited draft while copy page retains the PDF text', asyn
   await page.locator('#copy-all').click();
   await page.getByRole('button', { name: 'Copy page text' }).click();
   expect(await page.evaluate(() => globalThis.copiedValues)).toEqual(['Edited text for the form', 'Original PDF text']);
+  await assertPrivate(context, page, observations);
+});
+
+for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
+  test(`${label}: counts application text as it is edited and reset`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'Draft' }])));
+    await page.locator('.all-text-panel > summary').click();
+    const draft = page.locator('#all-text');
+    const limit = page.getByLabel('Character limit (optional)');
+    const result = page.locator('#text-limit-result');
+    await expect(result).toHaveText('5 characters.');
+    await limit.fill('5');
+    await expect(result).toHaveText('5 characters. 0 characters remaining.');
+    await draft.focus();
+    await draft.press('End');
+    await page.keyboard.type('!');
+    await expect(result).toHaveText('6 characters. 1 character over the limit.');
+    await expect(draft).toHaveValue('Draft!');
+    await expect(draft).toHaveAttribute('maxlength', '500100');
+    await draft.fill('A😀é\ne\u0301');
+    await limit.fill('7');
+    await expect(result).toHaveText('7 characters. 0 characters remaining.');
+    await expect(result).not.toHaveClass(/limit-warning/);
+    await draft.fill('');
+    await expect(result).toHaveText('0 characters. 7 characters remaining.');
+    await expect(page.locator('#copy-all')).toBeDisabled();
+    await expect(page.locator('#save-text')).toBeDisabled();
+    await discardDecision(page, () => page.locator('#reset-text').click(), true);
+    await expect(result).toHaveText('5 characters. 2 characters remaining.');
+    await expect(limit).toHaveValue('7');
+    await limit.fill('');
+    await expect(result).toHaveText('5 characters.');
+    await expect(page.locator('.page-card textarea')).toHaveValue('Draft');
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('invalid and exceeded text limits leave the whole draft available to copy and save', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original text' }])));
+  await page.locator('.all-text-panel > summary').click();
+  const edited = 'Zoë\nA😀';
+  await page.locator('#all-text').fill(edited);
+  await page.locator('#max-characters').fill('1e3');
+  await expect(page.locator('#max-characters')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#text-limit-result')).toHaveText('7 characters. Enter a positive whole number for the limit, or leave blank.');
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true, value: { writeText: async value => { globalThis.copiedText = value; } },
+    });
+  });
+  await page.locator('#copy-all').click();
+  expect(await page.evaluate(() => globalThis.copiedText)).toBe(edited);
+  await page.locator('#max-characters').fill('6');
+  await expect(page.locator('#max-characters')).toHaveAttribute('aria-invalid', 'false');
+  await expect(page.locator('#text-limit-result')).toHaveText('7 characters. 1 character over the limit.');
+  const pending = page.waitForEvent('download');
+  await page.locator('#save-text').click();
+  const download = await pending;
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  expect(Buffer.concat(chunks).toString('utf8')).toBe(edited);
+  expect(await download.failure()).toBeNull();
+  await expect(page.locator('#all-text')).toHaveValue(edited);
+  await assertPrivate(context, page, observations);
+});
+
+test('text limits survive replacement and cancellation, then clear with the review', async ({ page, context }) => {
+  const observations = await openReview(page, context, artifactURL);
+  const original = filePayload(pdfFixture([{ text: 'First' }]));
+  const replacement = filePayload(pdfFixture([{ text: 'Second PDF' }]));
+  await reviewFile(page, original);
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#max-characters').fill('6');
+  await page.locator('#all-text').fill('My draft');
+  for (const action of [
+    () => page.locator('#pdf-file').setInputFiles(replacement),
+    () => page.locator('#clear-file').click(),
+    () => page.locator('#reset-text').click(),
+  ]) {
+    await discardDecision(page, action, false);
+    await expect(page.locator('#text-limit-result')).toHaveText('8 characters. 2 characters over the limit.');
+    await expect(page.locator('#max-characters')).toHaveValue('6');
+    await expect(page.locator('#all-text')).toHaveValue('My draft');
+  }
+  await discardDecision(page, () => reviewFile(page, replacement), true);
+  await page.locator('.all-text-panel > summary').click();
+  await expect(page.locator('#text-limit-result')).toHaveText('10 characters. 4 characters over the limit.');
+  await expect(page.locator('#max-characters')).toHaveValue('6');
+  await page.locator('#clear-file').click();
+  await expect(page.locator('#max-characters')).toHaveValue('');
+  await expect(page.locator('#max-characters')).toBeDisabled();
+  await expect(page.locator('#text-limit-result')).toBeEmpty();
+  await reviewFile(page, original);
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#max-characters').fill('6');
+  await page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF')));
+  await expect(page.locator('#error')).toBeVisible();
+  await expect(page.locator('#max-characters')).toHaveValue('');
+  await expect(page.locator('#text-limit-result')).toBeEmpty();
+  await reviewFile(page, original);
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#max-characters').fill('6');
+  await page.reload();
+  await expect(page.locator('#max-characters')).toHaveValue('');
+  await expect(page.locator('#text-limit-result')).toBeEmpty();
+  await assertPrivate(context, page, observations);
+});
+
+test('the text limit is reachable by keyboard and fits narrow screens', async ({ page, context }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Draft' }])));
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').focus();
+  await page.keyboard.press('Tab');
+  const limit = page.getByLabel('Character limit (optional)');
+  await expect(limit).toBeFocused();
+  await page.keyboard.type('4');
+  await expect(page.locator('#text-limit-result')).toHaveText('5 characters. 1 character over the limit.');
+  await expect(page.locator('#text-limit-result')).toHaveAttribute('role', 'status');
+  await limit.fill('9007199254740991');
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const bounds = await limit.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+  }
   await assertPrivate(context, page, observations);
 });
 

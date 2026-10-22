@@ -12,7 +12,11 @@ Read a resume PDF beside its extracted text. Check where each link points and wh
 
 The download works offline. The PDF engine, fonts, and decoders are included in the HTML file.
 
-One PDF at a time, up to 20 MiB (20,971,520 bytes) and 20 pages. Password-protected files ask for the password locally. If you edit the text copy, replacing or clearing the file and resetting the text ask before discarding those edits. Cancelling keeps the current review. Copy or save edits before leaving; browsers may warn on reload or close, but that warning is not guaranteed on every device.
+One PDF at a time, up to 20 MiB (20,971,520 bytes) and 20 pages. Password-protected files ask for the password locally.
+
+Opening another file, **Clear file**, and **Reset text** ask before discarding edited text, including edits you have already copied or saved. Cancel keeps the current review. Unchanged text needs no confirmation. Dropping several files also leaves the current review intact.
+
+Reloading or closing the page requests the browser's leave-page warning while text differs from the extraction. Browsers may suppress that warning, so copy or save edits you need before leaving. Nothing is saved automatically.
 
 ## Application upload limits
 
@@ -22,12 +26,23 @@ File size uses decimal MB (1 MB = 1,000,000 bytes); the exact byte count is also
 
 Open a revised PDF to check it against the same limits. Clearing, reloading, or closing the page discards the limits; an unreadable or rejected file also resets them. The reviewer's own 20 MiB / 20-page cap still applies.
 
+## Application text limits
+
+**Text for application forms** shows a character count as you edit. Enter a **Character limit (optional)** to see how many characters remain or how far over you are. Leave it blank to show only the count. The limit never cuts text or blocks copying and saving.
+
+Counts use UTF-16 code units, like [native browser text fields](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/maxlength). Spaces and line breaks count; emoji and some accented characters can use more than one unit. Check the form's own counter before submitting. An incomplete extraction still needs checking against the PDF, even when its text fits the limit.
+
+Resetting text or opening a revised PDF keeps the limit. Clearing, reloading, closing, or rejecting a file discards it along with the review. Nothing is saved automatically.
+
 ## What to check
 
 - **Extracted text:** look for missing words, odd symbols, and wrong reading order. Ligatures such as `ﬁ` become ordinary letters for copying.
 - **Link destinations:** select **Show on page** beside a destination. Its clickable area is highlighted in the preview so you can compare it with the printed label. **Back to link** returns to that row. Select the same button again to clear the highlight. Destinations remain text only; the tool never follows them or checks whether a website is online. Hidden control characters are shown as escapes. Internal links and unsupported PDF actions are identified separately.
 - **Pages without text:** a scan or outlined lettering may look fine but copy nothing. This tool does not run OCR.
 - **Pages that appear blank:** this is a preview-based hint, not proof. Very faint content can be missed. A failed preview is never counted as a blank page.
+- **Paper size:** each page shows its dimensions and orientation. A4, US Letter, and US Legal are named; other dimensions show as **Custom size**. Compare each page with your application's instructions, especially if you combined PDFs.
+
+Dimensions use the visible page after cropping, rotation, and PDF scale. Values are rounded to 0.1 mm or 0.01 inches; enlarging the preview leaves them unchanged.
 
 Form fields, incomplete extraction, and truncated results get warnings. Check missing text against the original PDF. Extraction can differ between PDF.js, Poppler, and application forms; this is not an ATS test.
 
@@ -71,7 +86,9 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/app.mjs` | File lifecycle, worker, previews, clipboard, and DOM |
 | `src/review.mjs` | Bounded text and annotation inspection |
 | `src/link-region.mjs` | Annotation coordinates clipped to the rendered page |
+| `src/page-size.mjs` | Paper names, dimensions, and orientation from PDF page geometry |
 | `src/text-download.mjs` | UTF-8 text exports and safe download names |
+| `src/text-limits.mjs` | Character counts and optional application-text limits |
 | `src/upload-limits.mjs` | Optional page and file-size comparisons |
 | `build.mjs` | Embedded PDF.js resources, CSP hashes, and ZIP |
 | `tests/` | Unit, package, privacy, and browser checks |

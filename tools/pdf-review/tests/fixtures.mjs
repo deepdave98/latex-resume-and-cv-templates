@@ -92,7 +92,9 @@ export function pdfFixture(pages = [{ text: "Resume fixture" }], { title = "Resu
       fields.push(field);
     }
     const contentId = add(stream(content));
-    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [${page.mediaBox ?? "0 0 612 792"}] /Rotate ${page.rotation ?? 0} /Resources << /Font << /F1 3 0 R ${extraFont} >> ${imageResource} >> /Contents ${contentId} 0 R /Annots [${annotations.map((id) => `${id} 0 R`).join(" ")}] >>`;
+    const crop = page.cropBox ? `/CropBox [${page.cropBox}]` : '';
+    const unit = page.userUnit === undefined ? '' : `/UserUnit ${page.userUnit}`;
+    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [${page.mediaBox ?? "0 0 612 792"}] ${crop} ${unit} /Rotate ${page.rotation ?? 0} /Resources << /Font << /F1 3 0 R ${extraFont} >> ${imageResource} >> /Contents ${contentId} 0 R /Annots [${annotations.map((id) => `${id} 0 R`).join(" ")}] >>`;
   }
   objects[1] = `<< /Type /Catalog /Pages 2 0 R${fields.length ? ` /AcroForm << /Fields [${fields.map((id) => `${id} 0 R`).join(" ")}] /DA (/F1 12 Tf 0 g) /DR << /Font << /F1 3 0 R >> >> >>` : ""} >>`;
   objects[2] = `<< /Type /Pages /Count ${pages.length} /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] >>`;
