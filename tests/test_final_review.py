@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -44,12 +45,12 @@ class FinalReviewTests(unittest.TestCase):
             (build_dir / f"{self.source.stem}.pdf").write_bytes(self.pdf_content)
         if self.write_log:
             (build_dir / f"{self.source.stem}.log").write_text(self.log, encoding="utf-8")
-        return subprocess.CompletedProcess(args, self.returncode)
+        return self.returncode
 
     def run_review(self, extra=(), text="Applicant's own work.\f", error=None):
         out, err = StringIO(), StringIO()
         with (
-            patch.object(review.subprocess, "run", side_effect=self.compile) as build,
+            patch.object(review, "run_build", side_effect=self.compile) as build,
             patch.object(review.check_resume, "extract_text", return_value=text, side_effect=error) as extract,
             redirect_stdout(out), redirect_stderr(err),
         ):
@@ -217,7 +218,7 @@ class FinalReviewTests(unittest.TestCase):
             [str(self.source), "--max-pages", "0"],
             [str(self.source), "--max-pages", "1.5"],
         ):
-            with self.subTest(args=args), redirect_stderr(StringIO()), patch.object(review.subprocess, "run") as build:
+            with self.subTest(args=args), redirect_stderr(StringIO()), patch.object(review, "run_build") as build:
                 with self.assertRaises(SystemExit) as caught:
                     review.main(args)
                 self.assertEqual(caught.exception.code, 2)
@@ -232,6 +233,29 @@ class FinalReviewTests(unittest.TestCase):
         tool.assert_not_called()
         self.assertIn("exactly one LaTeX entry file", out.getvalue())
         self.assertIn("reading order", " ".join(out.getvalue().split()))
+
+
+class BuildTimeoutTests(unittest.TestCase):
+    def test_timeout_stops_the_compiler_child(self):
+        with tempfile.TemporaryDirectory(prefix="review timeout ") as temporary:
+            root = Path(temporary)
+            started = root / "compiler-started"
+            escaped = root / "compiler-survived"
+            child = (
+                "from pathlib import Path; import time; "
+                f"Path({str(started)!r}).touch(); time.sleep(2); "
+                f"Path({str(escaped)!r}).touch()"
+            )
+            parent = (
+                "import subprocess, sys, time; "
+                f"subprocess.Popen([sys.executable, '-c', {child!r}]); time.sleep(30)"
+            )
+            with (root / "build.log").open("w") as output:
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    review.run_build([sys.executable, "-c", parent], cwd=root, stdout=output, timeout=1)
+            self.assertTrue(started.exists(), "The compiler fixture did not start before the timeout")
+            time.sleep(2.1)
+            self.assertFalse(escaped.exists(), "The compiler kept running after the build timed out")
 
 
 if __name__ == "__main__":

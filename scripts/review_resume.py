@@ -2,8 +2,10 @@
 """Build one chosen resume and summarize its reminders and PDF text checks."""
 
 import argparse
+import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -16,6 +18,36 @@ BUILD_TIMEOUT = 180
 PLACEHOLDER = "Class resume Warning: Placeholder reminder in "
 PAGE_EXCEEDED = "Class resume Warning: Page limit exceeded:"
 PAGE_INVALID = "Class resume Warning: Invalid page limit."
+
+
+def run_build(command, *, cwd, stdout, timeout):
+    """Stop the compiler as well as latexmk when the build times out."""
+    with subprocess.Popen(
+        command, cwd=cwd, stdout=stdout, stderr=subprocess.STDOUT,
+        start_new_session=os.name == "posix",
+    ) as process:
+        try:
+            return process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            try:
+                if os.name == "posix":
+                    try:
+                        os.killpg(process.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                else:
+                    try:
+                        subprocess.run(
+                            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                            timeout=10, check=True,
+                        )
+                    except (OSError, subprocess.SubprocessError) as error:
+                        raise OSError("Could not stop compiler subprocesses. End them in Task Manager.") from error
+            finally:
+                process.kill()
+                process.wait()
+            raise
 
 
 def summarize_warnings(log):
@@ -100,16 +132,16 @@ def main(argv=None):
         # projects' own latexmkrc / relative inputs. Never invoke an all target.
         project = ROOT if source.parent == ROOT / "templates" else source.parent
         with build_log.open("w", encoding="utf-8") as output:
-            result = subprocess.run(
+            returncode = run_build(
                 [
                     shutil.which("latexmk"), "-xelatex", "-g",
                     "-interaction=nonstopmode", "-halt-on-error", "-file-line-error",
                     f"-outdir={build_dir}", f"-auxdir={build_dir}",
                     "-e", "$out2_dir = '';", str(source),
                 ],
-                cwd=project, stdout=output, stderr=subprocess.STDOUT, timeout=BUILD_TIMEOUT,
+                cwd=project, stdout=output, timeout=BUILD_TIMEOUT,
             )
-        if result.returncode:
+        if returncode:
             print("FAIL: Compilation failed. Fix the first error in the build/LaTeX log and rerun.", file=sys.stderr)
             print("No PDF from this run is ready for review; do not use an older PDF.", file=sys.stderr)
             return 1

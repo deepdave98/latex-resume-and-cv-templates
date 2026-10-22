@@ -74,6 +74,7 @@ jobs:
             python3 tests/check_contacts.py
             python3 tests/check_ai_ml.py
             python3 tests/check_graduate_admissions.py
+            python3 tests/check_final_review.py
             python3 scripts/package_application_versions.py --check
             python3 tests/check_application_versions.py
             python3 tests/check_application_versions.py --published
