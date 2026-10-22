@@ -50,3 +50,7 @@ In the reviewer, inspect every rendered page for clipping, overflow, unwanted pa
 The reviewer does not follow links or check whether a website is online. Open the same PDF in a PDF reader and click its links to verify their destinations. Use **Application upload limits** if the portal specifies page or file-size limits. See the [reviewer's limits](../tools/pdf-review/README.md) if it cannot open your file.
 
 Upload the PDF you just reviewed. These checks do not assess hiring outcomes or ATS compatibility.
+
+## 5. Keep the submitted copy
+
+After uploading, [save the exact PDF with the company and role](submitted-resumes.md). Keep it separate from future rebuilds so you can refer to the same version when preparing for an interview.
