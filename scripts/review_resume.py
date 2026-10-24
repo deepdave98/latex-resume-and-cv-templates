@@ -18,6 +18,7 @@ BUILD_TIMEOUT = 180
 PLACEHOLDER = "Class resume Warning: Placeholder reminder in "
 PAGE_EXCEEDED = "Class resume Warning: Page limit exceeded:"
 PAGE_INVALID = "Class resume Warning: Invalid page limit."
+CONTACT_UNSUPPORTED = "Class resume Warning: Unsupported "
 
 
 def run_build(command, *, cwd, stdout, timeout):
@@ -63,6 +64,16 @@ def summarize_warnings(log):
     else:
         print("Placeholders: no class reminders found. Unmarked examples and custom commands can be missed.")
 
+    contacts = [
+        number for number, line in enumerate(lines, 1)
+        if CONTACT_UNSUPPORTED in line and "format; contact is not linked." in line
+    ]
+    if contacts:
+        reminders = True
+        print(f"CONTACT LINKS: {len(contacts)} unsupported format(s); first at LaTeX log line {contacts[0]}.")
+        print("The contact text is printed without a link. Correct the email or include the phone country code.")
+        print(r"For other contact formats, use \resumelink{destination}{label}; check the exported PDF's links.")
+
     page_warnings = [
         (number, line.strip()) for number, line in enumerate(lines, 1)
         if PAGE_EXCEEDED in line or PAGE_INVALID in line
@@ -76,7 +87,7 @@ def summarize_warnings(log):
             print(r"Cut less relevant content or change \resumepagelimit{N} if the extra page is intentional.")
     if not page_warnings:
         print("Source page reminders: none found; this does not establish that a source limit is enabled.")
-    print("Other LaTeX warnings are not summarized. Read the logs for rerun, overflow, font, and contact warnings.")
+    print("Other LaTeX warnings are not summarized. Read the logs for rerun, overflow, and font warnings.")
     return reminders
 
 
