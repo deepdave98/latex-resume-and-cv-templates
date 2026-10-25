@@ -135,6 +135,25 @@ function internalDestination(destination, maxChars) {
   return "Unresolved internal destination";
 }
 
+// Match only contacts shipped in the starters, not names or generic words in
+// someone's resume. Ignore URL query/fragment additions, but require the host
+// and profile path to match; a substring check would flag unrelated links.
+function isSampleContact(destination) {
+  try {
+    const url = new URL(destination);
+    const path = decodeURIComponent(url.pathname);
+    if (url.protocol === "mailto:") return path.toLowerCase() === "hello@example.com";
+    if (url.protocol === "tel:") return path.replace(/[\s().-]/gu, "") === "+15555555555";
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    const host = url.hostname.replace(/^www\./u, "");
+    const profile = path.toLowerCase().replace(/\/+$/u, "");
+    return (host === "github.com" && profile === "/your-handle")
+      || (host === "linkedin.com" && profile === "/in/your-handle");
+  } catch {
+    return false;
+  }
+}
+
 /** Return inert data only. Never turn annotations into HTML or execute actions. */
 export function inspectLinkAnnotations(annotations, options = {}) {
   const maxLinks = positiveLimit(options.maxLinks, DEFAULTS.maxLinksPerPage);
@@ -160,10 +179,11 @@ export function inspectLinkAnnotations(annotations, options = {}) {
       const resolvedDestination = typeof annotation.url === "string" ? clip(annotation.url, maxChars) : null;
       const hiddenCharacters = HIDDEN_DESTINATION_CHARACTER.test(destination) || HIDDEN_DESTINATION_CHARACTER.test(resolvedDestination ?? "");
       const destinationTruncated = rawUrl.length > maxChars || (annotation.url?.length ?? 0) > maxChars;
+      const sampleContact = !destinationTruncated && (isSampleContact(destination) || isSampleContact(resolvedDestination));
       let protocol = null;
       try { protocol = new URL(destination).protocol; } catch { /* Relative and malformed destinations stay visible. */ }
       const unsafe = hiddenCharacters || destinationTruncated || !protocol || !["https:", "http:", "mailto:", "tel:"].includes(protocol);
-      links.push({ ...base, type: "external", destination, resolvedDestination, unsafe, hiddenCharacters,
+      links.push({ ...base, type: "external", destination, resolvedDestination, unsafe, hiddenCharacters, sampleContact,
         truncated: destinationTruncated,
         reason: hiddenCharacters ? "Contains hidden control or direction characters. Inspect the visible Unicode escapes in this destination."
           : (unsafe ? "Unrecognized, incomplete, or potentially unsafe destination. Shown as text only." : "") });
@@ -251,6 +271,7 @@ export async function reviewDocument(pdf, options = {}) {
   }
   return { pages, text: pages.map((page) => page.text).join("\n\n"), pageCount: pdf.numPages,
     reviewedPageCount: pages.length, linkCount: pages.reduce((count, page) => count + page.links.length, 0),
+    sampleLinkCount: pages.reduce((count, page) => count + page.links.filter((link) => link.sampleContact).length, 0),
     emptyTextPageCount: pages.filter((page) => page.textStatus === "empty").length,
     truncated: pdf.numPages > pageLimit || pages.some((page) => page.textTruncated || page.linksStatus === "limited" || page.links.some((link) => link.truncated)), warnings };
 }
