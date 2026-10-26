@@ -112,6 +112,8 @@ for (const [label, location] of [["downloaded file", artifactURL], ["hosted page
     await expect(page.locator("#all-text")).toHaveValue(/Education/i);
     await expect(page.locator("#all-text")).toHaveValue(/Experience/i);
     await expect(page.locator("#pages")).toContainText("mailto:");
+    await expect(page.locator("#summary")).toContainText("4 sample links");
+    await expect(page.locator('.link-list .notice')).toHaveCount(4);
     await expect(page.locator("#pages canvas")).toHaveCount(1);
     expect(await page.locator("#pages canvas").evaluate((canvas) => canvas.width > 0 && canvas.height > 0)).toBe(true);
     await assertPrivate(context, page, observations);
@@ -312,6 +314,43 @@ test('upload limits work by keyboard on a narrow screen', async ({ page, context
   await page.keyboard.type('0.5');
   await expect(page.locator('#size-limit-result')).toContainText('Within the');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await assertPrivate(context, page, observations);
+});
+
+test("sample warnings cover each remaining starter", async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  for (const template of ["no-internship", "experienced", "ai-engineer", "ml-engineer"]) {
+    await reviewFile(page, resumePath(`${template}-resume`));
+    await expect(page.locator("#summary")).toContainText("4 sample links");
+    await expect(page.locator('.link-list .notice')).toHaveCount(4);
+  }
+  await assertPrivate(context, page, observations);
+});
+
+test("a sample destination behind an edited label can be located and warnings clear on replacement", async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{
+    text: "Contact review",
+    links: [{ label: "My GitHub", url: "https://github.com/your-handle" }],
+  }])));
+  const warning = page.locator('.link-list .notice');
+  await expect(warning).toHaveText("Sample contact. Replace this destination in your resume source, then export a new PDF.");
+  await expect(page.locator("#summary")).toContainText("1 sample link");
+  const locate = page.getByRole("button", { name: "Show link 1 on page 1", exact: true });
+  await expect(locate).toHaveAttribute('aria-describedby', await warning.getAttribute('id'));
+  await locate.click();
+  await expect(page.locator('.link-overlay')).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(warning).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  await reviewFile(page, filePayload(pdfFixture([{
+    text: "Contact review",
+    links: [{ label: "My GitHub", url: "https://github.com/alex-morgan" }],
+  }])));
+  await expect(page.locator('.link-list .notice')).toHaveCount(0);
+  await expect(page.locator("#summary")).not.toContainText("sample");
+  await expect(page.locator('.locate-link')).not.toHaveAttribute('aria-describedby');
   await assertPrivate(context, page, observations);
 });
 
@@ -1101,5 +1140,241 @@ test("remains usable at a narrow viewport", async ({ page, context }) => {
   await expect(page.locator('#save-text')).toBeVisible();
   await expect(page.locator('#all-text')).toBeEditable();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await assertPrivate(context, page, observations);
+});
+
+test('file properties are read on demand and keep PDF and XMP values separate', async ({ page, context }) => {
+  const observations = await openReview(page, context, artifactURL);
+  const xmp = `<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Older XMP title</rdf:li></rdf:Alt></dc:title><dc:creator><rdf:Seq><rdf:li>Previous Author</rdf:li><rdf:li>Another Author</rdf:li></rdf:Seq></dc:creator></rdf:Description></rdf:RDF></x:xmpmeta>`;
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Visible resume text' }], {
+    title: 'Current PDF title', info: { Author: 'Zoë', Creator: 'Test writer', CreationDate: 'D:20260928120000Z' }, xmp,
+  })));
+  await expect(page.locator('#file-properties')).not.toHaveAttribute('open');
+  await expect(page.locator('#properties-list')).toBeEmpty();
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list')).toContainText('Current PDF title');
+  await expect(page.locator('#properties-list')).toContainText('Older XMP title');
+  await expect(page.locator('#properties-list')).toContainText('Previous Author; Another Author');
+  await expect(page.locator('#properties-list')).toContainText('Zoë');
+  await expect(page.locator('#properties-list')).toContainText('Title (PDF)');
+  await expect(page.locator('#properties-list')).toContainText('Title (XMP)');
+  await expect(page.locator('#properties-list')).toContainText('D:20260928120000Z');
+  await expect(page.locator('#all-text')).toHaveValue('Visible resume text');
+  await page.locator('#file-properties > summary').click();
+  const count = await page.locator('#properties-list > div').count();
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list > div')).toHaveCount(count);
+  await assertPrivate(context, page, observations);
+});
+
+test('property values are inert text with visible controls and bounded length', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  const title = '<img src="https://example.test/metadata" onerror="globalThis.metadataExecuted=true">';
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Safe page' }], {
+    title, info: { Author: 'Name\u202eHidden', Subject: 'x'.repeat(2000) },
+  })));
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list')).toContainText(title);
+  await expect(page.locator('#properties-list')).toContainText('Name\\u202eHidden');
+  await expect(page.locator('#properties-list img, #properties-list a, #properties-list script')).toHaveCount(0);
+  await expect(page.locator('#properties-status')).toContainText('cut short');
+  expect(await page.evaluate(() => globalThis.metadataExecuted)).toBeUndefined();
+  const subject = page.locator('#properties-list > div').filter({ hasText: 'Subject (PDF)' });
+  await expect(subject.locator('dd')).toHaveText('x'.repeat(1024) + 'Value cut short.');
+  await assertPrivate(context, page, observations);
+});
+
+test('missing properties are scoped to checked fields and do not imply a clean file', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'A document without common properties' }], { title: null, info: { CustomField: 'Not part of this inspection' } })));
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-status')).toHaveText('No values reported for the fields checked.');
+  await expect(page.locator('#file-properties')).toContainText('not a complete privacy check');
+  await expect(page.locator('#properties-list')).toBeEmpty();
+  await assertPrivate(context, page, observations);
+});
+
+test('clearing and replacing a file discard its properties', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'First PDF' }], { title: 'Old private title' })));
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list')).toContainText('Old private title');
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Second PDF' }], { title: 'Replacement title' })));
+  await expect(page.locator('#properties-list')).toBeEmpty();
+  await expect(page.locator('#file-properties')).not.toHaveAttribute('open');
+  await page.locator('#file-properties > summary').click();
+  await expect(page.locator('#properties-list')).toContainText('Replacement title');
+  await expect(page.locator('#properties-list')).not.toContainText('Old private title');
+  await page.locator('#clear-file').click();
+  await expect(page.locator('#file-properties')).toBeHidden();
+  await expect(page.locator('#properties-list')).toBeEmpty();
+  await expect(page.locator('#properties-status')).toHaveText('');
+  await assertPrivate(context, page, observations);
+});
+
+
+for (const failure of ['preview timeout', 'worker failure']) {
+  test(`${failure} preserves edited text for copying and saving`, async ({ page, context }) => {
+    await page.addInitScript(() => {
+      const NativeWorker = window.Worker;
+      window.Worker = function (...args) {
+        const worker = new NativeWorker(...args);
+        window.failReviewWorker = () => worker.dispatchEvent(new ErrorEvent('error', { cancelable: true }));
+        const post = worker.postMessage.bind(worker);
+        worker.postMessage = (message, ...args) => {
+          // Leave the first preview pending after text extraction has finished.
+          if (message?.action === 'GetOperatorList') return;
+          return post(message, ...args);
+        };
+        return worker;
+      };
+      window.Worker.prototype = NativeWorker.prototype;
+      const schedule = window.setTimeout.bind(window);
+      window.setTimeout = (callback, delay, ...args) => {
+        if (delay === 90_000) window.expireReview = callback;
+        return schedule(callback, delay, ...args);
+      };
+    });
+    const observations = await openReview(page, context);
+    await page.locator('#pdf-file').setInputFiles(filePayload(pdfFixture([{ text: 'Original PDF text' }])));
+    await expect(page.locator('#status')).toContainText('Rendering page');
+    await page.locator('.all-text-panel > summary').click();
+    await page.locator('#all-text').fill('An edited application answer');
+    await page.evaluate(kind => kind === 'preview timeout' ? window.expireReview() : window.failReviewWorker(), failure);
+    await expect(page.locator('#error')).toBeVisible();
+    await expect(page.locator('#all-text')).toHaveValue('An edited application answer');
+    await expect(page.locator('#all-text')).toBeEditable();
+    await expect(page.locator('#copy-all')).toBeEnabled();
+    await expect(page.locator('#save-text')).toBeEnabled();
+    await expect(page.locator('#pages canvas')).toHaveCount(0);
+    const saved = page.waitForEvent('download');
+    await page.locator('#save-text').click();
+    const download = await saved;
+    expect(download.suggestedFilename()).toBe('fixture-text.txt');
+    await discardDecision(page, () => page.locator('#clear-file').click(), false);
+    await expect(page.locator('#all-text')).toHaveValue('An edited application answer');
+    await discardDecision(page, () => page.locator('#clear-file').click(), true);
+    await expect(page.locator('#review')).toBeHidden();
+    await assertPrivate(context, page, observations);
+  });
+}
+
+for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
+  test(`${label}: compares original PDF wording and link destinations offline`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'Built API v1', links: [{ url: 'https://example.test/old' }] }]), 'before.pdf'));
+    await page.locator('#comparison > summary').click();
+    await page.locator('.all-text-panel > summary').click();
+    await page.locator('#all-text').fill('Draft text must stay out of the comparison');
+    await page.locator('#keep-before').click();
+    await expect(page.locator('#comparison-status')).toContainText('Open the revised PDF');
+    await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(pdfFixture([
+      { text: 'Built API v2', links: [{ url: 'https://example.test/new' }] }, { text: 'Another project' },
+    ]), 'after.pdf')), true);
+    await expect(page.locator('#status')).toHaveText('Review ready.');
+    await expect(page.locator('#comparison-files')).toContainText('before.pdf');
+    await expect(page.locator('#comparison-files')).toContainText('after.pdf');
+    await expect(page.locator('#comparison-files')).toContainText('1 page');
+    await expect(page.locator('#comparison-files')).toContainText('2 pages');
+    await expect(page.locator('.comparison-text del')).toContainText('v1');
+    await expect(page.locator('.comparison-text ins').first()).toContainText('v2');
+    await expect(page.locator('#comparison-results')).not.toContainText('Draft text must');
+    await expect(page.locator('.comparison-links')).toContainText('https://example.test/old');
+    await expect(page.locator('.comparison-links')).toContainText('https://example.test/new');
+    await expect(page.locator('.comparison-links a')).toHaveCount(0);
+    await page.locator('.all-text-panel > summary').click();
+    await page.locator('#all-text').fill('Another draft');
+    await expect(page.locator('#comparison-results')).not.toContainText('Another draft');
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('comparison ignores reflow but retains duplicate link changes', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  const destination = { url: 'https://example.test/code', label: '' };
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Built an API.', links: [destination, destination] }])));
+  await page.locator('#comparison > summary').click();
+  await page.locator('#keep-before').click();
+  await reviewFile(page, filePayload(pdfFixture([{ content: 'BT /F1 12 Tf 72 720 Td (Built an) Tj 0 -20 Td (API.) Tj ET', links: [destination] }])));
+  await expect(page.locator('#comparison-results')).toContainText('No differences in extracted text.');
+  await expect(page.locator('.comparison-links')).toContainText('Removed · 1 occurrence');
+  await expect(page.locator('.comparison-links li')).toHaveCount(1);
+  await expect(page.locator('#comparison')).toContainText('does not mean the PDFs look alike');
+  await assertPrivate(context, page, observations);
+});
+
+test('comparison never declares scanned or form-field text unchanged', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  for (const fixture of [{ image: true }, { text: 'Contact', formValue: 'Entered name' }]) {
+    await reviewFile(page, filePayload(pdfFixture([fixture])));
+    await page.locator('#comparison').evaluate(node => { node.open = true; });
+    await page.locator('#keep-before').click();
+    await reviewFile(page, filePayload(pdfFixture([fixture])));
+    await expect(page.locator('#comparison-results')).toContainText('Text comparison is incomplete.');
+    await expect(page.locator('#comparison-results')).not.toContainText('No differences in extracted text.');
+    await page.locator('#clear-before').click();
+  }
+  await assertPrivate(context, page, observations);
+});
+
+test('failed or cancelled replacement keeps the before copy until explicitly forgotten', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original resume' }]), 'before.pdf'));
+  await page.locator('#comparison > summary').click();
+  await page.locator('#keep-before').click();
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Keep my draft');
+  await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF'))), false);
+  await expect(page.locator('#all-text')).toHaveValue('Keep my draft');
+  await expect(page.locator('#comparison-files')).toContainText('before.pdf');
+  await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF'))), true);
+  await expect(page.locator('#error')).toBeVisible();
+  await expect(page.locator('#comparison-files')).toContainText('before.pdf');
+  await expect(page.locator('#comparison-results')).toBeEmpty();
+  await page.locator('#pdf-file').setInputFiles(filePayload(encryptedFixture()));
+  await expect(page.locator('#password-form')).toBeVisible();
+  await page.locator('#cancel-password').click();
+  await expect(page.locator('#comparison-files')).toContainText('before.pdf');
+  await page.locator('#clear-before').click();
+  await expect(page.locator('#comparison')).toBeHidden();
+  await expect(page.locator('#comparison-files')).toBeEmpty();
+  await assertPrivate(context, page, observations);
+});
+
+test('clear and reload forget both comparison copies', async ({ page, context }) => {
+  const observations = await openReview(page, context, artifactURL);
+  for (const action of ['clear', 'reload']) {
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'Before contents' }])));
+    await page.locator('#comparison > summary').click();
+    await page.locator('#keep-before').click();
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'After contents' }])));
+    await expect(page.locator('#comparison-results')).toContainText('After');
+    if (action === 'clear') await page.locator('#clear-file').click();
+    else await page.reload();
+    await expect(page.locator('#comparison')).toBeHidden();
+    await expect(page.locator('#comparison-files')).toBeEmpty();
+    await expect(page.locator('#comparison-results')).toBeEmpty();
+  }
+  await assertPrivate(context, page, observations);
+});
+
+test('comparison is keyboard usable at phone width and treats markup as text', async ({ page, context }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const observations = await openReview(page, context, artifactURL);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Before version' }]), 'before.pdf'));
+  const summary = page.locator('#comparison > summary');
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await page.locator('#keep-before').focus();
+  await page.keyboard.press('Enter');
+  const markup = '<img src=https://example.test/private>';
+  await reviewFile(page, filePayload(pdfFixture([{ text: markup }]), 'Long-'.repeat(40) + '.pdf'));
+  await expect(page.locator('.comparison-text')).toContainText(markup);
+  await expect(page.locator('#comparison-results img, #comparison-results script')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('#clear-before').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#keep-before')).toBeFocused();
+  await expect(page.locator('#comparison-results')).toBeEmpty();
   await assertPrivate(context, page, observations);
 });

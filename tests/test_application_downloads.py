@@ -44,9 +44,9 @@ class ApplicationDownloadTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name) / "source tree with spaces"
+        self.root = Path(self.temporary.name).resolve() / "source tree with spaces"
         fixture_root(self.root)
-        self.output = Path(self.temporary.name) / "download folder"
+        self.output = Path(self.temporary.name).resolve() / "download folder"
         self.archive = self.output / "application-versions.zip"
 
     def run_main(self, *args):
@@ -238,10 +238,37 @@ class ApplicationDownloadTests(unittest.TestCase):
         self.assertEqual(self.run_main(), 1)
         self.assertEqual(list(actual_output.iterdir()), [])
 
+    def test_output_parent_symlink_preserves_existing_archive_and_creates_nothing(self):
+        self.assertEqual(self.run_main(), 0)
+        previous = self.archive.read_bytes()
+        before = self.archive.stat().st_mtime_ns
+        redirect = self.root / "redirect"
+        self.symlink(redirect, self.output.parent)
+        for target in (redirect / self.output.name, redirect / "missing" / "downloads"):
+            with self.subTest(target=target), patch.object(self, "output", target):
+                for args in ((), ("--check",)):
+                    self.assertEqual(self.run_main(*args), 1)
+                    self.assertIn("symlink destination", self.stderr.getvalue())
+        self.assertEqual(self.archive.read_bytes(), previous)
+        self.assertEqual(self.archive.stat().st_mtime_ns, before)
+        self.assertFalse((self.output.parent / "missing").exists())
+
     def test_filesystem_errors_are_reported_without_traceback(self):
-        with patch.object(Path, "write_bytes", side_effect=PermissionError("write denied")):
+        with patch("package_templates.os.replace", side_effect=PermissionError("write denied")):
             self.assertEqual(self.run_main(), 1)
         self.assertEqual(self.stderr.getvalue().strip(), "FAIL: write denied")
+        self.assertEqual(list(self.output.iterdir()), [])
+
+    def test_failed_replacement_keeps_previous_archive_and_removes_temporary_file(self):
+        self.assertEqual(self.run_main(), 0)
+        previous = self.archive.read_bytes()
+        before = self.archive.stat().st_mtime_ns
+        (self.root / EXPECTED_SOURCES["README.md"]).write_text("A changed guide.\n", encoding="utf-8")
+        with patch("package_templates.os.replace", side_effect=PermissionError("replacement denied")):
+            self.assertEqual(self.run_main(), 1)
+        self.assertEqual(self.archive.read_bytes(), previous)
+        self.assertEqual(self.archive.stat().st_mtime_ns, before)
+        self.assertEqual(list(self.output.iterdir()), [self.archive])
 
     def test_cli_help_and_invalid_argument_exit_codes(self):
         script = Path(packager.__file__)

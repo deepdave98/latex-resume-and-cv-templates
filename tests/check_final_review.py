@@ -123,6 +123,34 @@ class FinalReviewBuildTests(unittest.TestCase):
         self.assertNotEqual(failed_log.parent, previous_pdf.parent)
         self.assertIn("Undefined control sequence", failed_log.read_text(encoding="utf-8"))
 
+    def test_unlinked_contact_needs_review_and_corrected_contact_passes(self):
+        source = self.fixture(r"\resumecontact{\resumephone{416-555-0123}}")
+        code, out, err = self.run_review(source)
+        self.assertEqual(code, 3, out + err)
+        self.assertIn("CONTACT LINKS: 1 unsupported format(s)", out)
+        self.assertIn("Text checks: 1 page(s)", out)
+        self.assertNotIn("416-555-0123", out + err)
+        source = self.fixture(r"\resumecontact{\resumephone{+1 (416) 555-0123}}")
+        code, out, err = self.run_review(source)
+        self.assertEqual(code, 0, out + err)
+        self.assertNotIn("CONTACT LINKS:", out)
+
+    def test_overflowing_text_needs_review_and_corrected_layout_passes(self):
+        bodies = (
+            r"\noindent\mbox{" + "UnbrokenText" * 30 + "}",
+            r"\vbox to 1pt{First line.\par Second line.}",
+        )
+        for body in bodies:
+            with self.subTest(body=body[:30]):
+                source = self.fixture(body)
+                code, out, err = self.run_review(source)
+                self.assertEqual(code, 3, out + err)
+                self.assertIn("LAYOUT OVERFLOW:", out)
+                self.assertIn("Text checks: 1 page(s)", out)
+        code, out, err = self.run_review(self.fixture("Completed resume content."))
+        self.assertEqual(code, 0, out + err)
+        self.assertNotIn("LAYOUT OVERFLOW:", out)
+
     def test_source_and_command_page_limits_report_separately(self):
         source = self.fixture(
             r"First page.\newpage Second page.",

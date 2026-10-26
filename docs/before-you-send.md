@@ -28,6 +28,8 @@ Each run uses a fresh directory under ignored `.context/final-review/`. It print
 ## 2. Resolve reminders and page limits
 
 - **Placeholders:** replace the flagged sample text or delete unused entries, then rebuild. Check included content files too. Reminders inspect selected template commands and lists; they can miss unfinished text, and literal brackets can trigger them.
+- **Unlinked contacts:** an unsupported email or phone value prints without a clickable link. Correct the literal email or include the phone country code. For other formats, use `\resumelink{destination}{label}` and check the exported PDF's links.
+- **Overflow:** an overfull box can put content beyond its available space. Inspect the affected page and log line, shorten unbroken text or adjust the entry, then rebuild. A clean log still does not prove the layout is correct.
 - **Too many pages:** remove less relevant content, or allow another page when the application permits it. The source uses `\resumepagelimit{1}` (in `setup.tex` for the application-version example). Change it only when the longer version is intentional. An invalid source limit needs a whole number from 1 to 999999999.
 - **Command page limit:** `--max-pages 1` separately checks the built PDF's page count. Omit it for no additional command limit. Source reminders still apply; no warning does not prove that a source limit was set.
 
@@ -38,6 +40,8 @@ The local command exits with `0` when its checks finish without reported reminde
 ## 3. Read the extracted text
 
 [Download the offline reviewer](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/pdf-review.zip), unzip it, and open `pdf-review.html`. Choose **Open PDF** and select the newly built or downloaded PDF.
+
+After tailoring a resume, use **Compare two exports** to keep the earlier PDF as the before copy, then open the revised export. Check changed wording and link destinations. Comparison does not check layout or establish that extraction is complete.
 
 Read every page's extracted text. Check names, contacts, dates, headings, bullet order, missing words, and odd symbols against the PDF. The local command checks for empty text pages, flagged characters, and extraction errors; it cannot establish completeness or correct reading order.
 

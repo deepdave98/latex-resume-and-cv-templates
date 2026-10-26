@@ -166,6 +166,40 @@ class FinalReviewTests(unittest.TestCase):
                     self.assertIn(expected, out)
                 self.assertNotIn("checks completed without", out)
 
+    def test_unsupported_contacts_need_review_without_printing_private_values(self):
+        self.log = "\n".join((
+            review.CONTACT_UNSUPPORTED + "phone format; contact is not linked.",
+            "PRIVATE_CONTACT_SENTINEL",
+            review.CONTACT_UNSUPPORTED + "email format; contact is not linked.",
+        ))
+        code, out, err, _, _ = self.run_review()
+        self.assertEqual(code, 3, err)
+        self.assertIn("CONTACT LINKS: 2 unsupported format(s)", out)
+        self.assertIn("log line 1", out)
+        self.assertIn("phone country code", out)
+        self.assertIn(r"\resumelink", out)
+        self.assertIn("REVIEW NEEDED", out)
+        self.assertNotIn("PRIVATE_CONTACT_SENTINEL", out + err)
+
+    def test_overfull_boxes_need_review_without_printing_resume_text(self):
+        self.log = "\n".join((
+            r"Overfull \hbox (40.0pt too wide) in paragraph at lines 3--4",
+            "PRIVATE_RESUME_SENTINEL",
+            r"Overfull \vbox (2.0pt too high) detected at line 8",
+        ))
+        code, out, err, _, _ = self.run_review()
+        self.assertEqual(code, 3, err)
+        self.assertIn("LAYOUT OVERFLOW: 2 box warning(s)", out)
+        self.assertIn("log line 1", out)
+        self.assertIn("clipped or overflowing text", out)
+        self.assertNotIn("PRIVATE_RESUME_SENTINEL", out + err)
+
+    def test_underfull_boxes_alone_do_not_fail_the_review(self):
+        self.log = r"Underfull \hbox (badness 10000) in paragraph at lines 3--4"
+        code, out, err, _, _ = self.run_review()
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("LAYOUT OVERFLOW:", out)
+
     def test_multiple_placeholder_reminders_count_only_final_log(self):
         self.log = "\n".join((review.PLACEHOLDER + "name.", review.PLACEHOLDER + "selected bullet."))
         code, out, _, _, _ = self.run_review()
