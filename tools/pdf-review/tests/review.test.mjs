@@ -74,6 +74,72 @@ test("unsafe, malformed, and relative destinations stay visible but are flagged"
   }
 });
 
+test("known starter contacts are flagged across URL formatting variations", () => {
+  for (const destination of [
+    "mailto:hello@example.com", "MAILTO:hello%40example.com?subject=Resume",
+    "tel:+15555555555", "tel:%2B1%20(555)%20555-5555",
+    "https://github.com/your-handle", "http://www.github.com/Your-Handle/?tab=repositories",
+    "https://github.com/%79our-handle#readme",
+    "https://www.linkedin.com/in/your-handle", "https://linkedin.com/in/your-handle/?trk=resume",
+  ]) {
+    const [result] = inspectLinkAnnotations([link({ url: destination })]).links;
+    assert.equal(result.sampleContact, true, destination);
+    assert.equal(result.destination, destination);
+    assert.equal(result.unsafe, false, "a sample is not an unsafe URL");
+  }
+});
+
+test("sample checks do not guess from labels, partial names, unrelated hosts, or query text", () => {
+  for (const destination of [
+    "mailto:alex@example.test", "mailto:hello@example.com.test", "mailto:hello+jobs@example.com",
+    "tel:+15555550123", "tel:+25555555555", "tel:+155555555550",
+    "https://github.com/alex-morgan", "https://github.com/your-handle-project",
+    "https://github.com/alex/your-handle", "https://github.com/?next=/your-handle",
+    "https://github.com/your-handle/repository", "https://notgithub.com/your-handle",
+    "https://github.com.example.test/your-handle", "https://github.com@elsewhere.test/your-handle",
+    "https://linkedin.com/company/your-handle", "https://linkedin.com/in/your-handle-team",
+    "https://www.linkedin.com/in/alex", "https://github.com/%zz",
+    "https://example.test/your-handle", "ftp://github.com/your-handle", "github.com/your-handle",
+  ]) {
+    const [result] = inspectLinkAnnotations([link({ url: destination, contentsObj: { str: "hello@example.com" } })]).links;
+    assert.equal(result.sampleContact, false, destination);
+  }
+});
+
+test("sample checks inspect raw and resolved destinations without replacing security warnings", () => {
+  const raw = "https://github.com/your-handle";
+  const resolved = "https://www.linkedin.com/in/your-handle";
+  const results = inspectLinkAnnotations([
+    link({ unsafeUrl: raw, url: "https://elsewhere.test/" }),
+    link({ unsafeUrl: "/in/your-handle", url: resolved }),
+    link({ unsafeUrl: "https://github.com/your-\nhandle", url: raw }),
+  ]).links;
+  assert.ok(results.every((result) => result.sampleContact));
+  assert.equal(results[0].destination, raw);
+  assert.equal(results[1].unsafe, true);
+  assert.equal(results[1].resolvedDestination, resolved);
+  assert.match(results[2].reason, /hidden control/u);
+});
+
+test("a truncated link is not mistaken for a complete sample destination", () => {
+  const prefix = "https://github.com/your-handle";
+  const [result] = inspectLinkAnnotations([link({ url: `${prefix}-real` })], { maxDestinationChars: prefix.length }).links;
+  assert.equal(result.destination, prefix);
+  assert.equal(result.truncated, true);
+  assert.equal(result.sampleContact, false);
+});
+
+test("sample counts include link annotations only, across all reviewed pages", async () => {
+  const result = await reviewDocument(document([
+    page([item("hello@example.com")], [link({ url: "https://github.com/alex" })]),
+    page([], [link({ url: "mailto:hello@example.com" }), link({ url: "tel:+15555555555" }), link({ dest: "hello@example.com" })]),
+  ]));
+  assert.equal(result.sampleLinkCount, 2);
+  assert.equal(result.linkCount, 4);
+  assert.equal(result.pages[0].links[0].sampleContact, false);
+  assert.equal(result.truncated, false);
+});
+
 test("URL controls cannot disappear through URL parsing or spoof displayed destinations", () => {
   for (const character of ["\n", "\t", "\r", "\u0000", "\u0085", "\u00ad", "\u061c", "\u200b", "\u200e", "\u2028", "\u2029", "\u202e", "\u2066", "\ufeff", "\u{e0001}"]) {
     const destination = `https://example.test/${character}secret`;
@@ -149,6 +215,28 @@ test("no text never claims a page is visually blank", async () => {
   assert.equal(result.emptyTextPageCount, 1);
   assert.match(result.pages[0].warnings[0].message, /image, a scanned page, or an empty page/u);
   assert.equal("isBlank" in result.pages[0], false);
+});
+
+test("format-only and control-only pages do not count as extracted content", async () => {
+  for (const text of ["\u200b\u200d", " \n\u200c\u2066\u2069\t", "\u0000", "\ue000", "\udfff", "\u0378"]) {
+    const result = await reviewDocument(document([page([item(text)])]));
+    assert.equal(result.pages[0].hasText, false, JSON.stringify(text));
+    assert.equal(result.pages[0].textStatus, "empty");
+    assert.equal(result.emptyTextPageCount, 1);
+    assert.ok(result.pages[0].warnings.some(({ code }) => code === "no-extracted-text"));
+    assert.equal(result.pages[0].text, text.trim(), "keep extracted characters available for inspection");
+  }
+});
+
+test("real text retains joining characters, combining marks, and emoji", async () => {
+  for (const text of ["می\u200cروم", "अक्\u200dषर", "Jose\u0301", "👩\u200d💻", "中文", "\u2067العربية\u2069"]) {
+    const result = await reviewDocument(document([page([item(text)])]));
+    assert.equal(result.pages[0].hasText, true, text);
+    assert.equal(result.pages[0].textStatus, "ok");
+    assert.equal(result.emptyTextPageCount, 0);
+    assert.equal(result.pages[0].text, text);
+    assert.ok(!result.pages[0].warnings.some(({ code }) => code === "no-extracted-text"));
+  }
 });
 
 test("per-page failures remain distinct from empty text and missing links without leaking parser errors", async () => {

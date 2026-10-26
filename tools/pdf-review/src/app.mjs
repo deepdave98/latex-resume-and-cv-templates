@@ -5,6 +5,9 @@ import { createTextDownload, MAX_DRAFT_CHARS } from './text-download.mjs';
 import { checkUploadLimits, formatFileSize } from './upload-limits.mjs';
 import { formatPageSize } from './page-size.mjs';
 import { checkTextLimit } from './text-limits.mjs';
+import { readProperties } from './document-properties.mjs';
+import { createComparisonSnapshot } from './compare.mjs';
+import { createComparisonView } from './comparison-view.mjs';
 
 const assets = __PDF_ASSETS__;
 class EmbeddedBinaryDataFactory {
@@ -16,11 +19,17 @@ class EmbeddedBinaryDataFactory {
 }
 
 const byId = id => document.getElementById(id);
-const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help', 'upload-limits', 'file-size', 'max-pages', 'max-mb', 'page-limit-result', 'size-limit-result', 'max-characters', 'text-limit-result'].map(id => [id, byId(id)]));
+const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'file-properties', 'properties-status', 'properties-list', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help', 'upload-limits', 'file-size', 'max-pages', 'max-mb', 'page-limit-result', 'size-limit-result', 'max-characters', 'text-limit-result'].map(id => [id, byId(id)]));
 ui['all-text'].maxLength = MAX_DRAFT_CHARS;
 let generation = 0;
 let current;
 let submitPassword;
+const comparison = createComparisonView(byId('comparison'), () => {
+  if (!current) {
+    ui.review.hidden = true;
+    ui['empty-state'].hidden = false;
+  }
+});
 const MAX_BYTES = 20 * 1024 * 1024;
 const MAX_PAGES = 20;
 
@@ -47,7 +56,8 @@ function dispose(state) {
   void Promise.resolve(state.ready).catch(() => {}).then(() => state.loading?.destroy()).catch(() => {}).finally(finish);
 }
 
-function clearReview(message = '', { keepLimits = false } = {}) {
+function clearReview(message = '', { keepLimits = false, keepComparison = false } = {}) {
+  comparison.clear({ keepBefore: keepComparison });
   window.removeEventListener('beforeunload', warnBeforeUnload);
   generation += 1;
   const old = current;
@@ -68,11 +78,18 @@ function clearReview(message = '', { keepLimits = false } = {}) {
   ui['save-text'].disabled = true;
   ui['max-characters'].disabled = true;
   ui['draft-warning'].hidden = true;
+  ui['file-properties'].hidden = true;
+  ui['file-properties'].open = false;
+  ui['properties-list'].replaceChildren();
+  ui['properties-status'].textContent = '';
   ui['pdf-file'].value = '';
   ui.password.value = '';
   ui['password-form'].hidden = true;
-  ui.review.hidden = true;
-  ui['empty-state'].hidden = false;
+  const referenceKept = keepComparison && !byId('comparison').hidden;
+  ui.review.hidden = !referenceKept;
+  ui['empty-state'].hidden = referenceKept;
+  document.querySelector('.review-heading').hidden = true;
+  document.querySelector('.all-text-panel').hidden = true;
   document.querySelector('.all-text-panel').open = false;
   ui.filename.textContent = '';
   ui.summary.textContent = '';
@@ -94,7 +111,27 @@ function clearReview(message = '', { keepLimits = false } = {}) {
 }
 
 function fail(message) {
-  clearReview();
+  const draft = hasTextEdits() ? {
+    text: ui['all-text'].value, originalText: current.originalText,
+    fileName: current.fileName, fileBytes: current.fileBytes, pageCount: current.pageCount,
+    incompleteText: !ui['draft-warning'].hidden,
+  } : null;
+  clearReview('', { keepLimits: Boolean(draft), keepComparison: true });
+  if (draft) {
+    current = { ...draft, controller: new AbortController() };
+    ui.review.hidden = false;
+    ui['empty-state'].hidden = true;
+    document.querySelector('.review-heading').hidden = false;
+    document.querySelector('.all-text-panel').hidden = false;
+    ui.filename.textContent = draft.fileName;
+    ui.summary.textContent = 'Page review did not finish.';
+    ui['all-text'].value = draft.text;
+    ui['all-text'].readOnly = false;
+    ui['draft-warning'].hidden = !draft.incompleteText;
+    document.querySelector('.all-text-panel').open = true;
+    updateTextControls();
+    ui.status.textContent = 'Your text edits are still available. Copy or save them before clearing.';
+  }
   ui.error.textContent = message;
   ui.error.hidden = false;
 }
@@ -219,6 +256,28 @@ function saveText() {
   }
 }
 
+async function showProperties(state) {
+  if (!state?.pdf || state.propertiesRequested) return;
+  state.propertiesRequested = true;
+  ui['properties-status'].textContent = 'Reading properties…';
+  const result = await readProperties(state.pdf, { signal: state.controller.signal });
+  if (current !== state || result.status === 'cancelled') return;
+  if (result.status !== 'ok') {
+    ui['properties-status'].textContent = 'Properties could not be read. Check them in your PDF reader.';
+    return;
+  }
+  for (const field of result.fields) {
+    const row = element('div');
+    const value = element('dd', '', displayDestination(field.value));
+    if (field.limited) value.append(element('span', 'property-limit', 'Value cut short.'));
+    row.append(element('dt', '', `${field.label} (${field.source})`), value);
+    ui['properties-list'].append(row);
+  }
+  ui['properties-status'].textContent = result.limited
+    ? 'Some properties were cut short or could not be read.'
+    : result.fields.length ? '' : 'No values reported for the fields checked.';
+}
+
 function showPage(record) {
   const card = element('section', 'page-card');
   const heading = element('div', 'page-heading');
@@ -302,6 +361,12 @@ function showPage(record) {
         item.append(element('p', 'field-hint', 'PDF reader resolves this to:'), element('code', 'link-destination', displayDestination(link.resolvedDestination)));
       }
       if (link.reason) item.append(element('p', 'field-hint', link.reason));
+      if (link.sampleContact) {
+        const warning = element('p', 'notice notice--warning', 'Sample contact. Replace this destination in your resume source, then export a new PDF.');
+        warning.id = `sample-contact-${record.number}-${index + 1}`;
+        locate.setAttribute('aria-describedby', warning.id);
+        item.append(warning);
+      }
       list.append(item);
     }
     links.append(list);
@@ -385,7 +450,7 @@ async function openFile(file) {
     ui['pdf-file'].value = '';
     return;
   }
-  clearReview('', { keepLimits: true });
+  clearReview('', { keepLimits: true, keepComparison: true });
   if (!file.size) return fail('This file is empty. Choose a finished PDF.');
   if (file.size > MAX_BYTES) return fail('Choose a PDF no larger than 20 MiB. Larger files can use too much browser memory.');
   const token = generation;
@@ -394,6 +459,8 @@ async function openFile(file) {
   armTimeout(state);
   ui.review.hidden = false;
   ui['empty-state'].hidden = true;
+  document.querySelector('.review-heading').hidden = false;
+  document.querySelector('.all-text-panel').hidden = false;
   ui.filename.textContent = file.name;
   ui.status.textContent = 'Opening PDF…';
   try {
@@ -447,6 +514,8 @@ async function openFile(file) {
     const pdf = await state.loading.promise;
     if (token !== generation) return;
     if (pdf.numPages > MAX_PAGES) return fail('This PDF has more than 20 pages. Choose just the resume pages to review.');
+    state.pdf = pdf;
+    ui['file-properties'].hidden = false;
     ui.status.textContent = 'Reading text and link destinations…';
     const result = await reviewDocument(pdf, { signal: state.controller.signal });
     if (token !== generation) return;
@@ -504,9 +573,11 @@ async function openFile(file) {
     const count = result.pageCount;
     const linkCount = result.pages.reduce((sum, page) => sum + page.links.length, 0);
     ui.summary.textContent = [`${count} ${count === 1 ? 'page' : 'pages'}`, `${linkCount} ${linkCount === 1 ? 'link' : 'links'}`,
+      result.sampleLinkCount ? `${result.sampleLinkCount} sample ${result.sampleLinkCount === 1 ? 'link' : 'links'}` : '',
       noText ? `${noText} without extracted text` : '', blank ? `${blank} appear blank` : '', failed ? `${failed} previews unavailable` : ''].filter(Boolean).join(' · ');
     for (const warning of result.warnings) ui.pages.prepend(element('p', 'notice notice--warning', warning.message));
     clearTimeout(state.timer);
+    comparison.setCurrent(createComparisonSnapshot(result, { filename: state.fileName, bytes: state.fileBytes }));
     ui.status.textContent = 'Review ready.';
   } catch {
     if (token === generation) fail('This PDF could not be read. It may be damaged, unsupported, or blocked by this browser. Try a fresh PDF export or a current browser.');
@@ -524,6 +595,9 @@ ui['all-text'].addEventListener('input', updateTextControls);
 ui['max-characters'].addEventListener('input', updateTextLimit);
 for (const id of ['max-pages', 'max-mb']) ui[id].addEventListener('input', updateUploadLimits);
 ui['save-text'].addEventListener('click', saveText);
+ui['file-properties'].addEventListener('toggle', () => {
+  if (ui['file-properties'].open) void showProperties(current);
+});
 ui['reset-text'].addEventListener('click', () => {
   if (typeof current?.originalText !== 'string') return;
   if (!confirmDiscardText()) return;
@@ -537,7 +611,7 @@ ui['password-form'].addEventListener('submit', event => {
   ui.password.value = '';
   submitPassword?.(value);
 });
-ui['cancel-password'].addEventListener('click', () => clearReview('Review cancelled.'));
+ui['cancel-password'].addEventListener('click', () => clearReview('Review cancelled.', { keepComparison: true }));
 for (const type of ['dragover', 'drop']) {
   window.addEventListener(type, event => event.preventDefault());
 }

@@ -16,7 +16,21 @@ One PDF at a time, up to 20 MiB (20,971,520 bytes) and 20 pages. Password-protec
 
 Opening another file, **Clear file**, and **Reset text** ask before discarding edited text, including edits you have already copied or saved. Cancel keeps the current review. Unchanged text needs no confirmation. Dropping several files also leaves the current review intact.
 
-Reloading or closing the page requests the browser's leave-page warning while text differs from the extraction. Browsers may suppress that warning, so copy or save edits you need before leaving. Nothing is saved automatically.
+Reloading or closing the page requests the browser's leave-page warning while text differs from the extraction. Browsers may suppress that warning, so copy or save edits you need before leaving. Nothing is saved automatically. If PDF processing fails after you edit the text copy, those edits remain available to copy or save; the page review is still incomplete.
+
+## Compare two exports
+
+1. Open the earlier PDF, expand **Compare two exports**, and choose **Keep this PDF as before**.
+2. Use **Open PDF** to open the revised export. The before copy stays in this tab.
+3. Check added and removed wording, external link destinations and their counts, page counts, and exact file sizes. Inspect both PDFs for layout changes too.
+
+Comparison uses the original extracted text, never edits in **Text for application forms**. Spaces and line breaks are ignored; punctuation, numbers, capitalization, and Unicode characters are preserved. Reordered text appears as removals and additions. Link destinations stay inert, including unsafe URLs; hidden controls are shown as escapes. Raw and resolved destinations are both compared.
+
+Missing, scanned, truncated, or known broken text cannot produce a text match. Form fields may be absent from extraction, so those comparisons are marked incomplete. Internal links and PDF actions cannot be compared; warnings identify partial link results. **No differences in extracted text** does not establish that two PDFs look alike or contain the same information.
+
+Large comparisons may be skipped to keep the page responsive: up to 60,000 text characters and 8,000 words per PDF, with a separate limit on comparison work and displayed changes. Link comparison keeps at most 100 external links and 32,000 destination characters per PDF. A limit produces an incomplete result, never an unchanged verdict.
+
+**Use current PDF as before** starts another comparison. **Forget before copy** removes just the reference. **Clear file**, reloading, or closing the page removes both. A cancelled or failed replacement keeps the reference; the existing confirmation still protects edited application text. No PDF bytes, workers, or application-form edits are kept in the reference, and nothing is stored between visits.
 
 ## Application upload limits
 
@@ -38,6 +52,8 @@ Resetting text or opening a revised PDF keeps the limit. Clearing, reloading, cl
 
 - **Extracted text:** look for missing words, odd symbols, and wrong reading order. Ligatures such as `ﬁ` become ordinary letters for copying.
 - **Link destinations:** select **Show on page** beside a destination. Its clickable area is highlighted in the preview so you can compare it with the printed label. **Back to link** returns to that row. Select the same button again to clear the highlight. Destinations remain text only; the tool never follows them or checks whether a website is online. Hidden control characters are shown as escapes. Internal links and unsupported PDF actions are identified separately.
+- **File properties:** check stored titles, authors, and creating applications for old names. PDF Info and XMP values are shown separately, with hidden controls escaped. This reads common fields only and does not remove metadata or certify privacy.
+- **Sample contacts:** a warning beside a link flags the starter email, phone number, or GitHub/LinkedIn profile. Check its printed label with **Show on page**, then fix the source and export again. This matches known sample destinations only; it does not verify ownership or find every placeholder.
 - **Pages without text:** a scan or outlined lettering may look fine but copy nothing. This tool does not run OCR.
 - **Pages that appear blank:** this is a preview-based hint, not proof. Very faint content can be missed. A failed preview is never counted as a blank page.
 - **Paper size:** each page shows its dimensions and orientation. A4, US Letter, and US Legal are named; other dimensions show as **Custom size**. Compare each page with your application's instructions, especially if you combined PDFs.
@@ -86,6 +102,8 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/app.mjs` | File lifecycle, worker, previews, clipboard, and DOM |
 | `src/review.mjs` | Bounded text and annotation inspection |
 | `src/link-region.mjs` | Annotation coordinates clipped to the rendered page |
+| `src/compare.mjs`, `src/comparison-view.mjs` | Bounded comparisons of original text and external destinations |
+| `src/document-properties.mjs` | Bounded, on-demand inspection of PDF Info and XMP fields |
 | `src/page-size.mjs` | Paper names, dimensions, and orientation from PDF page geometry |
 | `src/text-download.mjs` | UTF-8 text exports and safe download names |
 | `src/text-limits.mjs` | Character counts and optional application-text limits |
