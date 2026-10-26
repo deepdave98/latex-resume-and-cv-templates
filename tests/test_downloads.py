@@ -64,6 +64,12 @@ def fixture_archive(entries=None):
 
 
 class PackagingTests(unittest.TestCase):
+    def symlink(self, link, target):
+        try:
+            link.symlink_to(target, target_is_directory=target.is_dir())
+        except (OSError, NotImplementedError) as error:
+            self.skipTest(f"Symlinks unavailable: {error}")
+
     def test_template_registries_cover_all_starters(self):
         self.assertEqual(packager.TEMPLATE_SOURCES, EXPECTED_TEMPLATES)
         self.assertEqual(smoke.TEMPLATES, tuple(EXPECTED_TEMPLATES))
@@ -144,10 +150,43 @@ class PackagingTests(unittest.TestCase):
             with self.assertRaises((OSError, ValueError)):
                 packager.starter_files(root, "new-grad")
 
+    def test_source_parent_symlinks_cannot_import_private_files(self):
+        for relative, selected_name in (
+            ("templates", "new-grad-resume.tex"),
+            ("assets", "starter/START_HERE.md"),
+            ("assets/starter", "START_HERE.md"),
+        ):
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as temporary:
+                base = Path(temporary).resolve()
+                root = base / "checkout"
+                fixture_root(root)
+                source = root / relative
+                private = base / "private files"
+                source.rename(private)
+                (private / selected_name).write_bytes(b"PRIVATE_SENTINEL")
+                self.symlink(source, private)
+                with self.assertRaisesRegex(ValueError, "source symlink"):
+                    packager.starter_files(root, "new-grad")
+                out, err = StringIO(), StringIO()
+                with patch.object(packager, "ROOT", root), redirect_stdout(out), redirect_stderr(err):
+                    self.assertEqual(packager.main([]), 1)
+                self.assertFalse((root / "downloads").exists())
+                self.assertNotIn("PRIVATE_SENTINEL", out.getvalue() + err.getvalue())
+
+    def test_symlink_source_root_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            root = base / "checkout"
+            fixture_root(root)
+            linked = base / "linked checkout"
+            self.symlink(linked, root)
+            with self.assertRaisesRegex(ValueError, "regular source directory"):
+                packager.starter_files(linked, "new-grad")
+
     def test_check_archive_rejects_missing_stale_and_corrupt_without_writes(self):
         expected = packager.archive_bytes({"resume.tex": b"current"})
         with tempfile.TemporaryDirectory() as temporary:
-            archive = Path(temporary) / "resume.zip"
+            archive = Path(temporary).resolve() / "resume.zip"
             self.assertFalse(packager.check_archive(archive, expected))
             self.assertFalse(archive.exists())
             for content in (b"not a zip", packager.archive_bytes({"resume.tex": b"old"}), expected):
@@ -161,7 +200,7 @@ class PackagingTests(unittest.TestCase):
     def test_check_archive_rejects_symlink(self):
         expected = packager.archive_bytes({"resume.tex": b"current"})
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
+            root = Path(temporary).resolve()
             (root / "target.zip").write_bytes(expected)
             try:
                 (root / "link.zip").symlink_to(root / "target.zip")
@@ -171,7 +210,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_check_cli_fails_missing_then_passes_current_and_fails_stale(self):
         with tempfile.TemporaryDirectory() as temporary:
-            output = Path(temporary) / "download folder"
+            output = Path(temporary).resolve() / "download folder"
             with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
                 self.assertEqual(packager.main(["--check", "--output-dir", str(output)]), 1)
                 self.assertFalse(output.exists())
@@ -183,6 +222,25 @@ class PackagingTests(unittest.TestCase):
                 archive.write_bytes(b"stale")
                 self.assertEqual(packager.main(["--check", "--output-dir", str(output)]), 1)
                 self.assertEqual(archive.read_bytes(), b"stale")
+
+    def test_output_parent_symlink_neither_checks_nor_overwrites_archives(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            output = base / "actual" / "downloads"
+            with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                self.assertEqual(packager.main(["--output-dir", str(output)]), 0)
+            before = {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in output.iterdir()}
+            redirect = base / "redirect"
+            self.symlink(redirect, output.parent)
+            for target in (redirect / "downloads", redirect / "missing" / "downloads", redirect):
+                for args in ([], ["--check"]):
+                    with self.subTest(target=target, args=args), redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                        self.assertEqual(packager.main(["--output-dir", str(target), *args]), 1)
+            self.assertEqual({p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in output.iterdir()}, before)
+            self.assertEqual(list(output.parent.iterdir()), [output])
+            expected = next(iter(before.values()))[0]
+            archive = redirect / "downloads" / next(iter(before))
+            self.assertFalse(packager.check_archive(archive, expected))
 
 
 class ReadmeDownloadTests(unittest.TestCase):

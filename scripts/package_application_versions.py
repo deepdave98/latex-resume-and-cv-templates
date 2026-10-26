@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from package_templates import archive_bytes, check_archive
+from package_templates import archive_bytes, check_archive, checked_destination, read_sources
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -29,22 +29,7 @@ SOURCES = {
 
 
 def project_files(root):
-    """Read only the named UTF-8 sources, refusing links within the project."""
-    root = Path(root)
-    if root.is_symlink() or not root.is_dir():
-        raise ValueError(f"Expected a regular source directory: {root}")
-    files = {}
-    for name, relative in SOURCES.items():
-        source = root
-        for part in Path(relative).parts:
-            source /= part
-            if source.is_symlink():
-                raise ValueError(f"Refusing a source symlink: {source}")
-        if not source.is_file():
-            raise ValueError(f"Expected a regular source file: {source}")
-        # Universal newlines keep Windows and Unix checkouts byte-identical.
-        files[name] = source.read_text(encoding="utf-8").encode("utf-8")
-    return files
+    return read_sources(root, SOURCES)
 
 
 def main(argv=None):
@@ -54,9 +39,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     destination = args.output_dir / ARCHIVE_NAME
     try:
+        checked_destination(destination)
         payload = archive_bytes(project_files(ROOT))
-        if args.output_dir.is_symlink() or destination.is_symlink():
-            raise ValueError(f"Refusing a symlink destination: {destination}")
         if args.check:
             if not check_archive(destination, payload):
                 print(

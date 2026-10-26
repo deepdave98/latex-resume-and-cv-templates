@@ -26,18 +26,29 @@ SHARED_SOURCES = {
 }
 
 
-def starter_files(root, template):
-    # Use an allowlist, never a directory walk: personal files and build logs
-    # must not enter a public download.
-    sources = {"resume.tex": TEMPLATE_SOURCES[template], **SHARED_SOURCES}
+def read_sources(root, sources):
+    """Read named UTF-8 sources without following links within the checkout."""
+    root = Path(root)
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError(f"Expected a regular source directory: {root}")
     files = {}
     for name, relative in sources.items():
-        source = root / relative
-        if source.is_symlink() or not source.is_file():
+        source = root
+        for part in Path(relative).parts:
+            source /= part
+            if source.is_symlink():
+                raise ValueError(f"Refusing a source symlink: {source}")
+        if not source.is_file():
             raise ValueError(f"Expected a regular source file: {source}")
         # Universal newlines keep the ZIP identical in CRLF and LF checkouts.
         files[name] = source.read_text(encoding="utf-8").encode("utf-8")
     return files
+
+
+def starter_files(root, template):
+    # Use an allowlist, never a directory walk: personal files and build logs
+    # must not enter a public download.
+    return read_sources(root, {"resume.tex": TEMPLATE_SOURCES[template], **SHARED_SOURCES})
 
 
 def archive_bytes(files):
@@ -54,8 +65,20 @@ def archive_bytes(files):
     return result.getvalue()
 
 
+def checked_destination(path):
+    path = Path(path)
+    for component in (path, *path.parents):
+        if component.is_symlink():
+            raise ValueError(f"Refusing a symlink destination: {component}")
+    return path
+
+
 def check_archive(path, expected_bytes):
-    return not path.is_symlink() and path.is_file() and path.read_bytes() == expected_bytes
+    try:
+        path = checked_destination(path)
+    except ValueError:
+        return False
+    return path.is_file() and path.read_bytes() == expected_bytes
 
 
 def main(argv=None):
@@ -67,6 +90,7 @@ def main(argv=None):
     for template in TEMPLATE_SOURCES:
         destination = args.output_dir / f"{template}-resume.zip"
         try:
+            checked_destination(destination)
             payload = archive_bytes(starter_files(ROOT, template))
             if args.check:
                 if not check_archive(destination, payload):
@@ -75,8 +99,6 @@ def main(argv=None):
                 else:
                     print(f"PASS: {destination} matches its source")
             else:
-                if destination.is_symlink():
-                    raise ValueError(f"Refusing to replace a symlink: {destination}")
                 args.output_dir.mkdir(parents=True, exist_ok=True)
                 destination.write_bytes(payload)
                 print(f"Built {destination} ({len(payload):,} bytes)")
