@@ -2,9 +2,9 @@ name: Test PDF review
 
 on:
   push:
-    paths: ['tools/pdf-review/**', 'downloads/pdf-review.zip', '.github/workflows/pdf-review.yml', 'output/pdf/**']
+    paths: ['LICENSE', 'tools/pdf-review/**', 'downloads/pdf-review.zip', '.github/workflows/pdf-review.yml', 'output/pdf/**']
   pull_request:
-    paths: ['tools/pdf-review/**', 'downloads/pdf-review.zip', '.github/workflows/pdf-review.yml', 'output/pdf/**']
+    paths: ['LICENSE', 'tools/pdf-review/**', 'downloads/pdf-review.zip', '.github/workflows/pdf-review.yml', 'output/pdf/**']
   workflow_dispatch:
 
 permissions:
