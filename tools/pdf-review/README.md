@@ -16,7 +16,7 @@ One PDF at a time, up to 20 MiB (20,971,520 bytes) and 20 pages. Password-protec
 
 Opening another file, **Clear file**, and **Reset text** ask before discarding edited text, including edits you have already copied or saved. Cancel keeps the current review. Unchanged text needs no confirmation. Dropping several files also leaves the current review intact.
 
-Reloading or closing the page requests the browser's leave-page warning while text differs from the extraction. Browsers may suppress that warning, so copy or save edits you need before leaving. Nothing is saved automatically.
+Reloading or closing the page requests the browser's leave-page warning while text differs from the extraction. Browsers may suppress that warning, so copy or save edits you need before leaving. Nothing is saved automatically. If PDF processing fails after you edit the text copy, those edits remain available to copy or save; the page review is still incomplete.
 
 ## Application upload limits
 

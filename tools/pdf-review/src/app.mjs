@@ -99,7 +99,25 @@ function clearReview(message = '', { keepLimits = false } = {}) {
 }
 
 function fail(message) {
-  clearReview();
+  const draft = hasTextEdits() ? {
+    text: ui['all-text'].value, originalText: current.originalText,
+    fileName: current.fileName, fileBytes: current.fileBytes, pageCount: current.pageCount,
+    incompleteText: !ui['draft-warning'].hidden,
+  } : null;
+  clearReview('', { keepLimits: Boolean(draft) });
+  if (draft) {
+    current = { ...draft, controller: new AbortController() };
+    ui.review.hidden = false;
+    ui['empty-state'].hidden = true;
+    ui.filename.textContent = draft.fileName;
+    ui.summary.textContent = 'Page review did not finish.';
+    ui['all-text'].value = draft.text;
+    ui['all-text'].readOnly = false;
+    ui['draft-warning'].hidden = !draft.incompleteText;
+    document.querySelector('.all-text-panel').open = true;
+    updateTextControls();
+    ui.status.textContent = 'Your text edits are still available. Copy or save them before clearing.';
+  }
   ui.error.textContent = message;
   ui.error.hidden = false;
 }

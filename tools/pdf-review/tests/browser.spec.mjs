@@ -1212,3 +1212,49 @@ test('clearing and replacing a file discard its properties', async ({ page, cont
   await assertPrivate(context, page, observations);
 });
 
+
+for (const failure of ['preview timeout', 'worker failure']) {
+  test(`${failure} preserves edited text for copying and saving`, async ({ page, context }) => {
+    await page.addInitScript(() => {
+      const NativeWorker = window.Worker;
+      window.Worker = function (...args) {
+        const worker = new NativeWorker(...args);
+        window.failReviewWorker = () => worker.dispatchEvent(new ErrorEvent('error', { cancelable: true }));
+        const post = worker.postMessage.bind(worker);
+        worker.postMessage = (message, ...args) => {
+          // Leave the first preview pending after text extraction has finished.
+          if (message?.action === 'GetOperatorList') return;
+          return post(message, ...args);
+        };
+        return worker;
+      };
+      window.Worker.prototype = NativeWorker.prototype;
+      const schedule = window.setTimeout.bind(window);
+      window.setTimeout = (callback, delay, ...args) => {
+        if (delay === 90_000) window.expireReview = callback;
+        return schedule(callback, delay, ...args);
+      };
+    });
+    const observations = await openReview(page, context);
+    await page.locator('#pdf-file').setInputFiles(filePayload(pdfFixture([{ text: 'Original PDF text' }])));
+    await expect(page.locator('#status')).toContainText('Rendering page');
+    await page.locator('.all-text-panel > summary').click();
+    await page.locator('#all-text').fill('An edited application answer');
+    await page.evaluate(kind => kind === 'preview timeout' ? window.expireReview() : window.failReviewWorker(), failure);
+    await expect(page.locator('#error')).toBeVisible();
+    await expect(page.locator('#all-text')).toHaveValue('An edited application answer');
+    await expect(page.locator('#all-text')).toBeEditable();
+    await expect(page.locator('#copy-all')).toBeEnabled();
+    await expect(page.locator('#save-text')).toBeEnabled();
+    await expect(page.locator('#pages canvas')).toHaveCount(0);
+    const saved = page.waitForEvent('download');
+    await page.locator('#save-text').click();
+    const download = await saved;
+    expect(download.suggestedFilename()).toBe('fixture-text.txt');
+    await discardDecision(page, () => page.locator('#clear-file').click(), false);
+    await expect(page.locator('#all-text')).toHaveValue('An edited application answer');
+    await discardDecision(page, () => page.locator('#clear-file').click(), true);
+    await expect(page.locator('#review')).toBeHidden();
+    await assertPrivate(context, page, observations);
+  });
+}
