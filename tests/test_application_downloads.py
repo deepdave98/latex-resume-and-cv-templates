@@ -254,9 +254,21 @@ class ApplicationDownloadTests(unittest.TestCase):
         self.assertFalse((self.output.parent / "missing").exists())
 
     def test_filesystem_errors_are_reported_without_traceback(self):
-        with patch.object(Path, "write_bytes", side_effect=PermissionError("write denied")):
+        with patch("package_templates.os.replace", side_effect=PermissionError("write denied")):
             self.assertEqual(self.run_main(), 1)
         self.assertEqual(self.stderr.getvalue().strip(), "FAIL: write denied")
+        self.assertEqual(list(self.output.iterdir()), [])
+
+    def test_failed_replacement_keeps_previous_archive_and_removes_temporary_file(self):
+        self.assertEqual(self.run_main(), 0)
+        previous = self.archive.read_bytes()
+        before = self.archive.stat().st_mtime_ns
+        (self.root / EXPECTED_SOURCES["README.md"]).write_text("A changed guide.\n", encoding="utf-8")
+        with patch("package_templates.os.replace", side_effect=PermissionError("replacement denied")):
+            self.assertEqual(self.run_main(), 1)
+        self.assertEqual(self.archive.read_bytes(), previous)
+        self.assertEqual(self.archive.stat().st_mtime_ns, before)
+        self.assertEqual(list(self.output.iterdir()), [self.archive])
 
     def test_cli_help_and_invalid_argument_exit_codes(self):
         script = Path(packager.__file__)
