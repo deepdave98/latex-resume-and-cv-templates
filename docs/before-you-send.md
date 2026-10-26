@@ -41,6 +41,8 @@ The local command exits with `0` when its checks finish without reported reminde
 
 [Download the offline reviewer](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/pdf-review.zip), unzip it, and open `pdf-review.html`. Choose **Open PDF** and select the newly built or downloaded PDF.
 
+After tailoring a resume, use **Compare two exports** to keep the earlier PDF as the before copy, then open the revised export. Check changed wording and link destinations. Comparison does not check layout or establish that extraction is complete.
+
 Read every page's extracted text. Check names, contacts, dates, headings, bullet order, missing words, and odd symbols against the PDF. The local command checks for empty text pages, flagged characters, and extraction errors; it cannot establish completeness or correct reading order.
 
 If extraction fails or text is missing, open the PDF to confirm it is readable, inspect the reported page, and correct the source or font problem before rebuilding. Image-only pages need a text layer; the reviewer does not run OCR. If Poppler reports an error, check its message and whether the PDF is password-protected. A failed extraction leaves the text review unfinished.
