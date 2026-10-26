@@ -5,7 +5,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from package_templates import archive_bytes, check_archive, checked_destination, read_sources
+from package_templates import archive_bytes, check_archive, checked_destination, read_sources, write_archive
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -51,7 +51,7 @@ def main(argv=None):
             print(f"PASS: {destination} matches its source")
         else:
             args.output_dir.mkdir(parents=True, exist_ok=True)
-            destination.write_bytes(payload)
+            write_archive(destination, payload)
             print(f"Built {destination} ({len(payload):,} bytes)")
     except (OSError, UnicodeError, ValueError) as error:
         print(f"FAIL: {error}", file=sys.stderr)

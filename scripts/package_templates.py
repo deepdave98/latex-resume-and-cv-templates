@@ -3,9 +3,11 @@
 
 import argparse
 from io import BytesIO
+import os
 from pathlib import Path
 import stat
 import sys
+from tempfile import NamedTemporaryFile
 from zipfile import ZIP_STORED, ZipFile, ZipInfo
 
 
@@ -81,6 +83,21 @@ def check_archive(path, expected_bytes):
     return path.is_file() and path.read_bytes() == expected_bytes
 
 
+def write_archive(path, payload):
+    """Replace a download only after its complete contents have been written."""
+    temporary = None
+    try:
+        mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o644
+        with NamedTemporaryFile("wb", dir=path.parent, prefix=f".{path.name}.", delete=False) as output:
+            temporary = Path(output.name)
+            output.write(payload)
+        temporary.chmod(mode)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="fail on missing or stale ZIPs; write nothing")
@@ -100,7 +117,7 @@ def main(argv=None):
                     print(f"PASS: {destination} matches its source")
             else:
                 args.output_dir.mkdir(parents=True, exist_ok=True)
-                destination.write_bytes(payload)
+                write_archive(destination, payload)
                 print(f"Built {destination} ({len(payload):,} bytes)")
         except (OSError, UnicodeError, ValueError) as error:
             print(f"FAIL: {error}", file=sys.stderr)

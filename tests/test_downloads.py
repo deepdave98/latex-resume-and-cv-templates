@@ -242,6 +242,44 @@ class PackagingTests(unittest.TestCase):
             archive = redirect / "downloads" / next(iter(before))
             self.assertFalse(packager.check_archive(archive, expected))
 
+    def test_partial_write_failure_preserves_previous_downloads_and_removes_temporary_files(self):
+        create_temporary = packager.NamedTemporaryFile
+
+        def fail_during_write(*args, **kwargs):
+            temporary = create_temporary(*args, **kwargs)
+            write = temporary.write
+
+            def partial_write(payload):
+                write(payload[:12])
+                raise OSError("simulated disk full")
+
+            temporary.write = partial_write
+            return temporary
+
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary).resolve()
+            root = base / "checkout"
+            fixture_root(root)
+            existing = base / "existing downloads"
+            with patch.object(packager, "ROOT", root), redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+                self.assertEqual(packager.main(["--output-dir", str(existing)]), 0)
+                for output in (existing, base / "new downloads"):
+                    before = {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in output.iterdir()} if output.exists() else {}
+                    with self.subTest(output=output), patch.object(packager, "NamedTemporaryFile", fail_during_write):
+                        self.assertEqual(packager.main(["--output-dir", str(output)]), 1)
+                    self.assertEqual({p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in output.iterdir()}, before)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX file modes")
+    def test_replacing_archive_preserves_existing_permissions(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary).resolve() / "download.zip"
+            output.write_bytes(b"previous")
+            output.chmod(0o640)
+            packager.write_archive(output, b"complete replacement")
+            self.assertEqual(output.read_bytes(), b"complete replacement")
+            self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o640)
+            self.assertEqual(list(output.parent.iterdir()), [output])
+
 
 class ReadmeDownloadTests(unittest.TestCase):
     def setUp(self):
