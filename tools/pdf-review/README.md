@@ -38,6 +38,7 @@ Resetting text or opening a revised PDF keeps the limit. Clearing, reloading, cl
 
 - **Extracted text:** look for missing words, odd symbols, and wrong reading order. Ligatures such as `ﬁ` become ordinary letters for copying.
 - **Link destinations:** select **Show on page** beside a destination. Its clickable area is highlighted in the preview so you can compare it with the printed label. **Back to link** returns to that row. Select the same button again to clear the highlight. Destinations remain text only; the tool never follows them or checks whether a website is online. Hidden control characters are shown as escapes. Internal links and unsupported PDF actions are identified separately.
+- **File properties:** check stored titles, authors, and creating applications for old names. PDF Info and XMP values are shown separately, with hidden controls escaped. This reads common fields only and does not remove metadata or certify privacy.
 - **Sample contacts:** a warning beside a link flags the starter email, phone number, or GitHub/LinkedIn profile. Check its printed label with **Show on page**, then fix the source and export again. This matches known sample destinations only; it does not verify ownership or find every placeholder.
 - **Pages without text:** a scan or outlined lettering may look fine but copy nothing. This tool does not run OCR.
 - **Pages that appear blank:** this is a preview-based hint, not proof. Very faint content can be missed. A failed preview is never counted as a blank page.
@@ -87,6 +88,7 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/app.mjs` | File lifecycle, worker, previews, clipboard, and DOM |
 | `src/review.mjs` | Bounded text and annotation inspection |
 | `src/link-region.mjs` | Annotation coordinates clipped to the rendered page |
+| `src/document-properties.mjs` | Bounded, on-demand inspection of PDF Info and XMP fields |
 | `src/page-size.mjs` | Paper names, dimensions, and orientation from PDF page geometry |
 | `src/text-download.mjs` | UTF-8 text exports and safe download names |
 | `src/text-limits.mjs` | Character counts and optional application-text limits |
