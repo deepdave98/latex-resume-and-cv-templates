@@ -52,7 +52,7 @@ def run_build(command, *, cwd, stdout, timeout):
 
 
 def summarize_warnings(log):
-    """Report the class's existing checks; do not scan or expand LaTeX source."""
+    """Report known compiler warnings without quoting or expanding resume content."""
     reminders = False
     lines = log.splitlines()
     placeholders = [number for number, line in enumerate(lines, 1) if PLACEHOLDER in line]
@@ -74,6 +74,15 @@ def summarize_warnings(log):
         print("The contact text is printed without a link. Correct the email or include the phone country code.")
         print(r"For other contact formats, use \resumelink{destination}{label}; check the exported PDF's links.")
 
+    overflows = [
+        number for number, line in enumerate(lines, 1)
+        if line.lstrip().startswith((r"Overfull \hbox", r"Overfull \vbox"))
+    ]
+    if overflows:
+        reminders = True
+        print(f"LAYOUT OVERFLOW: {len(overflows)} box warning(s); first at LaTeX log line {overflows[0]}.")
+        print("Inspect the PDF for clipped or overflowing text. Shorten long text or adjust the affected entry, then rebuild.")
+
     page_warnings = [
         (number, line.strip()) for number, line in enumerate(lines, 1)
         if PAGE_EXCEEDED in line or PAGE_INVALID in line
@@ -87,7 +96,7 @@ def summarize_warnings(log):
             print(r"Cut less relevant content or change \resumepagelimit{N} if the extra page is intentional.")
     if not page_warnings:
         print("Source page reminders: none found; this does not establish that a source limit is enabled.")
-    print("Other LaTeX warnings are not summarized. Read the logs for rerun, overflow, and font warnings.")
+    print("Other LaTeX warnings are not summarized. Read the logs for rerun, font, and other layout warnings.")
     return reminders
 
 
