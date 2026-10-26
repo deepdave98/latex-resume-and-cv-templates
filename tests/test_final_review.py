@@ -166,6 +166,21 @@ class FinalReviewTests(unittest.TestCase):
                     self.assertIn(expected, out)
                 self.assertNotIn("checks completed without", out)
 
+    def test_unsupported_contacts_need_review_without_printing_private_values(self):
+        self.log = "\n".join((
+            review.CONTACT_UNSUPPORTED + "phone format; contact is not linked.",
+            "PRIVATE_CONTACT_SENTINEL",
+            review.CONTACT_UNSUPPORTED + "email format; contact is not linked.",
+        ))
+        code, out, err, _, _ = self.run_review()
+        self.assertEqual(code, 3, err)
+        self.assertIn("CONTACT LINKS: 2 unsupported format(s)", out)
+        self.assertIn("log line 1", out)
+        self.assertIn("phone country code", out)
+        self.assertIn(r"\resumelink", out)
+        self.assertIn("REVIEW NEEDED", out)
+        self.assertNotIn("PRIVATE_CONTACT_SENTINEL", out + err)
+
     def test_multiple_placeholder_reminders_count_only_final_log(self):
         self.log = "\n".join((review.PLACEHOLDER + "name.", review.PLACEHOLDER + "selected bullet."))
         code, out, _, _, _ = self.run_review()

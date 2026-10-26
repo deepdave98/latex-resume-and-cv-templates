@@ -28,6 +28,7 @@ Each run uses a fresh directory under ignored `.context/final-review/`. It print
 ## 2. Resolve reminders and page limits
 
 - **Placeholders:** replace the flagged sample text or delete unused entries, then rebuild. Check included content files too. Reminders inspect selected template commands and lists; they can miss unfinished text, and literal brackets can trigger them.
+- **Unlinked contacts:** an unsupported email or phone value prints without a clickable link. Correct the literal email or include the phone country code. For other formats, use `\resumelink{destination}{label}` and check the exported PDF's links.
 - **Too many pages:** remove less relevant content, or allow another page when the application permits it. The source uses `\resumepagelimit{1}` (in `setup.tex` for the application-version example). Change it only when the longer version is intentional. An invalid source limit needs a whole number from 1 to 999999999.
 - **Command page limit:** `--max-pages 1` separately checks the built PDF's page count. Omit it for no additional command limit. Source reminders still apply; no warning does not prove that a source limit was set.
 
