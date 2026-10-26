@@ -6,6 +6,8 @@ import { checkUploadLimits, formatFileSize } from './upload-limits.mjs';
 import { formatPageSize } from './page-size.mjs';
 import { checkTextLimit } from './text-limits.mjs';
 import { readProperties } from './document-properties.mjs';
+import { createComparisonSnapshot } from './compare.mjs';
+import { createComparisonView } from './comparison-view.mjs';
 
 const assets = __PDF_ASSETS__;
 class EmbeddedBinaryDataFactory {
@@ -22,6 +24,12 @@ ui['all-text'].maxLength = MAX_DRAFT_CHARS;
 let generation = 0;
 let current;
 let submitPassword;
+const comparison = createComparisonView(byId('comparison'), () => {
+  if (!current) {
+    ui.review.hidden = true;
+    ui['empty-state'].hidden = false;
+  }
+});
 const MAX_BYTES = 20 * 1024 * 1024;
 const MAX_PAGES = 20;
 
@@ -48,7 +56,8 @@ function dispose(state) {
   void Promise.resolve(state.ready).catch(() => {}).then(() => state.loading?.destroy()).catch(() => {}).finally(finish);
 }
 
-function clearReview(message = '', { keepLimits = false } = {}) {
+function clearReview(message = '', { keepLimits = false, keepComparison = false } = {}) {
+  comparison.clear({ keepBefore: keepComparison });
   window.removeEventListener('beforeunload', warnBeforeUnload);
   generation += 1;
   const old = current;
@@ -76,8 +85,11 @@ function clearReview(message = '', { keepLimits = false } = {}) {
   ui['pdf-file'].value = '';
   ui.password.value = '';
   ui['password-form'].hidden = true;
-  ui.review.hidden = true;
-  ui['empty-state'].hidden = false;
+  const referenceKept = keepComparison && !byId('comparison').hidden;
+  ui.review.hidden = !referenceKept;
+  ui['empty-state'].hidden = referenceKept;
+  document.querySelector('.review-heading').hidden = true;
+  document.querySelector('.all-text-panel').hidden = true;
   document.querySelector('.all-text-panel').open = false;
   ui.filename.textContent = '';
   ui.summary.textContent = '';
@@ -104,11 +116,13 @@ function fail(message) {
     fileName: current.fileName, fileBytes: current.fileBytes, pageCount: current.pageCount,
     incompleteText: !ui['draft-warning'].hidden,
   } : null;
-  clearReview('', { keepLimits: Boolean(draft) });
+  clearReview('', { keepLimits: Boolean(draft), keepComparison: true });
   if (draft) {
     current = { ...draft, controller: new AbortController() };
     ui.review.hidden = false;
     ui['empty-state'].hidden = true;
+    document.querySelector('.review-heading').hidden = false;
+    document.querySelector('.all-text-panel').hidden = false;
     ui.filename.textContent = draft.fileName;
     ui.summary.textContent = 'Page review did not finish.';
     ui['all-text'].value = draft.text;
@@ -436,7 +450,7 @@ async function openFile(file) {
     ui['pdf-file'].value = '';
     return;
   }
-  clearReview('', { keepLimits: true });
+  clearReview('', { keepLimits: true, keepComparison: true });
   if (!file.size) return fail('This file is empty. Choose a finished PDF.');
   if (file.size > MAX_BYTES) return fail('Choose a PDF no larger than 20 MiB. Larger files can use too much browser memory.');
   const token = generation;
@@ -445,6 +459,8 @@ async function openFile(file) {
   armTimeout(state);
   ui.review.hidden = false;
   ui['empty-state'].hidden = true;
+  document.querySelector('.review-heading').hidden = false;
+  document.querySelector('.all-text-panel').hidden = false;
   ui.filename.textContent = file.name;
   ui.status.textContent = 'Opening PDF…';
   try {
@@ -561,6 +577,7 @@ async function openFile(file) {
       noText ? `${noText} without extracted text` : '', blank ? `${blank} appear blank` : '', failed ? `${failed} previews unavailable` : ''].filter(Boolean).join(' · ');
     for (const warning of result.warnings) ui.pages.prepend(element('p', 'notice notice--warning', warning.message));
     clearTimeout(state.timer);
+    comparison.setCurrent(createComparisonSnapshot(result, { filename: state.fileName, bytes: state.fileBytes }));
     ui.status.textContent = 'Review ready.';
   } catch {
     if (token === generation) fail('This PDF could not be read. It may be damaged, unsupported, or blocked by this browser. Try a fresh PDF export or a current browser.');
@@ -594,7 +611,7 @@ ui['password-form'].addEventListener('submit', event => {
   ui.password.value = '';
   submitPassword?.(value);
 });
-ui['cancel-password'].addEventListener('click', () => clearReview('Review cancelled.'));
+ui['cancel-password'].addEventListener('click', () => clearReview('Review cancelled.', { keepComparison: true }));
 for (const type of ['dragover', 'drop']) {
   window.addEventListener(type, event => event.preventDefault());
 }

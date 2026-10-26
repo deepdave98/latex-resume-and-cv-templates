@@ -1258,3 +1258,123 @@ for (const failure of ['preview timeout', 'worker failure']) {
     await assertPrivate(context, page, observations);
   });
 }
+
+for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
+  test(`${label}: compares original PDF wording and link destinations offline`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'Built API v1', links: [{ url: 'https://example.test/old' }] }]), 'before.pdf'));
+    await page.locator('#comparison > summary').click();
+    await page.locator('.all-text-panel > summary').click();
+    await page.locator('#all-text').fill('Draft text must stay out of the comparison');
+    await page.locator('#keep-before').click();
+    await expect(page.locator('#comparison-status')).toContainText('Open the revised PDF');
+    await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(pdfFixture([
+      { text: 'Built API v2', links: [{ url: 'https://example.test/new' }] }, { text: 'Another project' },
+    ]), 'after.pdf')), true);
+    await expect(page.locator('#status')).toHaveText('Review ready.');
+    await expect(page.locator('#comparison-files')).toContainText('before.pdf');
+    await expect(page.locator('#comparison-files')).toContainText('after.pdf');
+    await expect(page.locator('#comparison-files')).toContainText('1 page');
+    await expect(page.locator('#comparison-files')).toContainText('2 pages');
+    await expect(page.locator('.comparison-text del')).toContainText('v1');
+    await expect(page.locator('.comparison-text ins').first()).toContainText('v2');
+    await expect(page.locator('#comparison-results')).not.toContainText('Draft text must');
+    await expect(page.locator('.comparison-links')).toContainText('https://example.test/old');
+    await expect(page.locator('.comparison-links')).toContainText('https://example.test/new');
+    await expect(page.locator('.comparison-links a')).toHaveCount(0);
+    await page.locator('.all-text-panel > summary').click();
+    await page.locator('#all-text').fill('Another draft');
+    await expect(page.locator('#comparison-results')).not.toContainText('Another draft');
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('comparison ignores reflow but retains duplicate link changes', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  const destination = { url: 'https://example.test/code', label: '' };
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Built an API.', links: [destination, destination] }])));
+  await page.locator('#comparison > summary').click();
+  await page.locator('#keep-before').click();
+  await reviewFile(page, filePayload(pdfFixture([{ content: 'BT /F1 12 Tf 72 720 Td (Built an) Tj 0 -20 Td (API.) Tj ET', links: [destination] }])));
+  await expect(page.locator('#comparison-results')).toContainText('No differences in extracted text.');
+  await expect(page.locator('.comparison-links')).toContainText('Removed · 1 occurrence');
+  await expect(page.locator('.comparison-links li')).toHaveCount(1);
+  await expect(page.locator('#comparison')).toContainText('does not mean the PDFs look alike');
+  await assertPrivate(context, page, observations);
+});
+
+test('comparison never declares scanned or form-field text unchanged', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  for (const fixture of [{ image: true }, { text: 'Contact', formValue: 'Entered name' }]) {
+    await reviewFile(page, filePayload(pdfFixture([fixture])));
+    await page.locator('#comparison').evaluate(node => { node.open = true; });
+    await page.locator('#keep-before').click();
+    await reviewFile(page, filePayload(pdfFixture([fixture])));
+    await expect(page.locator('#comparison-results')).toContainText('Text comparison is incomplete.');
+    await expect(page.locator('#comparison-results')).not.toContainText('No differences in extracted text.');
+    await page.locator('#clear-before').click();
+  }
+  await assertPrivate(context, page, observations);
+});
+
+test('failed or cancelled replacement keeps the before copy until explicitly forgotten', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original resume' }]), 'before.pdf'));
+  await page.locator('#comparison > summary').click();
+  await page.locator('#keep-before').click();
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Keep my draft');
+  await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF'))), false);
+  await expect(page.locator('#all-text')).toHaveValue('Keep my draft');
+  await expect(page.locator('#comparison-files')).toContainText('before.pdf');
+  await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF'))), true);
+  await expect(page.locator('#error')).toBeVisible();
+  await expect(page.locator('#comparison-files')).toContainText('before.pdf');
+  await expect(page.locator('#comparison-results')).toBeEmpty();
+  await page.locator('#pdf-file').setInputFiles(filePayload(encryptedFixture()));
+  await expect(page.locator('#password-form')).toBeVisible();
+  await page.locator('#cancel-password').click();
+  await expect(page.locator('#comparison-files')).toContainText('before.pdf');
+  await page.locator('#clear-before').click();
+  await expect(page.locator('#comparison')).toBeHidden();
+  await expect(page.locator('#comparison-files')).toBeEmpty();
+  await assertPrivate(context, page, observations);
+});
+
+test('clear and reload forget both comparison copies', async ({ page, context }) => {
+  const observations = await openReview(page, context, artifactURL);
+  for (const action of ['clear', 'reload']) {
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'Before contents' }])));
+    await page.locator('#comparison > summary').click();
+    await page.locator('#keep-before').click();
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'After contents' }])));
+    await expect(page.locator('#comparison-results')).toContainText('After');
+    if (action === 'clear') await page.locator('#clear-file').click();
+    else await page.reload();
+    await expect(page.locator('#comparison')).toBeHidden();
+    await expect(page.locator('#comparison-files')).toBeEmpty();
+    await expect(page.locator('#comparison-results')).toBeEmpty();
+  }
+  await assertPrivate(context, page, observations);
+});
+
+test('comparison is keyboard usable at phone width and treats markup as text', async ({ page, context }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const observations = await openReview(page, context, artifactURL);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Before version' }]), 'before.pdf'));
+  const summary = page.locator('#comparison > summary');
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await page.locator('#keep-before').focus();
+  await page.keyboard.press('Enter');
+  const markup = '<img src=https://example.test/private>';
+  await reviewFile(page, filePayload(pdfFixture([{ text: markup }]), 'Long-'.repeat(40) + '.pdf'));
+  await expect(page.locator('.comparison-text')).toContainText(markup);
+  await expect(page.locator('#comparison-results img, #comparison-results script')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('#clear-before').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#keep-before')).toBeFocused();
+  await expect(page.locator('#comparison-results')).toBeEmpty();
+  await assertPrivate(context, page, observations);
+});

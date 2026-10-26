@@ -18,6 +18,20 @@ Opening another file, **Clear file**, and **Reset text** ask before discarding e
 
 Reloading or closing the page requests the browser's leave-page warning while text differs from the extraction. Browsers may suppress that warning, so copy or save edits you need before leaving. Nothing is saved automatically. If PDF processing fails after you edit the text copy, those edits remain available to copy or save; the page review is still incomplete.
 
+## Compare two exports
+
+1. Open the earlier PDF, expand **Compare two exports**, and choose **Keep this PDF as before**.
+2. Use **Open PDF** to open the revised export. The before copy stays in this tab.
+3. Check added and removed wording, external link destinations and their counts, page counts, and exact file sizes. Inspect both PDFs for layout changes too.
+
+Comparison uses the original extracted text, never edits in **Text for application forms**. Spaces and line breaks are ignored; punctuation, numbers, capitalization, and Unicode characters are preserved. Reordered text appears as removals and additions. Link destinations stay inert, including unsafe URLs; hidden controls are shown as escapes. Raw and resolved destinations are both compared.
+
+Missing, scanned, truncated, or known broken text cannot produce a text match. Form fields may be absent from extraction, so those comparisons are marked incomplete. Internal links and PDF actions cannot be compared; warnings identify partial link results. **No differences in extracted text** does not establish that two PDFs look alike or contain the same information.
+
+Large comparisons may be skipped to keep the page responsive: up to 60,000 text characters and 8,000 words per PDF, with a separate limit on comparison work and displayed changes. Link comparison keeps at most 100 external links and 32,000 destination characters per PDF. A limit produces an incomplete result, never an unchanged verdict.
+
+**Use current PDF as before** starts another comparison. **Forget before copy** removes just the reference. **Clear file**, reloading, or closing the page removes both. A cancelled or failed replacement keeps the reference; the existing confirmation still protects edited application text. No PDF bytes, workers, or application-form edits are kept in the reference, and nothing is stored between visits.
+
 ## Application upload limits
 
 Open **Application upload limits** and enter the maximum pages and file size from the portal's instructions. Leave either blank to skip that check. Limits are inclusive; a file even one byte over is flagged. Nothing is trimmed or compressed.
@@ -88,6 +102,7 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/app.mjs` | File lifecycle, worker, previews, clipboard, and DOM |
 | `src/review.mjs` | Bounded text and annotation inspection |
 | `src/link-region.mjs` | Annotation coordinates clipped to the rendered page |
+| `src/compare.mjs`, `src/comparison-view.mjs` | Bounded comparisons of original text and external destinations |
 | `src/document-properties.mjs` | Bounded, on-demand inspection of PDF Info and XMP fields |
 | `src/page-size.mjs` | Paper names, dimensions, and orientation from PDF page geometry |
 | `src/text-download.mjs` | UTF-8 text exports and safe download names |
