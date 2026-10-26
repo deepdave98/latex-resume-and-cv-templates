@@ -217,6 +217,28 @@ test("no text never claims a page is visually blank", async () => {
   assert.equal("isBlank" in result.pages[0], false);
 });
 
+test("format-only and control-only pages do not count as extracted content", async () => {
+  for (const text of ["\u200b\u200d", " \n\u200c\u2066\u2069\t", "\u0000", "\ue000", "\udfff", "\u0378"]) {
+    const result = await reviewDocument(document([page([item(text)])]));
+    assert.equal(result.pages[0].hasText, false, JSON.stringify(text));
+    assert.equal(result.pages[0].textStatus, "empty");
+    assert.equal(result.emptyTextPageCount, 1);
+    assert.ok(result.pages[0].warnings.some(({ code }) => code === "no-extracted-text"));
+    assert.equal(result.pages[0].text, text.trim(), "keep extracted characters available for inspection");
+  }
+});
+
+test("real text retains joining characters, combining marks, and emoji", async () => {
+  for (const text of ["می\u200cروم", "अक्\u200dषर", "Jose\u0301", "👩\u200d💻", "中文", "\u2067العربية\u2069"]) {
+    const result = await reviewDocument(document([page([item(text)])]));
+    assert.equal(result.pages[0].hasText, true, text);
+    assert.equal(result.pages[0].textStatus, "ok");
+    assert.equal(result.emptyTextPageCount, 0);
+    assert.equal(result.pages[0].text, text);
+    assert.ok(!result.pages[0].warnings.some(({ code }) => code === "no-extracted-text"));
+  }
+});
+
 test("per-page failures remain distinct from empty text and missing links without leaking parser errors", async () => {
   const secret = "Private resume text https://private.example";
   const result = await reviewDocument({ numPages: 3, getPage: async (number) => {

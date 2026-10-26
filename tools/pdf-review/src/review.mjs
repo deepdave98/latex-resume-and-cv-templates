@@ -241,7 +241,8 @@ export async function reviewDocument(pdf, options = {}) {
         checkCancelled(options.signal);
         const extracted = extractPageText(content.items, { maxChars: Math.min(remainingText, limits.maxTextCharsPerPage), maxItems: limits.maxTextItemsPerPage });
         result.text = extracted.text;
-        result.hasText = extracted.text.length > 0;
+        // Formatting controls can belong inside words, but are not page content alone.
+        result.hasText = /[^\p{C}\p{White_Space}]/u.test(extracted.text);
         result.textTruncated = extracted.truncated;
         result.textStatus = extracted.truncated ? "limited" : (result.hasText ? "ok" : "empty");
         remainingText -= result.text.length;
