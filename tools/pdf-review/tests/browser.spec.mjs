@@ -112,6 +112,8 @@ for (const [label, location] of [["downloaded file", artifactURL], ["hosted page
     await expect(page.locator("#all-text")).toHaveValue(/Education/i);
     await expect(page.locator("#all-text")).toHaveValue(/Experience/i);
     await expect(page.locator("#pages")).toContainText("mailto:");
+    await expect(page.locator("#summary")).toContainText("4 sample links");
+    await expect(page.locator('.link-list .notice')).toHaveCount(4);
     await expect(page.locator("#pages canvas")).toHaveCount(1);
     expect(await page.locator("#pages canvas").evaluate((canvas) => canvas.width > 0 && canvas.height > 0)).toBe(true);
     await assertPrivate(context, page, observations);
@@ -312,6 +314,43 @@ test('upload limits work by keyboard on a narrow screen', async ({ page, context
   await page.keyboard.type('0.5');
   await expect(page.locator('#size-limit-result')).toContainText('Within the');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await assertPrivate(context, page, observations);
+});
+
+test("sample warnings cover each remaining starter", async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  for (const template of ["no-internship", "experienced", "ai-engineer", "ml-engineer"]) {
+    await reviewFile(page, resumePath(`${template}-resume`));
+    await expect(page.locator("#summary")).toContainText("4 sample links");
+    await expect(page.locator('.link-list .notice')).toHaveCount(4);
+  }
+  await assertPrivate(context, page, observations);
+});
+
+test("a sample destination behind an edited label can be located and warnings clear on replacement", async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{
+    text: "Contact review",
+    links: [{ label: "My GitHub", url: "https://github.com/your-handle" }],
+  }])));
+  const warning = page.locator('.link-list .notice');
+  await expect(warning).toHaveText("Sample contact. Replace this destination in your resume source, then export a new PDF.");
+  await expect(page.locator("#summary")).toContainText("1 sample link");
+  const locate = page.getByRole("button", { name: "Show link 1 on page 1", exact: true });
+  await expect(locate).toHaveAttribute('aria-describedby', await warning.getAttribute('id'));
+  await locate.click();
+  await expect(page.locator('.link-overlay')).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(warning).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  await reviewFile(page, filePayload(pdfFixture([{
+    text: "Contact review",
+    links: [{ label: "My GitHub", url: "https://github.com/alex-morgan" }],
+  }])));
+  await expect(page.locator('.link-list .notice')).toHaveCount(0);
+  await expect(page.locator("#summary")).not.toContainText("sample");
+  await expect(page.locator('.locate-link')).not.toHaveAttribute('aria-describedby');
   await assertPrivate(context, page, observations);
 });
 

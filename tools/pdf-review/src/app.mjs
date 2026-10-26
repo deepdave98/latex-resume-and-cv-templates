@@ -302,6 +302,12 @@ function showPage(record) {
         item.append(element('p', 'field-hint', 'PDF reader resolves this to:'), element('code', 'link-destination', displayDestination(link.resolvedDestination)));
       }
       if (link.reason) item.append(element('p', 'field-hint', link.reason));
+      if (link.sampleContact) {
+        const warning = element('p', 'notice notice--warning', 'Sample contact. Replace this destination in your resume source, then export a new PDF.');
+        warning.id = `sample-contact-${record.number}-${index + 1}`;
+        locate.setAttribute('aria-describedby', warning.id);
+        item.append(warning);
+      }
       list.append(item);
     }
     links.append(list);
@@ -504,6 +510,7 @@ async function openFile(file) {
     const count = result.pageCount;
     const linkCount = result.pages.reduce((sum, page) => sum + page.links.length, 0);
     ui.summary.textContent = [`${count} ${count === 1 ? 'page' : 'pages'}`, `${linkCount} ${linkCount === 1 ? 'link' : 'links'}`,
+      result.sampleLinkCount ? `${result.sampleLinkCount} sample ${result.sampleLinkCount === 1 ? 'link' : 'links'}` : '',
       noText ? `${noText} without extracted text` : '', blank ? `${blank} appear blank` : '', failed ? `${failed} previews unavailable` : ''].filter(Boolean).join(' · ');
     for (const warning of result.warnings) ui.pages.prepend(element('p', 'notice notice--warning', warning.message));
     clearTimeout(state.timer);
