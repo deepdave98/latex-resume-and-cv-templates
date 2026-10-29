@@ -1,62 +1,53 @@
 # Before you send
 
-Review the exact version you plan to upload. Repeat these steps after any edit.
+Review the exact PDF you plan to upload. Repeat after any edit.
 
 ## 1. Rebuild the chosen source
 
-**Overleaf:** choose your main document (`resume.tex`, or a named version such as `backend.tex`) and use XeLaTeX. Recompile, check the log, and confirm that the preview contains the intended version before downloading its PDF. If compilation fails, fix the reported source and line, then recompile. An older preview or download is not evidence of a successful build.
+**Overleaf:** select your main document and XeLaTeX, recompile, then download the PDF. For an application version, select its entry file, such as `backend.tex`.
 
-**Local starter:** in the extracted folder, run `latexmk -g -halt-on-error resume.tex`. For an application version, use its entry file instead. Continue only after a successful build; check the matching `.log` and `.pdf` (for example, `backend.log` and `backend.pdf`). A failed build can leave an older PDF in place.
+**Local starter:** run `latexmk -g -halt-on-error resume.tex` in the extracted folder. Substitute the entry filename for a named application version.
 
-**Optional local summary:** from a repository checkout, this command builds only the source you name:
+A failed build can leave an older preview or PDF. Continue only after a successful build and check that it is the intended version.
 
-```bash
-python3 scripts/review_resume.py templates/new-grad-resume.tex --max-pages 1
-```
-
-Add `--max-size-mb 2` for a 2 MB upload limit (1 MB = 1,000,000 bytes). An exact-size PDF passes; one byte over fails. Omit either limit when the application does not specify it.
-
-For a named application version or an edited starter outside the checkout, choose that file instead:
+**From a repository checkout**, the final-review command builds one source and summarizes its warnings:
 
 ```bash
-python3 scripts/review_resume.py examples/application-versions/backend.tex --max-pages 1
-python3 scripts/review_resume.py "/path/to/extracted-starter/resume.tex" --max-pages 1
+python3 scripts/review_resume.py templates/new-grad-resume.tex \
+  --max-pages 1 --max-size-mb 2
 ```
 
-This needs Python 3.9+, `latexmk`, XeLaTeX, and Poppler's `pdftotext` on `PATH`. If a tool is missing, follow [local setup](local-setup.md), including its [PDF checker dependencies](local-setup.md#pdf-checker-dependencies), then retry.
+Replace the source path with your `.tex` entry file, including one outside the checkout. Use the application's limits; omit either option if none is specified. MB means 1,000,000 bytes. Exact-size files pass; one byte over fails.
 
-Each run uses a fresh directory under ignored `.context/final-review/`. It prints the source, build log, LaTeX log, and exact PDF path. It does not update published PDFs, previews, or downloads. On a compile failure, read the build log, correct the source, and retry; the command will not accept an older PDF as this run's output.
+The command needs Python 3.9+, `latexmk`, XeLaTeX, and Poppler's `pdftotext`. See [local setup](local-setup.md). Each run uses a fresh folder under ignored `.context/final-review/` and prints its logs and PDF path. Published files stay unchanged.
 
 ## 2. Resolve reminders and page limits
 
-- **Placeholders:** replace the flagged sample text or delete unused entries, then rebuild. Check included content files too. Reminders inspect selected template commands and lists; they can miss unfinished text, and literal brackets can trigger them.
-- **Unlinked contacts:** an unsupported email or phone value prints without a clickable link. Correct the literal email or include the phone country code. For other formats, use `\resumelink{destination}{label}` and check the exported PDF's links.
-- **Overflow:** an overfull box can put content beyond its available space. Inspect the affected page and log line, shorten unbroken text or adjust the entry, then rebuild. A clean log still does not prove the layout is correct.
-- **Too many pages:** remove less relevant content, or allow another page when the application permits it. The source uses `\resumepagelimit{1}` (in `setup.tex` for the application-version example). Change it only when the longer version is intentional. An invalid source limit needs a whole number from 1 to 999999999.
-- **Command page limit:** `--max-pages 1` separately checks the built PDF's page count. Omit it for no additional command limit. Source reminders still apply; no warning does not prove that a source limit was set.
+- **Placeholders:** replace flagged sample values or delete unused entries, including those in shared content files. Literal brackets can trigger reminders; unmarked sample text can be missed.
+- **Unlinked contacts:** correct the email or include the phone's country code. For other formats, use `\resumelink{destination}{label}` and check the exported link.
+- **Overflow:** inspect the affected page and log line. Shorten unbroken text or adjust the entry, then rebuild.
+- **Page limits:** cut less relevant content or allow another page if the application permits it. The source's `\resumepagelimit{N}` takes a positive whole number. The command's `--max-pages N` checks the exported PDF separately.
 
-Let requested LaTeX reruns finish before judging page count. Review other log warnings against the PDF too.
+Let LaTeX finish requested reruns before judging page count. Read the full log for warnings the summary does not cover.
 
-The local command exits with `0` when its checks finish without reported reminders, `3` when source reminders need review, `1` when a build or PDF check fails, and `2` for invalid arguments. None of these outcomes replaces the checks below.
+The command exits with `0` for completed checks, `3` for source reminders, `1` for a failed build or PDF check, and `2` for invalid arguments. Continue with the manual review below even after exit `0`.
 
 ## 3. Read the extracted text
 
-[Download the offline reviewer](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/pdf-review.zip), unzip it, and open `pdf-review.html`. Choose **Open PDF** and select the newly built or downloaded PDF.
+[Download the offline reviewer](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/pdf-review.zip), unzip it, open `pdf-review.html`, and choose **Open PDF**.
 
-After tailoring a resume, use **Compare two exports** to keep the earlier PDF as the before copy, then open the revised export. Check changed wording and link destinations. Comparison does not check layout or establish that extraction is complete.
+Compare every page's extracted text with the PDF: names, contacts, dates, headings, bullet order, missing words, and odd symbols. The automated checks cannot establish completeness or correct reading order. If text is missing or extraction fails, fix the source or font problem and rebuild. Scanned pages need a text layer; the reviewer does not run OCR.
 
-Read every page's extracted text. Check names, contacts, dates, headings, bullet order, missing words, and odd symbols against the PDF. The local command checks for empty text pages, flagged characters, and extraction errors; it cannot establish completeness or correct reading order.
-
-If extraction fails or text is missing, open the PDF to confirm it is readable, inspect the reported page, and correct the source or font problem before rebuilding. Image-only pages need a text layer; the reviewer does not run OCR. If Poppler reports an error, check its message and whether the PDF is password-protected. A failed extraction leaves the text review unfinished.
+After tailoring, use **Compare two exports** to keep the earlier PDF, then open the revised export. Check changed wording and link destinations; compare layout yourself.
 
 ## 4. Inspect the final PDF and links
 
-In the reviewer, inspect every rendered page for clipping, overflow, unwanted pages, and incorrect content. Under link destinations, use **Show on page** to compare each destination with its printed label and clickable area.
+Check every page for clipping, overflow, unwanted pages, and incorrect content. Use **Show on page** to compare each link destination with its printed label and clickable area.
 
-The reviewer does not follow links or check whether a website is online. Open the same PDF in a PDF reader and click its links to verify their destinations. Use **Application upload limits** if the portal specifies page or file-size limits. See the [reviewer's limits](../tools/pdf-review/README.md) if it cannot open your file.
+The reviewer does not follow links. Click them in your PDF reader to verify the destinations. Use **Application upload limits** for the portal's page and file-size limits. See the [reviewer's limits](../tools/pdf-review/README.md) if it cannot open your file.
 
-Upload the PDF you just reviewed. These checks do not assess hiring outcomes or ATS compatibility.
+These checks do not assess hiring outcomes or ATS compatibility.
 
 ## 5. Keep the submitted copy
 
-After uploading, [save the exact PDF with the company and role](submitted-resumes.md). Keep it separate from future rebuilds so you can refer to the same version when preparing for an interview.
+Upload the reviewed PDF, then [save that exact file with the company and role](submitted-resumes.md). Keep it separate from future rebuilds for interview preparation.

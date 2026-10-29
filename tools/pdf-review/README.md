@@ -1,78 +1,62 @@
 # PDF review
 
-Read a resume PDF beside its extracted text. Check where each link points and where it appears on the page.
+Read a resume PDF beside its extracted text and inspect its links.
 
 ## Use it
 
-1. [Download the reviewer](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/pdf-review.zip).
-2. Unzip it. Open `pdf-review.html` in a current Chrome, Edge, Firefox, or Safari browser.
-3. Choose **Open PDF** or drop your file onto the file bar.
-4. Read each page and its text. Use **Show on page** to locate a link.
-5. Open **Text for application forms** to edit a text copy. **Copy all text** copies that version; **Save .txt** downloads it. **Reset text** restores the extraction. The PDF and per-page text stay unchanged.
+1. [Download the reviewer](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/pdf-review.zip), unzip it, and open `pdf-review.html` in a current Chrome, Edge, Firefox, or Safari browser.
+2. Choose **Open PDF** or drop one file onto the file bar.
+3. Read each page and its text. Use **Show on page** to locate a link.
+4. Open **Text for application forms** to edit a text copy. **Copy all text** copies it; **Save .txt** downloads it; **Reset text** restores the extraction. The PDF and per-page text stay unchanged.
 
-The download works offline. The PDF engine, fonts, and decoders are included in the HTML file.
+Works offline with one PDF at a time, up to **20 MiB (20,971,520 bytes) and 20 pages**. Password-protected files ask for the password locally.
 
-One PDF at a time, up to 20 MiB (20,971,520 bytes) and 20 pages. Password-protected files ask for the password locally.
-
-Opening another file, **Clear file**, and **Reset text** ask before discarding edited text, including edits you have already copied or saved. Cancel keeps the current review. Unchanged text needs no confirmation. Dropping several files also leaves the current review intact.
-
-Reloading or closing the page requests the browser's leave-page warning while text differs from the extraction. Browsers may suppress that warning, so copy or save edits you need before leaving. Nothing is saved automatically. If PDF processing fails after you edit the text copy, those edits remain available to copy or save; the page review is still incomplete.
+Opening another file, **Clear file**, and **Reset text** ask before discarding edits, even after copying or saving. Cancelling or dropping several files keeps the current review. Copy or save before leaving: browsers may suppress the leave-page warning. If processing fails after you edit text, those edits remain available; the page review is incomplete.
 
 ## Compare two exports
 
 1. Open the earlier PDF, expand **Compare two exports**, and choose **Keep this PDF as before**.
-2. Use **Open PDF** to open the revised export. The before copy stays in this tab.
-3. Check added and removed wording, external link destinations and their counts, page counts, and exact file sizes. Inspect both PDFs for layout changes too.
+2. Open the revised export.
+3. Check changed wording, external destinations and their counts, page counts, and exact file sizes. Inspect both PDFs for layout changes.
 
-Comparison uses the original extracted text, never edits in **Text for application forms**. Spaces and line breaks are ignored; punctuation, numbers, capitalization, and Unicode characters are preserved. Reordered text appears as removals and additions. Link destinations stay inert, including unsafe URLs; hidden controls are shown as escapes. Raw and resolved destinations are both compared.
+Comparison uses original extracted text, excluding application-form edits. Whitespace is ignored; punctuation, numbers, capitalization, and Unicode are preserved. Reordered words appear as removals and additions. Raw and resolved link destinations are both compared.
 
-Missing, scanned, truncated, or known broken text cannot produce a text match. Form fields may be absent from extraction, so those comparisons are marked incomplete. Internal links and PDF actions cannot be compared; warnings identify partial link results. **No differences in extracted text** does not establish that two PDFs look alike or contain the same information.
+Missing, broken, truncated, or oversized data produces an incomplete result. Form fields may be absent from text; internal links and PDF actions cannot be compared. **No differences in extracted text** does not establish that the PDFs look alike or contain the same information.
 
-Large comparisons may be skipped to keep the page responsive: up to 60,000 text characters and 8,000 words per PDF, with a separate limit on comparison work and displayed changes. Link comparison keeps at most 100 external links and 32,000 destination characters per PDF. A limit produces an incomplete result, never an unchanged verdict.
-
-**Use current PDF as before** starts another comparison. **Forget before copy** removes just the reference. **Clear file**, reloading, or closing the page removes both. A cancelled or failed replacement keeps the reference; the existing confirmation still protects edited application text. No PDF bytes, workers, or application-form edits are kept in the reference, and nothing is stored between visits.
+**Use current PDF as before** replaces the reference; **Forget before copy** removes it. Cancelled or failed replacements keep it.
 
 ## Application upload limits
 
-Open **Application upload limits** and enter the maximum pages and file size from the portal's instructions. Leave either blank to skip that check. Limits are inclusive; a file even one byte over is flagged. Nothing is trimmed or compressed.
+Enter the portal's maximum pages and file size under **Application upload limits**. Leave either blank to skip it. Limits are inclusive; one byte over is flagged. Nothing is trimmed or compressed.
 
-File size uses decimal MB (1 MB = 1,000,000 bytes); the exact byte count is also shown. Use a whole number for pages and a positive number such as `0.5` for MB. Portals may use different units or additional rules, so these checks do not guarantee acceptance.
+Use a whole number for pages and a positive number such as `0.5` for MB. Size uses **decimal MB (1 MB = 1,000,000 bytes)** and shows the exact bytes. Check the portal's units and other requirements too.
 
-Open a revised PDF to check it against the same limits. Clearing, reloading, or closing the page discards the limits; an unreadable or rejected file also resets them. The reviewer's own 20 MiB / 20-page cap still applies.
+Page, size, and character limits carry over to another PDF. Clearing, reloading, or closing resets them, as does a file that cannot open. If processing fails after text edits, the draft and its limits remain available.
 
 ## Application text limits
 
-**Text for application forms** shows a character count as you edit. Enter a **Character limit (optional)** to see how many characters remain or how far over you are. Leave it blank to show only the count. The limit never cuts text or blocks copying and saving.
+Enter a **Character limit (optional)** to see remaining or excess characters. It never cuts text or blocks copying and saving. Resetting text keeps the limit.
 
-Counts use UTF-16 code units, like [native browser text fields](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/maxlength). Spaces and line breaks count; emoji and some accented characters can use more than one unit. Check the form's own counter before submitting. An incomplete extraction still needs checking against the PDF, even when its text fits the limit.
-
-Resetting text or opening a revised PDF keeps the limit. Clearing, reloading, closing, or rejecting a file discards it along with the review. Nothing is saved automatically.
+Counts use [UTF-16 code units](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/maxlength). Spaces and line breaks count; emoji and some accented characters use multiple units. Check the form's own counter. Text edits are capped at 500,100 units.
 
 ## What to check
 
-- **Extracted text:** look for missing words, odd symbols, and wrong reading order. Ligatures such as `ﬁ` become ordinary letters for copying.
-- **Link destinations:** select **Show on page** beside a destination. Its clickable area is highlighted in the preview so you can compare it with the printed label. **Back to link** returns to that row. Select the same button again to clear the highlight. Destinations remain text only; the tool never follows them or checks whether a website is online. Hidden control characters are shown as escapes. Internal links and unsupported PDF actions are identified separately.
-- **File properties:** check stored titles, authors, and creating applications for old names. PDF Info and XMP values are shown separately, with hidden controls escaped. This reads common fields only and does not remove metadata or certify privacy.
-- **Sample contacts:** a warning beside a link flags the starter email, phone number, or GitHub/LinkedIn profile. Check its printed label with **Show on page**, then fix the source and export again. This matches known sample destinations only; it does not verify ownership or find every placeholder.
-- **Pages without text:** a scan or outlined lettering may look fine but copy nothing. This tool does not run OCR.
-- **Pages that appear blank:** this is a preview-based hint, not proof. Very faint content can be missed. A failed preview is never counted as a blank page.
-- **Paper size:** each page shows its dimensions and orientation. A4, US Letter, and US Legal are named; other dimensions show as **Custom size**. Compare each page with your application's instructions, especially if you combined PDFs.
+- **Extracted text:** compare names, words, symbols, and reading order with the PDF. Ligatures such as `ﬁ` become ordinary letters. Missing text, form fields, and truncation need manual review; scans need a text layer. There is no OCR or ATS test.
+- **Links:** use **Show on page** to compare a destination with its printed label and clickable area. **Back to link** returns to the row; selecting the same button clears the highlight. Hidden controls appear as escapes. Links stay inert: open the PDF in a reader to test them.
+- **File properties:** inspect stored titles, authors, and creating applications for old names. PDF Info and XMP are shown separately. Only common fields are read; metadata is not removed.
+- **Sample contacts:** flagged starter email, phone, or profile destinations need replacing. This catches known samples only.
+- **Blank pages:** preview-based hints can miss faint content. A failed preview is never treated as blank.
+- **Paper size:** check dimensions and orientation against the application requirements. Measurements include cropping, rotation, and PDF scale.
 
-Dimensions use the visible page after cropping, rotation, and PDF scale. Values are rounded to 0.1 mm or 0.01 inches; enlarging the preview leaves them unchanged.
-
-Form fields, incomplete extraction, and truncated results get warnings. Check missing text against the original PDF. Extraction can differ between PDF.js, Poppler, and application forms; this is not an ATS test.
-
-Link highlights use the PDF's annotation bounds, not guessed text matches. A PDF can attach a link to a broad area, an image, or no visible label. Missing or off-page bounds get a position warning; a failed preview never gets a highlight. Highlights follow rotated and cropped pages and scale with the preview. Use **Enlarge** to read small labels; **Fit page** restores the full-page view. Neither changes the PDF.
+Link highlights follow annotation bounds, which may cover images or broad areas. Missing or off-page bounds get warnings. Use **Enlarge** for small labels and **Fit page** to restore the view.
 
 ## Privacy
 
-The PDF is read into browser memory. The tool does not upload file contents, names, passwords, or links, and uses no analytics, cookies, browser storage, or service worker. PDF links and scripts are not executed.
+PDFs, passwords, names, and links stay in browser memory. There are no uploads, analytics, cookies, browser storage, or service workers. PDF links and scripts are not executed; the page's security policy blocks network connections.
 
-The page's Content Security Policy blocks network connections, external scripts, form submission, and plugins. The PDF worker runs locally. Closing, reloading, or clearing the page discards this tool's review. This is not a secure memory wipe, and it cannot control browser extensions or your operating system.
+Clearing, reloading, or closing discards the review and comparison. Nothing is saved automatically. This is not a secure memory wipe and cannot control extensions or the operating system. A static host can receive page-request data, but not the PDF.
 
-Copying text puts it on your system clipboard. Other apps or clipboard history may retain it. **Save .txt** creates a UTF-8 file in your browser's download location; clearing the review does not delete that file. Exports contain only the text copy, without the reviewer’s warnings or labels. Check it against the PDF, especially if extraction was incomplete. Text edits are limited to 500,100 UTF-16 code units.
-
-If someone hosts this page, their host can receive normal page-request data; it still does not receive your PDF.
+Copied text may remain in clipboard history. **Save .txt** creates a UTF-8 download containing only your text, without review warnings. Clearing the page does not delete that file; check it before sending.
 
 ## Development
 
