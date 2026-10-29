@@ -116,6 +116,10 @@ def main(argv=None):
         "--max-pages", type=check_resume.positive_integer, metavar="N",
         help="check the extracted page count against N; no command limit by default",
     )
+    parser.add_argument(
+        "--max-size-mb", type=check_resume.megabyte_limit, dest="max_bytes", metavar="MB",
+        help="fail above this PDF size; 1 MB = 1,000,000 bytes; no limit by default",
+    )
     args = parser.parse_args(argv)
     try:
         source = args.source.expanduser().resolve(strict=True)
@@ -184,13 +188,15 @@ def main(argv=None):
 
     reminders = summarize_warnings(log)
     try:
-        text = check_resume.extract_text(pdf)
+        text = check_resume.extract_text(pdf, max_bytes=args.max_bytes)
         # Keep the page comparison separate so it cannot hide a text failure.
         pages = check_resume.check_text(text)
     except check_resume.CheckError as error:
-        print(f"FAIL: PDF extraction check: {error}", file=sys.stderr)
-        print("Open this PDF in the offline reviewer; compare its text with the source, fix fonts or text encoding, and rebuild.", file=sys.stderr)
+        print(f"FAIL: PDF check: {error}", file=sys.stderr)
+        print("Resolve the reported error, then inspect the PDF and its text in the offline reviewer.", file=sys.stderr)
         return 1
+    if args.max_bytes is not None:
+        print(f"Upload size: within the {args.max_bytes:,}-byte limit.")
     print(f"Text checks: {pages} page(s); text on every page; no flagged characters.")
     if args.max_pages is not None:
         if pages > args.max_pages:

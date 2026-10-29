@@ -102,6 +102,20 @@ class FinalReviewBuildTests(unittest.TestCase):
         self.assertEqual(list(self.root.rglob("*.pdf")), [pdf])
         self.assertFalse((project / "backend.log").exists())
 
+    def test_upload_limit_checks_the_built_pdf(self):
+        source = self.fixture("Completed resume content.")
+        for limit, expected in (("1", 0), ("0.000001", 1)):
+            with self.subTest(limit=limit):
+                code, out, err = self.run_review(source, "--max-size-mb", limit)
+                self.assertEqual(code, expected, out + err)
+                pdf = self.output_path(out, "Built PDF: ")
+                self.assert_private_output(pdf)
+                if expected == 0:
+                    self.assertIn("1,000,000-byte limit", out)
+                else:
+                    self.assertIn(f"File size is {pdf.stat().st_size:,} bytes, above the 1-byte limit", err)
+                    self.assertNotIn("Text checks:", out)
+
     def test_failed_rebuild_does_not_accept_previous_or_source_pdf(self):
         source = self.fixture("Completed resume content.")
         code, out, err = self.run_review(source)
@@ -205,7 +219,7 @@ class FinalReviewBuildTests(unittest.TestCase):
         code, out, err = self.run_review(source)
         self.assertEqual(code, 1, out + err)
         self.assertIn("Built PDF:", out)
-        self.assertIn("PDF extraction check: Page 2 has no extractable text.", err)
+        self.assertIn("PDF check: Page 2 has no extractable text.", err)
         self.assertNotIn("Text checks:", out)
         self.assertNotIn("Automated checks completed", out)
 

@@ -14,6 +14,8 @@ Review the exact version you plan to upload. Repeat these steps after any edit.
 python3 scripts/review_resume.py templates/new-grad-resume.tex --max-pages 1
 ```
 
+Add `--max-size-mb 2` for a 2 MB upload limit (1 MB = 1,000,000 bytes). An exact-size PDF passes; one byte over fails. Omit either limit when the application does not specify it.
+
 For a named application version or an edited starter outside the checkout, choose that file instead:
 
 ```bash

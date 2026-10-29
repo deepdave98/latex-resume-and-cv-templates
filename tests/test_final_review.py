@@ -70,7 +70,7 @@ class FinalReviewTests(unittest.TestCase):
         for label in ("Source:", "Build log:", "LaTeX log (if created):", "Built PDF:"):
             self.assertIn(label, out)
         pdf = self.output_dirs[0] / f"{self.source.stem}.pdf"
-        extract.assert_called_once_with(pdf)
+        extract.assert_called_once_with(pdf, max_bytes=None)
         self.assertTrue(pdf.is_relative_to(self.root / ".context/final-review"))
         self.assertIn("Command page limit: not checked", out)
         self.assertIn("does not establish", out)
@@ -217,7 +217,7 @@ class FinalReviewTests(unittest.TestCase):
         self.assertIn("application's instructions", err)
         code, out, err, _, _ = self.run_review(("--max-pages", "1"), text="First.\fBad \ufffd\f")
         self.assertEqual(code, 1)
-        self.assertIn("PDF extraction check", err)
+        self.assertIn("PDF check", err)
         self.assertIn("U+FFFD", err)
         self.assertNotIn("Text checks:", out)
 
@@ -232,7 +232,7 @@ class FinalReviewTests(unittest.TestCase):
             with self.subTest(text=repr(text), error=error):
                 code, out, err, _, _ = self.run_review(text=text, error=error)
                 self.assertEqual(code, 1)
-                self.assertIn("PDF extraction check", err)
+                self.assertIn("PDF check", err)
                 self.assertIn("offline reviewer", err)
                 self.assertNotIn("Text checks:", out)
                 self.assertNotIn("PRIVATE_SENTINEL", out + err)
@@ -245,12 +245,37 @@ class FinalReviewTests(unittest.TestCase):
         self.assertFalse((self.project / "final-review").exists())
         build.assert_not_called()
 
+    def test_upload_size_checks_the_new_pdf_before_poppler(self):
+        self.assertEqual(len(self.pdf_content), 8)
+        for limit, expected in (("0.000008", 0), ("0.000007", 1)):
+            out, err = StringIO(), StringIO()
+            result = subprocess.CompletedProcess([], 0, stdout="Resume\f", stderr="")
+            with (
+                self.subTest(limit=limit),
+                patch.object(review, "run_build", side_effect=self.compile),
+                patch.object(review.check_resume.subprocess, "run", return_value=result) as poppler,
+                redirect_stdout(out), redirect_stderr(err),
+            ):
+                code = review.main([str(self.source), "--max-size-mb", limit, "--max-pages", "1"])
+            self.assertEqual(code, expected, out.getvalue() + err.getvalue())
+            pdf = self.output_dirs[-1] / f"{self.source.stem}.pdf"
+            self.assertEqual(pdf.read_bytes(), self.pdf_content)
+            if expected == 0:
+                poppler.assert_called_once()
+                self.assertIn("8-byte limit", out.getvalue())
+            else:
+                poppler.assert_not_called()
+                self.assertIn("8 bytes, above the 7-byte limit", err.getvalue())
+                self.assertNotIn("Text checks:", out.getvalue())
+
     def test_source_required_and_arguments_reject_multiple_sources_or_bad_limits(self):
         for args in (
             [], [str(self.source), str(self.source)],
             [str(self.project)], [str(self.root / "missing.tex")],
             [str(self.source), "--max-pages", "0"],
             [str(self.source), "--max-pages", "1.5"],
+            [str(self.source), "--max-size-mb", "NaN"],
+            [str(self.source), "--max-size-mb", "0"],
         ):
             with self.subTest(args=args), redirect_stderr(StringIO()), patch.object(review, "run_build") as build:
                 with self.assertRaises(SystemExit) as caught:
