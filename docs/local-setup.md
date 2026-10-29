@@ -39,6 +39,8 @@ make
 
 Edit files in `templates/`. `make` builds all starters to `build/`. To build one, use `make no-internship`, `make new-grad`, `make experienced`, `make ai-engineer`, `make ml-engineer`, or `make graduate-admissions`.
 
+To check the installed tools, packages, and fonts before building, run `make doctor` (Python 3.9+). Without make, use `python3 scripts/check_setup.py`. Missing dependencies are named in the output; nothing is installed or compiled.
+
 On Windows or without `make`, run the relevant command from the repository root:
 
 ```bash
@@ -79,5 +81,7 @@ The [terminal checker](../tests/README.md#check-your-own-resume) needs Python 3.
 - macOS: `brew install python poppler`
 - Ubuntu/Debian: `sudo apt install python3 poppler-utils`
 - Windows: install Python and Poppler, add Poppler's `bin` directory to `PATH`, and use `py -3` instead of `python3`.
+
+Use `python3 scripts/check_setup.py --pdf-checks` to check the build tools and Poppler together.
 
 [Back to the README](../README.md#build-locally)
