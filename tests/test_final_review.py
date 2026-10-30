@@ -3,6 +3,7 @@
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+import os
 import subprocess
 import sys
 import tempfile
@@ -75,6 +76,7 @@ class FinalReviewTests(unittest.TestCase):
         self.assertIn("Command page limit: not checked", out)
         self.assertIn("does not establish", out)
         self.assertIn("manual review is still needed", out)
+        self.assertNotIn("Exported PDF:", out)
 
     def test_repository_template_reuses_root_working_directory(self):
         (self.root / "templates").mkdir()
@@ -248,6 +250,7 @@ class FinalReviewTests(unittest.TestCase):
     def test_upload_size_checks_the_new_pdf_before_poppler(self):
         self.assertEqual(len(self.pdf_content), 8)
         for limit, expected in (("0.000008", 0), ("0.000007", 1)):
+            destination = self.root / f"size-{limit}.pdf"
             out, err = StringIO(), StringIO()
             result = subprocess.CompletedProcess([], 0, stdout="Resume\f", stderr="")
             with (
@@ -256,8 +259,12 @@ class FinalReviewTests(unittest.TestCase):
                 patch.object(review.check_resume.subprocess, "run", return_value=result) as poppler,
                 redirect_stdout(out), redirect_stderr(err),
             ):
-                code = review.main([str(self.source), "--max-size-mb", limit, "--max-pages", "1"])
+                code = review.main([
+                    str(self.source), "--max-size-mb", limit, "--max-pages", "1",
+                    "--export-pdf", str(destination),
+                ])
             self.assertEqual(code, expected, out.getvalue() + err.getvalue())
+            self.assertEqual(destination.exists(), expected == 0)
             pdf = self.output_dirs[-1] / f"{self.source.stem}.pdf"
             self.assertEqual(pdf.read_bytes(), self.pdf_content)
             if expected == 0:
@@ -282,6 +289,178 @@ class FinalReviewTests(unittest.TestCase):
                     review.main(args)
                 self.assertEqual(caught.exception.code, 2)
                 build.assert_not_called()
+
+    def test_export_copies_only_the_fresh_checked_pdf(self):
+        destination = self.project / "Applicant Resume.PDF"
+        self.source.with_suffix(".pdf").write_bytes(b"stale source-adjacent PDF")
+        code, out, err, _, extract = self.run_review(("--export-pdf", str(destination)))
+        self.assertEqual(code, 0, err)
+        checked = extract.call_args.args[0]
+        self.assertEqual(destination.read_bytes(), checked.read_bytes())
+        self.assertEqual(destination.read_bytes(), self.pdf_content)
+        self.assertNotEqual(destination.stat().st_ino, checked.stat().st_ino)
+        self.assertIn(f"Exported PDF: {destination}", out)
+        self.assertIn("manual review is still needed", out)
+        self.assertFalse(list(destination.parent.glob(".resume-export-*")))
+
+    def test_export_expands_home_and_relative_paths(self):
+        # Validate home expansion without changing the environment or writing there.
+        filename = f"resume-export-{self.root.name}.pdf"
+        self.assertEqual(
+            review.export_destination(Path("~") / filename), Path.home().resolve() / filename,
+        )
+        relative = os.path.relpath(self.root / "Relative Resume.pdf")
+        code, _, err, _, _ = self.run_review(("--export-pdf", relative))
+        self.assertEqual(code, 0, err)
+        self.assertEqual((self.root / "Relative Resume.pdf").read_bytes(), self.pdf_content)
+
+    def test_export_rejects_invalid_or_existing_paths_before_building(self):
+        existing = self.root / "existing.pdf"
+        existing.write_bytes(b"keep this file")
+        directory = self.root / "directory.pdf"
+        directory.mkdir()
+        symlink = self.root / "link.pdf"
+        symlink.symlink_to(existing)
+        dangling = self.root / "dangling.pdf"
+        dangling.symlink_to(self.root / "absent.pdf")
+        for destination in (
+            self.root / "resume.txt", self.root / "missing" / "resume.pdf",
+            existing, directory, symlink, dangling, existing / "resume.pdf",
+        ):
+            with self.subTest(destination=destination), patch.object(review, "run_build") as build:
+                with redirect_stderr(StringIO()) as err, self.assertRaises(SystemExit) as caught:
+                    review.main([str(self.source), "--export-pdf", str(destination)])
+                self.assertEqual(caught.exception.code, 2)
+                self.assertIn("Cannot use --export-pdf", err.getvalue())
+                build.assert_not_called()
+        self.assertEqual(existing.read_bytes(), b"keep this file")
+        self.assertTrue(symlink.is_symlink())
+        self.assertTrue(dangling.is_symlink())
+        self.assertFalse((self.root / "missing").exists())
+        self.assertFalse((self.root / ".context").exists())
+
+    def test_failed_or_incomplete_review_never_starts_export(self):
+        destination = self.root / "Resume.pdf"
+        cases = (
+            {"returncode": 1},
+            {"write_pdf": False},
+            {"write_log": False},
+            {"text": "\f"},
+            {"error": review.check_resume.CheckError("File size exceeds the limit.")},
+            {"extra": ("--max-pages", "1"), "text": "First\fSecond\f"},
+            {"log": review.PLACEHOLDER + "name."},
+            {"log": review.PAGE_EXCEEDED + " 2 pages; limit 1."},
+            {"log": review.CONTACT_UNSUPPORTED + "phone format; contact is not linked."},
+            {"log": r"Overfull \hbox (40pt too wide)"},
+        )
+        for case in cases:
+            self.returncode, self.write_pdf, self.write_log, self.log = 0, True, True, "This is XeTeX.\n"
+            options = ("--export-pdf", str(destination), *case.get("extra", ()))
+            for name in ("returncode", "write_pdf", "write_log", "log"):
+                if name in case:
+                    setattr(self, name, case[name])
+            with self.subTest(case=case), patch.object(review, "export_pdf") as export:
+                code, out, _, _, _ = self.run_review(
+                    options, text=case.get("text", "Resume\f"), error=case.get("error"),
+                )
+                self.assertEqual(code, 3 if "log" in case else 1)
+                export.assert_not_called()
+                self.assertFalse(destination.exists())
+                self.assertNotIn("Exported PDF:", out)
+
+    def test_export_does_not_reuse_a_previous_successful_output(self):
+        first = self.root / "first.pdf"
+        second = self.root / "second.pdf"
+        code, _, err, _, _ = self.run_review(("--export-pdf", str(first)))
+        self.assertEqual(code, 0, err)
+        original = first.read_bytes()
+        self.returncode = 1
+        self.pdf_content = b"partial new PDF"
+        code, out, _, _, _ = self.run_review(("--export-pdf", str(second)))
+        self.assertEqual(code, 1)
+        self.assertFalse(second.exists())
+        self.assertEqual(first.read_bytes(), original)
+        self.assertNotIn("Exported PDF:", out)
+
+    def test_copy_failure_removes_partial_staging_file(self):
+        destination = self.root / "Resume.pdf"
+
+        def fail_copy(source, output):
+            output.write(b"partial PDF")
+            raise OSError("disk full")
+
+        with patch.object(review.shutil, "copyfileobj", side_effect=fail_copy), patch.object(review.os, "link") as link:
+            code, out, err, _, _ = self.run_review(("--export-pdf", str(destination)))
+        self.assertEqual(code, 1)
+        self.assertIn("Cannot export PDF", err)
+        self.assertNotIn("Exported PDF:", out)
+        link.assert_not_called()
+        self.assertFalse(destination.exists())
+        self.assertFalse(list(self.root.glob(".resume-export-*")))
+
+    def test_export_link_failure_leaves_no_destination_or_staging_file(self):
+        destination = self.root / "Resume.pdf"
+        with patch.object(review.os, "link", side_effect=OSError("hard links unavailable")):
+            code, out, err, _, _ = self.run_review(("--export-pdf", str(destination)))
+        self.assertEqual(code, 1)
+        self.assertIn("supports hard links", err)
+        self.assertNotIn("Exported PDF:", out)
+        self.assertFalse(destination.exists())
+        self.assertFalse(list(self.root.glob(".resume-export-*")))
+
+    def test_late_export_collision_never_replaces_a_file_or_symlink(self):
+        target = self.root / "other.pdf"
+        target.write_bytes(b"keep target")
+        native_link = os.link
+        for symlink in (False, True):
+            destination = self.root / f"collision-{symlink}.pdf"
+
+            def collide(source, output):
+                self.assertEqual(Path(source).read_bytes(), self.pdf_content)
+                if symlink:
+                    output.symlink_to(target)
+                else:
+                    output.write_bytes(b"keep collision")
+                native_link(source, output)
+
+            with self.subTest(symlink=symlink), patch.object(review.os, "link", side_effect=collide):
+                code, out, err, _, _ = self.run_review(("--export-pdf", str(destination)))
+            self.assertEqual(code, 1)
+            self.assertIn("Cannot export PDF", err)
+            self.assertNotIn("Exported PDF:", out)
+            self.assertEqual(destination.is_symlink(), symlink)
+            self.assertEqual(destination.read_bytes(), b"keep target" if symlink else b"keep collision")
+            self.assertFalse(list(self.root.glob(".resume-export-*")))
+        self.assertEqual(target.read_bytes(), b"keep target")
+
+    def test_pdf_changed_during_checks_is_not_exported(self):
+        destination = self.root / "Resume.pdf"
+
+        def change_pdf(pdf, **kwargs):
+            pdf.write_bytes(b"different PDF bytes")
+            return "Resume\f"
+
+        code, out, err, _, _ = self.run_review(("--export-pdf", str(destination)), error=change_pdf)
+        self.assertEqual(code, 1)
+        self.assertIn("changed after its checks", err)
+        self.assertNotIn("Exported PDF:", out)
+        self.assertFalse(destination.exists())
+        self.assertFalse(list(self.root.glob(".resume-export-*")))
+
+    def test_pdf_changed_while_copying_is_not_exported(self):
+        destination = self.root / "Resume.pdf"
+        native_copy = review.shutil.copyfileobj
+
+        def change_pdf(source, output):
+            native_copy(source, output)
+            Path(source.name).write_bytes(b"changed during copy")
+
+        with patch.object(review.shutil, "copyfileobj", side_effect=change_pdf):
+            code, _, err, _, _ = self.run_review(("--export-pdf", str(destination)))
+        self.assertEqual(code, 1)
+        self.assertIn("changed while copying", err)
+        self.assertFalse(destination.exists())
+        self.assertFalse(list(self.root.glob(".resume-export-*")))
 
     def test_help_needs_no_installed_tools(self):
         out = StringIO()

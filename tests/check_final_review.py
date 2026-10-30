@@ -116,6 +116,22 @@ class FinalReviewBuildTests(unittest.TestCase):
                     self.assertIn(f"File size is {pdf.stat().st_size:,} bytes, above the 1-byte limit", err)
                     self.assertNotIn("Text checks:", out)
 
+    def test_exported_pdf_matches_the_checked_build_and_stays_independent(self):
+        source = self.fixture("Completed resume content.")
+        destination = self.root / "Applicant Resume.pdf"
+        code, out, err = self.run_review(
+            source, "--max-pages", "1", "--max-size-mb", "1", "--export-pdf", str(destination),
+        )
+        self.assertEqual(code, 0, out + err)
+        built = self.output_path(out, "Built PDF: ")
+        self.assertEqual(self.output_path(out, "Exported PDF: "), destination)
+        self.assertEqual(destination.read_bytes(), built.read_bytes())
+        self.assertEqual(check_resume.check_pdf(destination), 1)
+        saved = destination.read_bytes()
+        built.write_bytes(b"later build changed")
+        self.assertEqual(destination.read_bytes(), saved)
+        self.assertFalse(list(self.root.glob(".resume-export-*")))
+
     def test_failed_rebuild_does_not_accept_previous_or_source_pdf(self):
         source = self.fixture("Completed resume content.")
         code, out, err = self.run_review(source)

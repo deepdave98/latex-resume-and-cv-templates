@@ -141,3 +141,5 @@ Check your name, email, dates, headings, bullet order, and text split across pag
 `make test-final-review` runs real one-source builds through `scripts/review_resume.py`. It covers an extracted starter in a folder with spaces, a named application with shared facts, stale PDFs after a failed compile, unlinked contacts, overflowing boxes, placeholder and page-limit reminders, and a PDF with a blank text page. It also checks separate logs for `build.tex` and isolated output despite project compiler settings. An entrypoint check invokes the script from outside the checkout and verifies that published PDFs, previews, and downloads stay unchanged.
 
 Unit tests cover missing tools, invalid inputs, failed builds and extraction, and incomplete logs. The customer sequence is in [Before you send](../docs/before-you-send.md).
+
+PDF export tests check exact bytes, changed build output, existing destinations, write failures, and skipped export after failed checks or source reminders.
