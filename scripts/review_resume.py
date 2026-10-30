@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build one chosen resume and summarize its reminders and PDF text checks."""
+"""Build and check one chosen resume, with an optional PDF export."""
 
 import argparse
 import os
@@ -19,6 +19,49 @@ PLACEHOLDER = "Class resume Warning: Placeholder reminder in "
 PAGE_EXCEEDED = "Class resume Warning: Page limit exceeded:"
 PAGE_INVALID = "Class resume Warning: Invalid page limit."
 CONTACT_UNSUPPORTED = "Class resume Warning: Unsupported "
+
+
+def export_destination(path):
+    path = path.expanduser()
+    if path.suffix.lower() != ".pdf":
+        raise ValueError("Use a .pdf filename for --export-pdf.")
+    parent = path.parent.resolve(strict=True)
+    if not parent.is_dir():
+        raise ValueError("The export parent must be an existing folder.")
+    destination = parent / path.name
+    # lstat also catches a dangling symlink; nothing existing may be replaced.
+    try:
+        destination.lstat()
+    except FileNotFoundError:
+        return destination
+    raise ValueError("The export path already exists. Choose a new filename.")
+
+
+def file_state(stat):
+    return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+
+
+def export_pdf(source, destination, reviewed_state):
+    """Install a complete copy without replacing an existing destination."""
+    temporary = None
+    try:
+        with source.open("rb") as original:
+            before = os.fstat(original.fileno())
+            if file_state(before) != reviewed_state:
+                raise OSError("The built PDF changed after its checks. Rerun the review.")
+            with tempfile.NamedTemporaryFile(
+                prefix=".resume-export-", suffix=".tmp", dir=destination.parent, delete=False,
+            ) as output:
+                temporary = Path(output.name)
+                shutil.copyfileobj(original, output)
+                if output.tell() != before.st_size or file_state(os.fstat(original.fileno())) != reviewed_state:
+                    raise OSError("The built PDF changed while copying. Rerun the review.")
+        # A same-filesystem hard link installs the complete file atomically and
+        # fails if a file or symlink appeared after the destination was checked.
+        os.link(temporary, destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink()
 
 
 def run_build(command, *, cwd, stdout, timeout):
@@ -106,6 +149,8 @@ def main(argv=None):
         epilog=(
             "Uses latexmk/XeLaTeX and Poppler locally. Each run gets a fresh folder "
             "in .context/final-review/ in this checkout. No published files are updated. "
+            "An optional PDF export requires completed checks without source reminders; "
+            "existing files are never overwritten. "
             "Exit codes: 0 checks completed without reminders, 1 failed check, "
             "2 invalid arguments, 3 source reminders need review. "
             "This does not check layout, reading order, missing words, claims, or link destinations."
@@ -120,6 +165,10 @@ def main(argv=None):
         "--max-size-mb", type=check_resume.megabyte_limit, dest="max_bytes", metavar="MB",
         help="fail above this PDF size; 1 MB = 1,000,000 bytes; no limit by default",
     )
+    parser.add_argument(
+        "--export-pdf", type=Path, metavar="PATH",
+        help="copy the checked PDF to a new .pdf path in an existing folder",
+    )
     args = parser.parse_args(argv)
     try:
         source = args.source.expanduser().resolve(strict=True)
@@ -127,6 +176,12 @@ def main(argv=None):
             parser.error("Choose one .tex entry file, such as resume.tex or backend.tex.")
     except (OSError, RuntimeError, ValueError):
         parser.error("Cannot read the chosen source. Check its path and permissions.")
+    destination = None
+    if args.export_pdf is not None:
+        try:
+            destination = export_destination(args.export_pdf)
+        except (OSError, RuntimeError, ValueError) as error:
+            parser.error(f"Cannot use --export-pdf: {str(error).rstrip('.')}. Choose a new .pdf path in an existing folder.")
 
     print(f"Source: {source}")
     for tool, remedy in (
@@ -188,10 +243,11 @@ def main(argv=None):
 
     reminders = summarize_warnings(log)
     try:
+        reviewed_state = file_state(pdf.stat()) if destination is not None else None
         text = check_resume.extract_text(pdf, max_bytes=args.max_bytes)
         # Keep the page comparison separate so it cannot hide a text failure.
         pages = check_resume.check_text(text)
-    except check_resume.CheckError as error:
+    except (check_resume.CheckError, OSError) as error:
         print(f"FAIL: PDF check: {error}", file=sys.stderr)
         print("Resolve the reported error, then inspect the PDF and its text in the offline reviewer.", file=sys.stderr)
         return 1
@@ -211,6 +267,14 @@ def main(argv=None):
     if reminders:
         print("REVIEW NEEDED: source reminders remain; compilation and text extraction completed.")
         return 3
+    if destination is not None:
+        try:
+            export_pdf(pdf, destination, reviewed_state)
+        except (OSError, RuntimeError) as error:
+            print(f"FAIL: Cannot export PDF: {error}", file=sys.stderr)
+            print("Choose an unused filename in a writable folder that supports hard links, then rerun.", file=sys.stderr)
+            return 1
+        print(f"Exported PDF: {destination}")
     print("Automated checks completed without source reminders; manual review is still needed.")
     return 0
 

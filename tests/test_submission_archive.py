@@ -273,6 +273,218 @@ class SubmissionArchiveTests(unittest.TestCase):
         self.assertIn("header", result.stdout)
         self.assertFalse((self.root / "submissions").exists())
 
+    def test_verify_moved_archive_is_read_only_and_needs_no_original_pdf(self):
+        saved = archive.archive_pdf(self.source, "PRIVATE_LABEL Québec")
+        backup = self.root / "private backup" / "renamed archive"
+        backup.parent.mkdir()
+        saved.rename(backup)
+        self.source.unlink()
+        (backup / "notes.txt").write_text("UNSELECTED_PRIVATE_CONTENT", encoding="utf-8")
+        before = {path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in backup.iterdir()}
+        code, out, err = self.run_main("--verify", str(backup))
+        self.assertEqual(code, 0, err)
+        self.assertIn("byte count and SHA-256 hash match", out)
+        self.assertNotIn("PRIVATE", out + err)
+        self.assertNotIn("Saved:", out)
+        self.assertEqual(err, "")
+        result = subprocess.run(
+            [sys.executable, str(REPOSITORY / "scripts/archive_resume.py"), "--verify", str(backup)],
+            cwd=self.root, capture_output=True, text=True, timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("PASS:", result.stdout)
+        self.assertEqual({path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in backup.iterdir()}, before)
+        self.assertEqual(list((self.root / "submissions").iterdir()), [])
+
+    def test_verify_detects_size_and_same_size_hash_changes_without_writes(self):
+        saved = archive.archive_pdf(self.source, "Acme")
+        pdf = saved / "resume-acme.pdf"
+        for content, message in ((self.content[:-1], "byte count"),
+                                 (self.content.replace(b"PRIVATE", b"CHANGED"), "SHA-256 hash")):
+            with self.subTest(message=message):
+                pdf.write_bytes(content)
+                before = {path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in saved.iterdir()}
+                code, out, err = self.run_main("--verify", str(saved))
+                self.assertEqual(code, 1)
+                self.assertIn(message, err)
+                self.assertNotIn("PASS:", out)
+                self.assertNotIn("PRIVATE", out + err)
+                self.assertEqual({path.name: (path.read_bytes(), path.stat().st_mtime_ns) for path in saved.iterdir()}, before)
+
+    def test_verify_rejects_malformed_receipts_without_echoing_contents(self):
+        saved = archive.archive_pdf(self.source, "Acme")
+        receipt = saved / "receipt.json"
+        for content in (
+            b'{"PRIVATE_LABEL":', b'"PRIVATE_LABEL"', b'[]', b'null', b'\xffPRIVATE_LABEL',
+            b'{"pdf": "resume-acme.pdf", "pdf": "PRIVATE_LABEL"}',
+        ):
+            with self.subTest(content=content):
+                receipt.write_bytes(content)
+                code, out, err = self.run_main("--verify", str(saved))
+                self.assertEqual(code, 1)
+                self.assertIn("FAIL:", err)
+                self.assertNotIn("PRIVATE_LABEL", out + err)
+                self.assertEqual(receipt.read_bytes(), content)
+
+    def test_verify_validates_byte_count_hash_and_required_fields(self):
+        saved = archive.archive_pdf(self.source, "Acme")
+        receipt = saved / "receipt.json"
+        original = json.loads(receipt.read_text(encoding="utf-8"))
+        for key, values in (
+            ("bytes", (None, True, False, 0, -1, 1.5, str(len(self.content)))),
+            ("sha256", (None, True, 12, "", "a" * 63, "a" * 65, "z" * 64)),
+            ("pdf", (None, True, 12, "")),
+        ):
+            for value in values:
+                with self.subTest(key=key, value=value):
+                    data = dict(original, **{key: value})
+                    receipt.write_text(json.dumps(data), encoding="utf-8")
+                    with self.assertRaises(archive.ArchiveError):
+                        archive.verify_archive(saved)
+            data = dict(original)
+            del data[key]
+            receipt.write_text(json.dumps(data), encoding="utf-8")
+            with self.subTest(missing=key), self.assertRaises(archive.ArchiveError):
+                archive.verify_archive(saved)
+        original["sha256"] = original["sha256"].upper()
+        receipt.write_text(json.dumps(original), encoding="utf-8")
+        archive.verify_archive(saved)
+
+    def test_verify_rejects_paths_and_nonportable_filenames_before_opening_pdf(self):
+        saved = archive.archive_pdf(self.source, "Acme")
+        receipt = saved / "receipt.json"
+        original = json.loads(receipt.read_text(encoding="utf-8"))
+        open_file = Path.open
+        opened = []
+
+        def record_open(path, *args, **kwargs):
+            opened.append(path)
+            return open_file(path, *args, **kwargs)
+
+        for name in (
+            "../chosen.pdf", "/chosen.pdf", "nested/chosen.pdf", "nested\\chosen.pdf",
+            "C:\\chosen.pdf", "C:chosen.pdf", "\\\\server\\chosen.pdf", "chosen.pdf:secret.pdf",
+            "NUL.pdf", "CON.pdf", "COM1.pdf", "LPT9.pdf", "chosen?.pdf", "chosen*.pdf",
+            "chosen|.pdf", 'chosen".pdf', "chosen<.pdf", "chosen>.pdf", "chosen\x00.pdf",
+            "chosen\n.pdf", "chosen\u200b.pdf", ".", "..", "chosen.txt", "chosen.pdf ",
+        ):
+            with self.subTest(name=name):
+                receipt.write_text(json.dumps(dict(original, pdf=name)), encoding="utf-8")
+                opened.clear()
+                with patch.object(Path, "open", record_open), self.assertRaises(archive.ArchiveError):
+                    archive.verify_archive(saved)
+                self.assertEqual(opened, [receipt])
+        self.assertEqual(self.source.read_bytes(), self.content)
+
+    def test_verify_rejects_missing_files_and_directories(self):
+        saved = archive.archive_pdf(self.source, "Acme")
+        for path in (saved / "resume-acme.pdf", saved / "receipt.json"):
+            content = path.read_bytes()
+            path.unlink()
+            with self.subTest(missing=path.name), self.assertRaises(archive.ArchiveError):
+                archive.verify_archive(saved)
+            path.mkdir()
+            with self.subTest(directory=path.name), self.assertRaises(archive.ArchiveError):
+                archive.verify_archive(saved)
+            path.rmdir()
+            path.write_bytes(content)
+        for path in (self.root / "missing archive", self.source):
+            code, out, err = self.run_main("--verify", str(path))
+            self.assertEqual(code, 1)
+            self.assertNotIn("PASS:", out)
+            self.assertIn("FAIL:", err)
+
+    def test_verify_does_not_follow_receipt_or_pdf_symlinks(self):
+        saved = archive.archive_pdf(self.source, "Acme")
+        for path in (saved / "resume-acme.pdf", saved / "receipt.json"):
+            content = path.read_bytes()
+            outside = self.root / f"outside-{path.name}"
+            path.rename(outside)
+            self.symlink(path, outside)
+            with self.subTest(path=path.name), self.assertRaisesRegex(archive.ArchiveError, "symlink"):
+                archive.verify_archive(saved)
+            self.assertTrue(path.is_symlink())
+            self.assertEqual(outside.read_bytes(), content)
+            path.unlink()
+            outside.rename(path)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "FIFO support")
+    def test_verify_rejects_special_files_before_opening_them(self):
+        saved = archive.archive_pdf(self.source, "Acme")
+        for path in (saved / "resume-acme.pdf", saved / "receipt.json"):
+            content = path.read_bytes()
+            path.unlink()
+            os.mkfifo(path)
+            with self.subTest(path=path.name), self.assertRaisesRegex(archive.ArchiveError, "regular file"):
+                archive.verify_archive(saved)
+            path.unlink()
+            path.write_bytes(content)
+
+    def test_verify_permission_errors_do_not_print_private_paths(self):
+        saved = archive.archive_pdf(self.source, "Acme")
+        with patch.object(Path, "open", side_effect=PermissionError("PRIVATE_LABEL")):
+            code, out, err = self.run_main("--verify", str(saved))
+        self.assertEqual(code, 1)
+        self.assertIn("permissions", err)
+        self.assertNotIn("PRIVATE_LABEL", out + err)
+
+    def test_verify_does_not_pass_when_pdf_changes_during_read(self):
+        saved = archive.archive_pdf(self.source, "Acme")
+        pdf = saved / "resume-acme.pdf"
+        digest = hashlib.sha256()
+
+        def change_after_read(chunk):
+            digest.update(chunk)
+            before = pdf.stat()
+            pdf.write_bytes(self.content.replace(b"PRIVATE", b"CHANGED"))
+            os.utime(pdf, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000))
+
+        with patch.object(archive.hashlib, "sha256") as hashing:
+            hashing.return_value.update.side_effect = change_after_read
+            hashing.return_value.hexdigest.side_effect = digest.hexdigest
+            code, out, err = self.run_main("--verify", str(saved))
+        self.assertEqual(code, 1)
+        self.assertIn("changed during verification", err)
+        self.assertNotIn("PASS:", out)
+
+    def test_verify_cli_is_exclusive_with_archive_arguments(self):
+        for args in (("--verify",), ("--verify", str(self.root), "--label", "Acme"),
+                     (str(self.source), "--verify", str(self.root))):
+            with self.subTest(args=args), redirect_stderr(StringIO()):
+                with self.assertRaises(SystemExit) as caught:
+                    archive.main(args)
+                self.assertEqual(caught.exception.code, 2)
+        self.assertFalse((self.root / "submissions").exists())
+
+    @unittest.skipUnless(os.name == "posix", "Replacing open files requires POSIX semantics")
+    def test_verify_rejects_atomic_replacement_even_with_stable_open_file_stats(self):
+        saved = archive.archive_pdf(self.source, "Acme")
+        pdf = saved / "resume-acme.pdf"
+        receipt = saved / "receipt.json"
+        original_stat = pdf.stat()
+        receipt_before = receipt.read_bytes(), receipt.stat().st_mtime_ns
+        replacement = saved / "replacement.pdf"
+        changed = self.content.replace(b"PRIVATE", b"CHANGED")
+        replacement.write_bytes(changed)
+        replacement_stat = replacement.stat()
+        digest = hashlib.sha256()
+
+        def replace_after_read(chunk):
+            digest.update(chunk)
+            replacement.replace(pdf)
+
+        with patch.object(archive.hashlib, "sha256") as hashing, \
+                patch.object(archive.os, "fstat", return_value=original_stat):
+            hashing.return_value.update.side_effect = replace_after_read
+            hashing.return_value.hexdigest.side_effect = digest.hexdigest
+            code, out, err = self.run_main("--verify", str(saved))
+        self.assertEqual(code, 1)
+        self.assertIn("changed during verification", err)
+        self.assertNotIn("PASS:", out)
+        self.assertEqual((pdf.read_bytes(), pdf.stat().st_mtime_ns), (changed, replacement_stat.st_mtime_ns))
+        self.assertEqual((receipt.read_bytes(), receipt.stat().st_mtime_ns), receipt_before)
+        self.assertEqual({path.name for path in saved.iterdir()}, {pdf.name, receipt.name})
+
 
 if __name__ == "__main__":
     unittest.main()
