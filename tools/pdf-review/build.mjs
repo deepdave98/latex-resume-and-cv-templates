@@ -1,7 +1,7 @@
 // The shipped page needs no server, CDN, package manager, or network access.
 import { build } from 'esbuild';
 import { createHash } from 'node:crypto';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { zipSync } from 'fflate';
@@ -74,8 +74,17 @@ if (process.argv.includes('--check')) {
     process.exitCode = 1;
   } else console.log('PASS: downloadable review page matches its source.');
 } else {
-  await writeFile(output, html);
-  await writeFile(archive, zipped);
+  const staging = await mkdtemp(path.join(path.dirname(output), '.pdf-review-build-'));
+  try {
+    const stagedHTML = path.join(staging, 'pdf-review.html');
+    const stagedZIP = path.join(staging, 'pdf-review.zip');
+    await writeFile(stagedHTML, html);
+    await writeFile(stagedZIP, zipped);
+    await rename(stagedZIP, archive);
+    await rename(stagedHTML, output);
+  } finally {
+    await rm(staging, { recursive: true, force: true });
+  }
   console.log(`Built downloads/pdf-review.html (${(Buffer.byteLength(html) / 1024 / 1024).toFixed(1)} MB).`);
   console.log(`Built downloads/pdf-review.zip (${(zipped.length / 1024 / 1024).toFixed(1)} MB).`);
 }

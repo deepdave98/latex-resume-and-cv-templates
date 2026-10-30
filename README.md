@@ -37,7 +37,7 @@ For AI or ML jobs, use the role starter when its work matches yours; move educat
 latexmk resume.tex
 ```
 
-Output: `resume.pdf`. In a clone, `make` builds all starters to `build/`.
+Output: `resume.pdf`. In a clone, `make` builds all starters to `build/`; `make doctor` checks local dependencies.
 
 ## Optional tools
 

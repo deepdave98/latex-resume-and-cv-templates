@@ -11,11 +11,14 @@ WATCH_TARGETS := $(addprefix watch-,$(TEMPLATES))
 
 .PHONY: $(WATCH_TARGETS)
 
-.PHONY: all $(TEMPLATES) preview $(addprefix preview-,$(TEMPLATES)) preview-ai-ml downloads clean
+.PHONY: all $(TEMPLATES) preview $(addprefix preview-,$(TEMPLATES)) preview-ai-ml downloads clean doctor
 .PHONY: test test-unit test-pdf-text test-personal-pdf test-downloads test-starters test-placeholders test-layout test-page-limits test-contacts test-ai-ml test-graduate-admissions test-final-review
 .PHONY: application-versions application-download preview-application-versions test-application-versions clean-application-versions
 
 all: $(TEMPLATES)
+
+doctor:
+	$(PYTHON) scripts/check_setup.py
 
 $(TEMPLATES):
 	@mkdir -p "$(BUILD_DIR)/$@"

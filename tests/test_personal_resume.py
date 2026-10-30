@@ -166,7 +166,7 @@ class ExtractionChecks(unittest.TestCase):
         with patch.object(checker, "extract_text", return_value="A\fB\f") as extract:
             with self.assertRaisesRegex(checker.CheckError, "chosen limit is 1"):
                 checker.check_pdf(self.pdf, max_pages=1)
-        extract.assert_called_once_with(self.pdf)
+        extract.assert_called_once_with(self.pdf, max_bytes=None)
 
 
 class CommandChecks(unittest.TestCase):
@@ -197,12 +197,12 @@ class CommandChecks(unittest.TestCase):
     def test_options_after_path_and_dash_separator(self):
         with patch.object(checker, "check_pdf", return_value=2) as check:
             code, out, err = self.run_cli(["folder/my resume.pdf", "--max-pages", "2"])
-            check.assert_called_once_with(Path("folder/my resume.pdf"), max_pages=2)
+            check.assert_called_once_with(Path("folder/my resume.pdf"), max_pages=2, max_bytes=None)
         self.assertEqual(code, 0)
         self.assertIn("2 pages;", out)
         with patch.object(checker, "check_pdf", return_value=1) as check:
             self.run_cli(["--max-pages", "1", "--", "-resume.pdf"])
-            check.assert_called_once_with(Path("-resume.pdf"), max_pages=1)
+            check.assert_called_once_with(Path("-resume.pdf"), max_pages=1, max_bytes=None)
 
     def test_page_limit_requires_positive_integer(self):
         for value in ("0", "-1", "1.5", "many"):
