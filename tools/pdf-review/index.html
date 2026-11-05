@@ -139,8 +139,9 @@
             </details>
 
             <details id="submission-archive" hidden>
-              <summary>Save submitted copy</summary>
+              <summary>Submitted copies</summary>
               <div class="all-text-content">
+                <h3 class="submission-heading">Save this PDF</h3>
                 <p class="field-hint" id="submission-hint">Keep the PDF you uploaded with a dated receipt. Text edits in this reviewer are not included.</p>
                 <form id="submission-form" class="submission-controls">
                   <div>
@@ -150,6 +151,15 @@
                   <button id="save-submission" class="button" type="submit" disabled>Save copy (.zip)</button>
                 </form>
                 <p id="submission-status" class="status" role="status" aria-live="polite"></p>
+                <div class="receipt-check">
+                  <h3 class="submission-heading">Check a saved copy</h3>
+                  <p class="field-hint" id="receipt-hint">Unzip the saved copy and open its PDF, then choose receipt.json.</p>
+                  <input id="submission-receipt" type="file" accept=".json,application/json" hidden disabled>
+                  <button id="verify-receipt" class="button" type="button" aria-describedby="receipt-hint receipt-status" disabled>Choose receipt.json</button>
+                  <p id="receipt-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+                  <p id="receipt-pdf" class="status"></p>
+                  <p class="field-hint">Checks file bytes only; a receipt is not proof of delivery. No files are changed.</p>
+                </div>
               </div>
             </details>
           </div>
