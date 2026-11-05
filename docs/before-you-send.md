@@ -34,6 +34,7 @@ Create the destination folder first. Export copies this run's PDF only after che
 
 - **Placeholders:** replace flagged sample values or delete unused entries, including those in shared content files. Literal brackets can trigger reminders; unmarked sample text can be missed.
 - **Unlinked contacts:** correct the email or include the phone's country code. For other formats, use `\resumelink{destination}{label}` and check the exported link.
+- **Missing characters:** the font could not print some characters. Choose a font that contains them or replace unsupported symbols, then rebuild.
 - **Overflow:** inspect the affected page and log line. Shorten unbroken text or adjust the entry, then rebuild.
 - **Page limits:** cut less relevant content or allow another page if the application permits it. The source's `\resumepagelimit{N}` takes a positive whole number. The command's `--max-pages N` checks the exported PDF separately.
 

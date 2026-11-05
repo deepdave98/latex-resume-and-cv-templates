@@ -196,6 +196,21 @@ class FinalReviewTests(unittest.TestCase):
         self.assertIn("clipped or overflowing text", out)
         self.assertNotIn("PRIVATE_RESUME_SENTINEL", out + err)
 
+    def test_missing_characters_need_review_without_printing_character_or_font(self):
+        self.log = "\n".join((
+            "This is XeTeX.",
+            "Missing character: There is no PRIVATE_CHARACTER in font PRIVATE_FONT!",
+            "  Missing character: There is no OTHER_CHARACTER in font OTHER_FONT!",
+        ))
+        code, out, err, _, _ = self.run_review()
+        self.assertEqual(code, 3, err)
+        self.assertIn("MISSING CHARACTERS: 2 warning(s); first at LaTeX log line 2.", out)
+        self.assertIn("Choose a font that contains them", out)
+        self.assertIn("Text checks: 1 page(s)", out)
+        self.assertIn("REVIEW NEEDED", out)
+        for private in ("PRIVATE_CHARACTER", "PRIVATE_FONT", "OTHER_CHARACTER", "OTHER_FONT"):
+            self.assertNotIn(private, out + err)
+
     def test_underfull_boxes_alone_do_not_fail_the_review(self):
         self.log = r"Underfull \hbox (badness 10000) in paragraph at lines 3--4"
         code, out, err, _, _ = self.run_review()
@@ -352,6 +367,7 @@ class FinalReviewTests(unittest.TestCase):
             {"log": review.PAGE_EXCEEDED + " 2 pages; limit 1."},
             {"log": review.CONTACT_UNSUPPORTED + "phone format; contact is not linked."},
             {"log": r"Overfull \hbox (40pt too wide)"},
+            {"log": "Missing character: There is no X in font nullfont!"},
         )
         for case in cases:
             self.returncode, self.write_pdf, self.write_log, self.log = 0, True, True, "This is XeTeX.\n"

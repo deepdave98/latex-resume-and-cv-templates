@@ -117,6 +117,15 @@ def summarize_warnings(log):
         print("The contact text is printed without a link. Correct the email or include the phone country code.")
         print(r"For other contact formats, use \resumelink{destination}{label}; check the exported PDF's links.")
 
+    missing_characters = [
+        number for number, line in enumerate(lines, 1)
+        if line.lstrip().startswith("Missing character:")
+    ]
+    if missing_characters:
+        reminders = True
+        print(f"MISSING CHARACTERS: {len(missing_characters)} warning(s); first at LaTeX log line {missing_characters[0]}.")
+        print("The font could not print some characters. Choose a font that contains them or replace unsupported symbols, then rebuild.")
+
     overflows = [
         number for number, line in enumerate(lines, 1)
         if line.lstrip().startswith((r"Overfull \hbox", r"Overfull \vbox"))
