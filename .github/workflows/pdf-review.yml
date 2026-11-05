@@ -2,6 +2,7 @@ name: Test PDF review
 
 on:
   push:
+    branches: [main]
     paths: ['LICENSE', 'tools/pdf-review/**', 'downloads/pdf-review.zip', '.github/workflows/pdf-review.yml', 'output/pdf/**']
   pull_request:
     paths: ['LICENSE', 'tools/pdf-review/**', 'downloads/pdf-review.zip', '.github/workflows/pdf-review.yml', 'output/pdf/**']
