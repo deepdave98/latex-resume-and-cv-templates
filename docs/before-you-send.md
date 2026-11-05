@@ -19,12 +19,22 @@ python3 scripts/review_resume.py templates/new-grad-resume.tex \
 
 Replace the source path with your `.tex` entry file, including one outside the checkout. Use the application's limits; omit either option if none is specified. MB means 1,000,000 bytes. Exact-size files pass; one byte over fails.
 
-The command needs Python 3.9+, `latexmk`, XeLaTeX, and Poppler's `pdftotext`. See [local setup](local-setup.md). Each run uses a fresh folder under ignored `.context/final-review/` and prints its logs and PDF path. Published files stay unchanged.
+The command needs Python 3.9+, `latexmk`, XeLaTeX, and Poppler's `pdftotext`. See [local setup](local-setup.md). Each run uses a fresh folder under ignored `.context/final-review/` and prints its logs and PDF path.
+
+To save an edited resume under your upload filename, add `--export-pdf`:
+
+```bash
+python3 scripts/review_resume.py "/path/to/your/resume.tex" \
+  --max-pages 1 --max-size-mb 2 --export-pdf "~/Applications/Resume.pdf"
+```
+
+Create the destination folder first. Export copies this run's PDF only after checks finish without reported source reminders; existing files are never replaced. Use a local folder that supports hard links. The exported PDF still needs the manual review below.
 
 ## 2. Resolve reminders and page limits
 
 - **Placeholders:** replace flagged sample values or delete unused entries, including those in shared content files. Literal brackets can trigger reminders; unmarked sample text can be missed.
 - **Unlinked contacts:** correct the email or include the phone's country code. For other formats, use `\resumelink{destination}{label}` and check the exported link.
+- **Missing characters:** the font could not print some characters. Choose a font that contains them or replace unsupported symbols, then rebuild.
 - **Overflow:** inspect the affected page and log line. Shorten unbroken text or adjust the entry, then rebuild.
 - **Page limits:** cut less relevant content or allow another page if the application permits it. The source's `\resumepagelimit{N}` takes a positive whole number. The command's `--max-pages N` checks the exported PDF separately.
 

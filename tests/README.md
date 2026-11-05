@@ -8,6 +8,8 @@ Upload-limit checks cover exact byte boundaries, fractional MB, invalid inputs, 
 
 Submission archive tests use temporary directories to check byte-for-byte copies, hash receipts, duplicate refusal, labels, permissions, symlinks, and failed copies. They do not create personal archives in the checkout.
 
+Verification tests check moved backups, changed PDFs, malformed receipts, unsafe filenames, and read-only behavior.
+
 The check compares every page with `expected/*.txt` using Poppler's `-layout` reading order. Missing or reordered words, changed punctuation, unmapped characters, and extra or missing pages fail. Whitespace and Unicode ligature differences are ignored. Line-end hyphens are preserved.
 
 Inspect the PDF too: extraction tests cannot catch every visual defect or predict how other parsers read it.
@@ -139,3 +141,5 @@ Check your name, email, dates, headings, bullet order, and text split across pag
 `make test-final-review` runs real one-source builds through `scripts/review_resume.py`. It covers an extracted starter in a folder with spaces, a named application with shared facts, stale PDFs after a failed compile, unlinked contacts, overflowing boxes, placeholder and page-limit reminders, and a PDF with a blank text page. It also checks separate logs for `build.tex` and isolated output despite project compiler settings. An entrypoint check invokes the script from outside the checkout and verifies that published PDFs, previews, and downloads stay unchanged.
 
 Unit tests cover missing tools, invalid inputs, failed builds and extraction, and incomplete logs. The customer sequence is in [Before you send](../docs/before-you-send.md).
+
+PDF export tests check exact bytes, changed build output, existing destinations, write failures, and skipped export after failed checks or source reminders.

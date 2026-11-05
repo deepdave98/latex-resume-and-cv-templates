@@ -116,6 +116,22 @@ class FinalReviewBuildTests(unittest.TestCase):
                     self.assertIn(f"File size is {pdf.stat().st_size:,} bytes, above the 1-byte limit", err)
                     self.assertNotIn("Text checks:", out)
 
+    def test_exported_pdf_matches_the_checked_build_and_stays_independent(self):
+        source = self.fixture("Completed resume content.")
+        destination = self.root / "Applicant Resume.pdf"
+        code, out, err = self.run_review(
+            source, "--max-pages", "1", "--max-size-mb", "1", "--export-pdf", str(destination),
+        )
+        self.assertEqual(code, 0, out + err)
+        built = self.output_path(out, "Built PDF: ")
+        self.assertEqual(self.output_path(out, "Exported PDF: "), destination)
+        self.assertEqual(destination.read_bytes(), built.read_bytes())
+        self.assertEqual(check_resume.check_pdf(destination), 1)
+        saved = destination.read_bytes()
+        built.write_bytes(b"later build changed")
+        self.assertEqual(destination.read_bytes(), saved)
+        self.assertFalse(list(self.root.glob(".resume-export-*")))
+
     def test_failed_rebuild_does_not_accept_previous_or_source_pdf(self):
         source = self.fixture("Completed resume content.")
         code, out, err = self.run_review(source)
@@ -181,6 +197,27 @@ class FinalReviewBuildTests(unittest.TestCase):
         self.assertEqual(code, 1, out + err)
         self.assertIn("Page limit: found 2 pages; --max-pages is 1", err)
         self.assertIn("application's instructions", err)
+
+    def test_missing_glyph_blocks_export_even_when_extracted_text_passes(self):
+        # TeX's empty font guarantees a missing glyph on every platform.
+        source = self.fixture(r"Completed resume content. {\nullfont X}")
+        destination = self.root / "Applicant Resume.pdf"
+        code, out, err = self.run_review(source, "--export-pdf", str(destination))
+        self.assertEqual(code, 3, out + err)
+        self.assertIn("MISSING CHARACTERS: 1 warning(s)", out)
+        self.assertIn("Text checks: 1 page(s)", out)
+        self.assertNotIn("Exported PDF:", out)
+        self.assertFalse(destination.exists())
+        log = self.output_path(out, "LaTeX log (if created): ").read_text(encoding="utf-8")
+        self.assertIn("Missing character:", log)
+        self.assertIn("nullfont", log)
+        self.assertNotIn("nullfont", out + err)
+
+        source = self.fixture("Completed resume content. X")
+        code, out, err = self.run_review(source, "--export-pdf", str(destination))
+        self.assertEqual(code, 0, out + err)
+        self.assertNotIn("MISSING CHARACTERS:", out)
+        self.assertEqual(destination.read_bytes(), self.output_path(out, "Built PDF: ").read_bytes())
 
     def test_no_page_budget_allows_multiple_pages_without_claiming_a_limit(self):
         source = self.fixture(r"First page.\newpage Second page.").rename(self.root / "build.tex")

@@ -76,7 +76,7 @@ npm run check
 
 Tests run in Chromium, Firefox, and WebKit. Chromium and Firefox use offline emulation. WebKit blocks all HTTP(S) instead because its offline emulation also blocks local blob workers. Every engine checks for zero post-load network requests and no browser storage.
 
-Interface checks cover file selection, copying without opening the text disclosure, clipboard failure, link highlighting, keyboard controls, rotation, clearing, and narrow screens. Synthetic fixtures cover multi-page PDFs. For visual review, open the public PDFs at desktop and phone widths. Check the first page is visible without scrolling past instructions, text and URLs wrap, and selecting a link identifies the right area. Repeat with an unreadable PDF and a scan; neither should look like a successful text check.
+Browser tests cover the controls, keyboard use, narrow screens, and multi-page PDFs. For visual review, open the public PDFs at desktop and phone widths. Check that the first page is visible, text and URLs wrap, and link highlights match their annotations. Repeat with an unreadable PDF and a scan; neither should look like a successful text check.
 
 For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. The server serves only the generated page; it has no upload route.
 

@@ -6,7 +6,7 @@ Use an issue for a question or bug; open a PR for a change.
 
 - Keep shared layout and styling in `resume.cls`.
 - Keep each shipped starter at one page; preserve support for longer resumes and CVs.
-- Keep examples shipped in the resume templates and maintainer-written guides fictional: use placeholder companies, roles, metrics, links, and contact details.
+- Use fictional examples and placeholder companies, roles, metrics, links, and contacts.
 - Run `make` with XeLaTeX.
 - Run `make preview` and review every page if the output changes.
 - Run `make downloads` after changing template content, styling, the license, or starter instructions.
