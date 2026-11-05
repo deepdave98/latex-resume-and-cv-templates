@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { unzipSync } from "fflate";
 import { encryptedFixture, filePayload, pdfFixture } from "./fixtures.mjs";
 
 const artifactURL = new URL("../../../downloads/pdf-review.html", import.meta.url).href;
@@ -46,6 +48,35 @@ async function discardDecision(page, action, accept) {
   });
   await action();
   await response;
+}
+
+async function openSubmission(page) {
+  const panel = page.locator('#submission-archive');
+  if (await panel.getAttribute('open') === null) await panel.locator('summary').click();
+}
+
+async function readSubmission(download) {
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  expect(await download.failure()).toBeNull();
+  const entries = unzipSync(Buffer.concat(chunks));
+  const files = Object.keys(entries).filter(name => !name.endsWith('/'));
+  expect(files).toHaveLength(2);
+  const receiptPath = files.find(name => name.endsWith('/receipt.json'));
+  expect(receiptPath).toBeDefined();
+  const folder = receiptPath.split('/')[0];
+  expect(folder).toMatch(/^\d{4}-\d{2}-\d{2}-acme-backend-engineer$/);
+  const receipt = JSON.parse(Buffer.from(entries[receiptPath]).toString('utf8'));
+  expect(Object.keys(receipt).sort()).toEqual(['bytes', 'label', 'pdf', 'saved_at', 'sha256']);
+  expect(receipt.label).toBe('Acme - Backend Engineer');
+  expect(receipt.pdf).toBe('resume-acme-backend-engineer.pdf');
+  expect(Number.isFinite(Date.parse(receipt.saved_at))).toBe(true);
+  expect(files.sort()).toEqual([`${folder}/receipt.json`, `${folder}/${receipt.pdf}`].sort());
+  expect(download.suggestedFilename()).toBe(`${folder}.zip`);
+  const pdf = Buffer.from(entries[`${folder}/${receipt.pdf}`]);
+  expect(receipt.bytes).toBe(pdf.length);
+  expect(receipt.sha256).toBe(createHash('sha256').update(pdf).digest('hex'));
+  return pdf;
 }
 
 async function assertPrivate(context, page, observations) {
@@ -319,10 +350,10 @@ test('upload limits work by keyboard on a narrow screen', async ({ page, context
 
 test("sample warnings cover each remaining starter", async ({ page, context }) => {
   const observations = await openReview(page, context);
-  for (const template of ["no-internship", "experienced", "ai-engineer", "ml-engineer"]) {
+  for (const [template, samples] of [["no-internship", 4], ["experienced", 4], ["ai-engineer", 4], ["ml-engineer", 4], ["graduate-admissions", 3]]) {
     await reviewFile(page, resumePath(`${template}-resume`));
-    await expect(page.locator("#summary")).toContainText("4 sample links");
-    await expect(page.locator('.link-list .notice')).toHaveCount(4);
+    await expect(page.locator("#summary")).toContainText(`${samples} sample links`);
+    await expect(page.locator('.link-list .notice')).toHaveCount(samples);
   }
   await assertPrivate(context, page, observations);
 });
@@ -635,18 +666,19 @@ test("warns about form values that page-text extraction may omit", async ({ page
   const observations = await openReview(page, context);
   await reviewFile(page, filePayload(pdfFixture([{ text: "Form resume", formValue: "Stored form value" }])));
   await expect(page.locator("#review")).toContainText(/form/i);
-  // PDF form widgets must not become active inputs. The only review inputs
-  // belong to our optional limit controls, not the document.
+  // PDF form widgets must not become active inputs; these controls belong to the app.
   await expect(page.locator("#pages input, #pages form")).toHaveCount(0);
   expect(await page.locator('#review input').evaluateAll(inputs => inputs.map(input => input.id).sort()))
-    .toEqual(['max-characters', 'max-mb', 'max-pages']);
+    .toEqual(['max-characters', 'max-mb', 'max-pages', 'submission-label']);
   await assertPrivate(context, page, observations);
 });
 
 test("password retry and cancellation stay local and recover", async ({ page, context }) => {
   const observations = await openReview(page, context);
-  await page.locator("#pdf-file").setInputFiles(filePayload(encryptedFixture()));
+  const encrypted = encryptedFixture();
+  await page.locator("#pdf-file").setInputFiles(filePayload(encrypted));
   await expect(page.locator("#password-form")).toBeVisible();
+  await expect(page.locator('#save-submission')).toBeDisabled();
   await page.locator("#password").fill("incorrect");
   await page.locator("#password-form button[type=submit]").click();
   await expect(page.locator("#password-form")).toBeVisible();
@@ -655,10 +687,17 @@ test("password retry and cancellation stay local and recover", async ({ page, co
   await expect(page.locator("#status")).toHaveText("Review ready.");
   await expect(page.locator("#all-text")).toHaveValue(/Protected resume fixture/);
   await expect(page.locator("#password")).toHaveValue("");
+  await openSubmission(page);
+  await page.locator('#submission-label').fill('Acme - Backend Engineer');
+  const saved = page.waitForEvent('download');
+  await page.locator('#save-submission').click();
+  expect(await readSubmission(await saved)).toEqual(encrypted);
   await page.locator("#pdf-file").setInputFiles(filePayload(encryptedFixture(), "locked-again.pdf"));
   await expect(page.locator("#password-form")).toBeVisible();
+  await expect(page.locator('#save-submission')).toBeDisabled();
   await page.locator("#cancel-password").click();
   await expect(page.locator("#password-form")).toBeHidden();
+  await expect(page.locator('#submission-label')).toHaveValue('');
   await expect(page.locator("#review")).toBeHidden();
   await reviewFile(page, filePayload(pdfFixture([{ text: "Recovered after password cancellation" }])));
   await assertPrivate(context, page, observations);
@@ -836,6 +875,134 @@ test('copy all uses the edited draft while copy page retains the PDF text', asyn
   await page.locator('#copy-all').click();
   await page.getByRole('button', { name: 'Copy page text' }).click();
   expect(await page.evaluate(() => globalThis.copiedValues)).toEqual(['Edited text for the form', 'Original PDF text']);
+  await assertPrivate(context, page, observations);
+});
+
+for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
+  test(`${label}: submission ZIP keeps the original PDF and its hash receipt`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    const original = pdfFixture([{ text: 'Submitted PDF content', links: [{ url: 'mailto:hello@example.com' }] }]);
+    await reviewFile(page, filePayload(original, 'Chosen Resume.pdf'));
+    await page.evaluate(() => {
+      File.prototype.arrayBuffer = async () => { throw new Error('The selected file changed on disk.'); };
+    });
+    await expect(page.locator('.link-list .notice')).toHaveCount(1);
+    await expect(page.locator('#submission-archive')).not.toHaveAttribute('open');
+    await openSubmission(page);
+    await expect(page.locator('#save-submission')).toBeDisabled();
+    await page.getByLabel('Company and role', { exact: true }).fill('   ');
+    await expect(page.locator('#save-submission')).toBeDisabled();
+    await page.getByLabel('Company and role', { exact: true }).fill('Acme - Backend Engineer');
+    await page.locator('.all-text-panel > summary').click();
+    await page.locator('#all-text').fill('Edited application text must stay out of this ZIP.');
+    const pending = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Save copy (.zip)', exact: true }).click();
+    expect(await readSubmission(await pending)).toEqual(original);
+    await expect(page.locator('#all-text')).toHaveValue('Edited application text must stay out of this ZIP.');
+    await expect(page.locator('.page-card textarea')).toHaveValue(/Submitted PDF content/);
+    await expect(page.locator('#save-submission')).toBeEnabled();
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('submission label survives replacements and cancellation, then clears explicitly', async ({ page, context }) => {
+  const observations = await openReview(page, context, artifactURL);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'First PDF' }])));
+  await openSubmission(page);
+  await page.locator('#submission-label').fill('Acme - Backend Engineer');
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Keep my draft');
+  const replacement = filePayload(pdfFixture([{ text: 'Replacement PDF' }]));
+  await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(replacement), false);
+  await expect(page.locator('#submission-label')).toHaveValue('Acme - Backend Engineer');
+  await expect(page.locator('#save-submission')).toBeEnabled();
+  await discardDecision(page, () => reviewFile(page, replacement), true);
+  await expect(page.locator('#submission-label')).toHaveValue('Acme - Backend Engineer');
+  await expect(page.locator('#save-submission')).toBeEnabled();
+  await page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF')));
+  await expect(page.locator('#error')).toBeVisible();
+  await expect(page.locator('#submission-label')).toHaveValue('Acme - Backend Engineer');
+  await expect(page.locator('#save-submission')).toBeDisabled();
+  await reviewFile(page, replacement);
+  await page.locator('#clear-file').click();
+  await expect(page.locator('#submission-label')).toHaveValue('');
+  await expect(page.locator('#save-submission')).toBeDisabled();
+  await assertPrivate(context, page, observations);
+});
+
+test('submission save failure keeps the PDF and label available for retry', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  const original = pdfFixture([{ text: 'Keep this submitted PDF' }]);
+  await reviewFile(page, filePayload(original));
+  await openSubmission(page);
+  await page.locator('#submission-label').fill('Acme - Backend Engineer');
+  await page.evaluate(() => {
+    const digest = crypto.subtle.digest.bind(crypto.subtle);
+    window.restoreSubmissionDigest = () => { crypto.subtle.digest = digest; };
+    crypto.subtle.digest = async () => { throw new Error('PRIVATE_HASH_DETAIL'); };
+  });
+  await page.locator('#save-submission').click();
+  await expect(page.locator('#submission-status')).toContainText(/could not|failed|try again/i);
+  await expect(page.locator('#submission-status')).not.toContainText(/PRIVATE_HASH_DETAIL|Acme|Keep this/);
+  await expect(page.locator('#save-submission')).toBeEnabled();
+  await expect(page.locator('#submission-label')).toHaveValue('Acme - Backend Engineer');
+  await page.evaluate(() => window.restoreSubmissionDigest());
+  const pending = page.waitForEvent('download');
+  await page.locator('#save-submission').click();
+  expect(await readSubmission(await pending)).toEqual(original);
+  await assertPrivate(context, page, observations);
+});
+
+for (const action of ['replace', 'clear']) {
+  test(`${action} during submission hashing prevents a stale download`, async ({ page, context }) => {
+    const observations = await openReview(page, context);
+    const downloads = [];
+    page.on('download', download => downloads.push(download));
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'Previous PDF' }])));
+    await openSubmission(page);
+    await page.locator('#submission-label').fill('Acme - Backend Engineer');
+    await page.evaluate(() => {
+      const digest = crypto.subtle.digest.bind(crypto.subtle);
+      crypto.subtle.digest = (...args) => {
+        crypto.subtle.digest = digest;
+        return new Promise(resolve => {
+          window.releaseSubmissionDigest = async () => resolve(await digest(...args));
+        });
+      };
+    });
+    await page.locator('#save-submission').click();
+    await page.waitForFunction(() => typeof window.releaseSubmissionDigest === 'function');
+    await expect(page.locator('#save-submission')).toBeDisabled();
+    const replacement = pdfFixture([{ text: 'Current PDF' }]);
+    if (action === 'replace') await reviewFile(page, filePayload(replacement));
+    else await page.locator('#clear-file').click();
+    await page.evaluate(() => window.releaseSubmissionDigest());
+    if (action === 'clear') await reviewFile(page, filePayload(replacement));
+    await openSubmission(page);
+    await page.locator('#submission-label').fill('Acme - Backend Engineer');
+    const pending = page.waitForEvent('download');
+    await page.locator('#save-submission').click();
+    expect(await readSubmission(await pending)).toEqual(replacement);
+    expect(downloads).toHaveLength(1);
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('submission archive is usable by keyboard on a narrow screen', async ({ page, context }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const observations = await openReview(page, context);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Submitted PDF' }])));
+  const summary = page.locator('#submission-archive > summary');
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#submission-label')).toBeFocused();
+  await page.keyboard.type('Acme - Backend Engineer');
+  const pending = page.waitForEvent('download');
+  await page.keyboard.press('Enter');
+  await readSubmission(await pending);
+  await expect(page.locator('#submission-status')).toHaveAttribute('role', 'status');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await assertPrivate(context, page, observations);
 });
 
@@ -1241,10 +1408,12 @@ for (const failure of ['preview timeout', 'worker failure']) {
     const observations = await openReview(page, context);
     await page.locator('#pdf-file').setInputFiles(filePayload(pdfFixture([{ text: 'Original PDF text' }])));
     await expect(page.locator('#status')).toContainText('Rendering page');
+    await expect(page.locator('#save-submission')).toBeDisabled();
     await page.locator('.all-text-panel > summary').click();
     await page.locator('#all-text').fill('An edited application answer');
     await page.evaluate(kind => kind === 'preview timeout' ? window.expireReview() : window.failReviewWorker(), failure);
     await expect(page.locator('#error')).toBeVisible();
+    await expect(page.locator('#save-submission')).toBeDisabled();
     await expect(page.locator('#all-text')).toHaveValue('An edited application answer');
     await expect(page.locator('#all-text')).toBeEditable();
     await expect(page.locator('#copy-all')).toBeEnabled();

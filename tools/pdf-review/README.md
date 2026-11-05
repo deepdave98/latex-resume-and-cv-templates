@@ -13,6 +13,12 @@ Works offline with one PDF at a time, up to **20 MiB (20,971,520 bytes) and 20 p
 
 Opening another file, **Clear file**, and **Reset text** ask before discarding edits, even after copying or saving. Cancelling or dropping several files keeps the current review. Copy or save before leaving: browsers may suppress the leave-page warning. If processing fails after you edit text, those edits remain available; the page review is incomplete.
 
+## Save a submitted copy
+
+After uploading this PDF, open **Save submitted copy**, enter the company and role, and choose **Save copy (.zip)**. Keep the ZIP in a private folder. It contains the original PDF and a receipt with your label, save time, byte count, and SHA-256 hash. Application-form text edits are excluded; PDF metadata and password protection stay intact.
+
+Unzip it to [verify the saved PDF](../../docs/submitted-resumes.md#verify-a-saved-copy). The receipt records a file, not employer delivery or review approval. Use a different label for each revision and check the browser's download location; nothing is saved automatically.
+
 ## Compare two exports
 
 1. Open the earlier PDF, expand **Compare two exports**, and choose **Keep this PDF as before**.
@@ -52,11 +58,11 @@ Link highlights follow annotation bounds, which may cover images or broad areas.
 
 ## Privacy
 
-PDFs, passwords, names, and links stay in browser memory. There are no uploads, analytics, cookies, browser storage, or service workers. PDF links and scripts are not executed; the page's security policy blocks network connections.
+PDFs, passwords, names, and links are processed in browser memory. Only **Save .txt** or **Save copy (.zip)** creates a download. There are no uploads, analytics, cookies, browser storage, or service workers. PDF links and scripts are not executed; the page's security policy blocks network connections.
 
 Clearing, reloading, or closing discards the review and comparison. Nothing is saved automatically. This is not a secure memory wipe and cannot control extensions or the operating system. A static host can receive page-request data, but not the PDF.
 
-Copied text may remain in clipboard history. **Save .txt** creates a UTF-8 download containing only your text, without review warnings. Clearing the page does not delete that file; check it before sending.
+Copied text may remain in clipboard history. **Save .txt** creates a UTF-8 download containing only your text, without review warnings. Saved text and submission ZIPs remain on your device after clearing the page.
 
 ## Development
 
@@ -90,6 +96,7 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/document-properties.mjs` | Bounded, on-demand inspection of PDF Info and XMP fields |
 | `src/page-size.mjs` | Paper names, dimensions, and orientation from PDF page geometry |
 | `src/text-download.mjs` | UTF-8 text exports and safe download names |
+| `src/submission-archive.mjs` | Original-PDF ZIPs and hash receipts |
 | `src/text-limits.mjs` | Character counts and optional application-text limits |
 | `src/upload-limits.mjs` | Optional page and file-size comparisons |
 | `build.mjs` | Embedded PDF.js resources, CSP hashes, and ZIP |

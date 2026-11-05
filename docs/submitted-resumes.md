@@ -2,6 +2,12 @@
 
 After uploading a resume, save that exact PDF with the company and role. Rebuilding a resume later should not change the copy you use to prepare for an interview.
 
+## From Overleaf or a PDF download
+
+Open the PDF you uploaded in the [offline reviewer](../tools/pdf-review/README.md). After reviewing it, expand **Save submitted copy**, enter the company and role, and choose **Save copy (.zip)**.
+
+Keep the ZIP privately and unzip it when needed. Its dated folder contains the original PDF and `receipt.json`, compatible with the verification command below. The PDF's metadata and password protection remain; text edits made in the reviewer are excluded. The browser controls the download filename and location, so check where it saved the ZIP and keep each revision separately.
+
 ## From a repository checkout
 
 Use the PDF you uploaded, including the specific output path printed by the [final-review command](before-you-send.md) if you used it:
@@ -36,7 +42,7 @@ The dated folder is created inside `Submitted`. The parent must already exist; e
 
 ## Verify a saved copy
 
-Pass the saved folder, including a backup moved outside this checkout:
+Pass the saved folder, including an unzipped browser download or a backup moved outside this checkout:
 
 ```bash
 python3 scripts/archive_resume.py --verify "submissions/2026-10-22-acme-backend-engineer"
@@ -46,10 +52,10 @@ This compares the named PDF's byte count and SHA-256 with `receipt.json` and cha
 
 A match does not authenticate the label/date or prove delivery. A receipt is not a signature: someone who changes both files can replace the record.
 
-Keep a private backup outside this checkout before deleting or replacing it. Git ignores `submissions/`, so pushing this repository does not back it up. These are ordinary local files, not encrypted or locked against manual edits.
+Keep a private backup outside this checkout before deleting or replacing it. Git ignores `submissions/`, so pushing this repository does not back it up. Receipts are not encrypted. Any PDF password protection stays intact; files can still be edited or deleted.
 
-## From Overleaf
+## Copy manually
 
-Download the reviewed PDF and upload that file to the application. Copy the same download into a private folder named with the date, company, and role. Keep a different folder for each revision and never replace an earlier submission.
+Copy the uploaded PDF into a private folder named with the date, company, and role. Keep a different folder for each revision and never replace an earlier submission.
 
 For a manual copy without a receipt, record its hash with `shasum -a 256 file.pdf` on macOS/Linux or `Get-FileHash file.pdf -Algorithm SHA256` in PowerShell. Compare it again later to detect changed bytes; no checkout is needed.

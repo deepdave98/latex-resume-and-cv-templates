@@ -137,6 +137,21 @@
               <dl id="properties-list" class="properties-list"></dl>
               <p class="field-hint">PDF and XMP values are listed separately. This is not a complete privacy check.</p>
             </details>
+
+            <details id="submission-archive" hidden>
+              <summary>Save submitted copy</summary>
+              <div class="all-text-content">
+                <p class="field-hint" id="submission-hint">Keep the PDF you uploaded with a dated receipt. Text edits in this reviewer are not included.</p>
+                <form id="submission-form" class="submission-controls">
+                  <div>
+                    <label for="submission-label">Company and role</label>
+                    <input id="submission-label" type="text" maxlength="500" autocomplete="off" spellcheck="false" aria-describedby="submission-hint submission-status" disabled>
+                  </div>
+                  <button id="save-submission" class="button" type="submit" disabled>Save copy (.zip)</button>
+                </form>
+                <p id="submission-status" class="status" role="status" aria-live="polite"></p>
+              </div>
+            </details>
           </div>
 
           <div id="pages" class="pages"></div>
@@ -148,7 +163,7 @@
             <p><strong>Text:</strong> extraction order can differ from the layout. Scans and outlined letters may have no text to copy. This tool does not run OCR or predict how an application system reads your resume.</p>
             <p><strong>Pages:</strong> a blank-page warning comes from the preview. Very faint content can be missed. Check the original PDF if a preview fails.</p>
             <p><strong>Links:</strong> destinations are displayed as text. They are never opened or checked online.</p>
-            <p><strong>Your file:</strong> processing runs in this tab. The tool does not upload or save the PDF. Clear, reload, or close the page to discard the review and text edits. Copied text may remain in clipboard history. Saved text files stay in your downloads until you remove them.</p>
+            <p><strong>Your file:</strong> processing runs in this tab. Nothing is uploaded or saved automatically. Clear, reload, or close the page to discard the review and text edits. Copied text may remain in clipboard history. Saved text files and submission ZIPs stay in your downloads until you remove them.</p>
             <p>If this page is hosted, the host receives the page request, not your PDF. Browser extensions and your operating system are outside this tool’s control.</p>
           </div>
         </details>
