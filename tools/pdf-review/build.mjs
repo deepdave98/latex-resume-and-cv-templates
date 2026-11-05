@@ -30,6 +30,7 @@ for (const [kind, directory, extensions] of [
   }
 }
 licenses.unshift(`PDF.js\n${await readText(path.join(pdfRoot, 'LICENSE'))}`);
+licenses.unshift(`fflate\n${await readText(path.join(root, 'node_modules/fflate/LICENSE'))}`);
 licenses.unshift(`Private PDF review\n${await readText(path.resolve(root, '../../LICENSE'))}`);
 // Classic blob workers work on opaque file:// origins too. The PDF.js worker
 // initializes its message handler on the worker global; no exports are needed.

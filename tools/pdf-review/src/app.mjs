@@ -2,6 +2,7 @@ import { getDocument, PDFWorker, AnnotationMode, PasswordResponses } from 'pdfjs
 import { reviewDocument, displayDestination } from './review.mjs';
 import { linkRegion } from './link-region.mjs';
 import { createTextDownload, MAX_DRAFT_CHARS } from './text-download.mjs';
+import { createSubmissionArchive, SubmissionArchiveError } from './submission-archive.mjs';
 import { checkUploadLimits, formatFileSize } from './upload-limits.mjs';
 import { formatPageSize } from './page-size.mjs';
 import { checkTextLimit } from './text-limits.mjs';
@@ -20,6 +21,7 @@ class EmbeddedBinaryDataFactory {
 
 const byId = id => document.getElementById(id);
 const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'file-properties', 'properties-status', 'properties-list', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help', 'upload-limits', 'file-size', 'max-pages', 'max-mb', 'page-limit-result', 'size-limit-result', 'max-characters', 'text-limit-result'].map(id => [id, byId(id)]));
+for (const id of ['submission-archive', 'submission-form', 'submission-label', 'save-submission', 'submission-status']) ui[id] = byId(id);
 ui['all-text'].maxLength = MAX_DRAFT_CHARS;
 let generation = 0;
 let current;
@@ -56,7 +58,7 @@ function dispose(state) {
   void Promise.resolve(state.ready).catch(() => {}).then(() => state.loading?.destroy()).catch(() => {}).finally(finish);
 }
 
-function clearReview(message = '', { keepLimits = false, keepComparison = false } = {}) {
+function clearReview(message = '', { keepLimits = false, keepComparison = false, keepSubmissionLabel = false } = {}) {
   comparison.clear({ keepBefore: keepComparison });
   window.removeEventListener('beforeunload', warnBeforeUnload);
   generation += 1;
@@ -82,6 +84,12 @@ function clearReview(message = '', { keepLimits = false, keepComparison = false 
   ui['file-properties'].open = false;
   ui['properties-list'].replaceChildren();
   ui['properties-status'].textContent = '';
+  ui['submission-archive'].hidden = true;
+  ui['submission-archive'].open = false;
+  ui['submission-label'].disabled = true;
+  ui['save-submission'].disabled = true;
+  ui['submission-status'].textContent = '';
+  if (!keepSubmissionLabel) ui['submission-label'].value = '';
   ui['pdf-file'].value = '';
   ui.password.value = '';
   ui['password-form'].hidden = true;
@@ -116,7 +124,7 @@ function fail(message) {
     fileName: current.fileName, fileBytes: current.fileBytes, pageCount: current.pageCount,
     incompleteText: !ui['draft-warning'].hidden,
   } : null;
-  clearReview('', { keepLimits: Boolean(draft), keepComparison: true });
+  clearReview('', { keepLimits: Boolean(draft), keepComparison: true, keepSubmissionLabel: true });
   if (draft) {
     current = { ...draft, controller: new AbortController() };
     ui.review.hidden = false;
@@ -233,12 +241,10 @@ function updateUploadLimits() {
   }
 }
 
-function saveText() {
-  if (typeof current?.originalText !== 'string') return;
+function requestDownload(download) {
   let url;
   let anchor;
   try {
-    const download = createTextDownload(current.fileName, ui['all-text'].value);
     url = URL.createObjectURL(download.blob);
     anchor = document.createElement('a');
     anchor.href = url;
@@ -246,13 +252,51 @@ function saveText() {
     anchor.hidden = true;
     document.body.append(anchor);
     anchor.click();
-    ui.status.textContent = 'Text download requested. The PDF is unchanged.';
-  } catch {
-    ui.status.textContent = 'Could not save this text. Use Copy all text instead.';
   } finally {
     anchor?.remove();
     // Give the browser time to consume the local download before releasing it.
     if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
+function saveText() {
+  if (typeof current?.originalText !== 'string') return;
+  try {
+    requestDownload(createTextDownload(current.fileName, ui['all-text'].value));
+    ui.status.textContent = 'Text download requested. The PDF is unchanged.';
+  } catch {
+    ui.status.textContent = 'Could not save this text. Use Copy all text instead.';
+  }
+}
+
+function updateSubmissionControls() {
+  const ready = Boolean(current?.reviewComplete && current.originalPDF);
+  const busy = Boolean(current?.savingSubmission);
+  ui['submission-archive'].hidden = !ready;
+  ui['submission-label'].disabled = !ready || busy;
+  ui['save-submission'].disabled = !ready || busy || !ui['submission-label'].value.trim();
+}
+
+async function saveSubmission() {
+  const state = current;
+  const label = ui['submission-label'].value;
+  if (!state?.reviewComplete || !state.originalPDF || state.savingSubmission || !label.trim()) return;
+  state.savingSubmission = true;
+  updateSubmissionControls();
+  ui['submission-status'].textContent = 'Preparing copy…';
+  try {
+    const bytes = new Uint8Array(await state.originalPDF.arrayBuffer());
+    if (current !== state) return;
+    const download = await createSubmissionArchive(bytes, label);
+    if (current !== state) return;
+    requestDownload(download);
+    ui['submission-status'].textContent = 'ZIP download requested. Keep it in your private application folder.';
+  } catch (error) {
+    if (current === state) ui['submission-status'].textContent = error instanceof SubmissionArchiveError
+      ? error.message : 'Could not save this copy. Try again.';
+  } finally {
+    state.savingSubmission = false;
+    if (current === state) updateSubmissionControls();
   }
 }
 
@@ -450,7 +494,7 @@ async function openFile(file) {
     ui['pdf-file'].value = '';
     return;
   }
-  clearReview('', { keepLimits: true, keepComparison: true });
+  clearReview('', { keepLimits: true, keepComparison: true, keepSubmissionLabel: true });
   if (!file.size) return fail('This file is empty. Choose a finished PDF.');
   if (file.size > MAX_BYTES) return fail('Choose a PDF no larger than 20 MiB. Larger files can use too much browser memory.');
   const token = generation;
@@ -466,6 +510,8 @@ async function openFile(file) {
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
     if (token !== generation) return;
+    // Keep the reviewed bytes before PDF.js transfers its buffer to the worker.
+    state.originalPDF = new Blob([bytes], { type: 'application/pdf' });
     if (!new TextDecoder('latin1').decode(bytes.subarray(0, 1024)).includes('%PDF-')) {
       return fail('This does not look like a PDF. Export your resume as a PDF, then try again.');
     }
@@ -578,6 +624,8 @@ async function openFile(file) {
     for (const warning of result.warnings) ui.pages.prepend(element('p', 'notice notice--warning', warning.message));
     clearTimeout(state.timer);
     comparison.setCurrent(createComparisonSnapshot(result, { filename: state.fileName, bytes: state.fileBytes }));
+    state.reviewComplete = true;
+    updateSubmissionControls();
     ui.status.textContent = 'Review ready.';
   } catch {
     if (token === generation) fail('This PDF could not be read. It may be damaged, unsupported, or blocked by this browser. Try a fresh PDF export or a current browser.');
@@ -595,6 +643,14 @@ ui['all-text'].addEventListener('input', updateTextControls);
 ui['max-characters'].addEventListener('input', updateTextLimit);
 for (const id of ['max-pages', 'max-mb']) ui[id].addEventListener('input', updateUploadLimits);
 ui['save-text'].addEventListener('click', saveText);
+ui['submission-form'].addEventListener('submit', event => {
+  event.preventDefault();
+  void saveSubmission();
+});
+ui['submission-label'].addEventListener('input', () => {
+  ui['submission-status'].textContent = '';
+  updateSubmissionControls();
+});
 ui['file-properties'].addEventListener('toggle', () => {
   if (ui['file-properties'].open) void showProperties(current);
 });

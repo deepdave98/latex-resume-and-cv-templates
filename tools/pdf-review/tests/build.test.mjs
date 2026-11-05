@@ -42,7 +42,7 @@ test('policy blocks connections, external code, plugins, and form submission', (
 });
 
 test('app and third-party licenses travel inside the offline download', () => {
-  for (const phrase of ['Copyright (c) 2026 deepdave98', 'Apache License', 'LICENSE_FOXIT', 'LICENSE_LIBERATION', 'LICENSE_OPENJPEG', 'LICENSE_JBIG2']) assert.ok(page.includes(phrase));
+  for (const phrase of ['Copyright (c) 2026 deepdave98', 'Copyright (c) 2026 Arjun Barrett', 'Apache License', 'LICENSE_FOXIT', 'LICENSE_LIBERATION', 'LICENSE_OPENJPEG', 'LICENSE_JBIG2']) assert.ok(page.includes(phrase));
 });
 
 test('build replaces complete outputs and preserves previous files on write failure', { timeout: 60_000 }, async t => {
