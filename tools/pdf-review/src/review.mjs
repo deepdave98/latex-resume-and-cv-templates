@@ -137,7 +137,7 @@ function internalDestination(destination, maxChars) {
 
 // Match only contacts shipped in the starters, not names or generic words in
 // someone's resume. Ignore URL query/fragment additions, but require the host
-// and profile path to match; a substring check would flag unrelated links.
+// and path to match; a substring check would flag unrelated links.
 function isSampleContact(destination) {
   try {
     const url = new URL(destination);
@@ -148,7 +148,8 @@ function isSampleContact(destination) {
     const host = url.hostname.replace(/^www\./u, "");
     const profile = path.toLowerCase().replace(/\/+$/u, "");
     return (host === "github.com" && profile === "/your-handle")
-      || (host === "linkedin.com" && profile === "/in/your-handle");
+      || (host === "linkedin.com" && profile === "/in/your-handle")
+      || (host === "example.com" && path === "/");
   } catch {
     return false;
   }

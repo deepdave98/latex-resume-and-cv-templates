@@ -350,7 +350,7 @@ test('upload limits work by keyboard on a narrow screen', async ({ page, context
 
 test("sample warnings cover each remaining starter", async ({ page, context }) => {
   const observations = await openReview(page, context);
-  for (const [template, samples] of [["no-internship", 4], ["experienced", 4], ["ai-engineer", 4], ["ml-engineer", 4]]) {
+  for (const [template, samples] of [["no-internship", 4], ["experienced", 4], ["ai-engineer", 4], ["ml-engineer", 4], ["graduate-admissions", 3]]) {
     await reviewFile(page, resumePath(`${template}-resume`));
     await expect(page.locator("#summary")).toContainText(`${samples} sample links`);
     await expect(page.locator('.link-list .notice')).toHaveCount(samples);

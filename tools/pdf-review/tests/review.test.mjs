@@ -106,6 +106,25 @@ test("sample checks do not guess from labels, partial names, unrelated hosts, or
   }
 });
 
+test("the admissions starter website is flagged only at its root", () => {
+  for (const destination of [
+    "https://example.com", "https://example.com/", "http://www.EXAMPLE.com/?source=resume#home",
+  ]) {
+    const [result] = inspectLinkAnnotations([link({ url: destination })]).links;
+    assert.equal(result.sampleContact, true, destination);
+    assert.equal(result.destination, destination);
+    assert.equal(result.unsafe, false);
+  }
+  for (const destination of [
+    "https://example.com/portfolio", "https://example.com//", "https://example.com/%2F",
+    "https://portfolio.example.com/", "https://example.com.test/", "https://example.com@elsewhere.test/",
+    "https://elsewhere.test/?next=https://example.com", "ftp://example.com/",
+  ]) {
+    const [result] = inspectLinkAnnotations([link({ url: destination })]).links;
+    assert.equal(result.sampleContact, false, destination);
+  }
+});
+
 test("sample checks inspect raw and resolved destinations without replacing security warnings", () => {
   const raw = "https://github.com/your-handle";
   const resolved = "https://www.linkedin.com/in/your-handle";
