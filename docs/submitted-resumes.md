@@ -25,6 +25,15 @@ An existing date and label will not be overwritten, even if the PDF changed. Use
 
 The command checks the PDF header and copies its bytes. It does not validate or upload the document. Finish the [PDF review](before-you-send.md) first.
 
+To keep submissions outside the checkout, choose an existing private folder:
+
+```bash
+python3 scripts/archive_resume.py "/path/to/submitted-resume.pdf" \
+  --label "Acme - Backend Engineer" --output-dir "~/Applications/Submitted"
+```
+
+The dated folder is created inside `Submitted`. The parent must already exist; existing files and folder permissions stay unchanged. Relative paths start from your current working directory. Choose a location you back up privately; `--output-dir` does not add Git ignore rules.
+
 ## Verify a saved copy
 
 Pass the saved folder, including a backup moved outside this checkout:

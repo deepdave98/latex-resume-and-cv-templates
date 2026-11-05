@@ -34,15 +34,20 @@ def label_slug(label):
     return slug
 
 
-def archive_pdf(source, label):
+def archive_pdf(source, label, output_dir=None):
     slug = label_slug(label)
     source = Path(source).expanduser().resolve(strict=True)
     if not source.is_file():
         raise ArchiveError("Choose an existing PDF file, not a directory.")
     saved_at = datetime.now().astimezone()
-    archive_root = ROOT / "submissions"
-    if archive_root.resolve() != archive_root:
-        raise ArchiveError("The submissions folder must not be a symlink or use a redirected parent.")
+    if output_dir is None:
+        archive_root = ROOT / "submissions"
+        if archive_root.resolve() != archive_root:
+            raise ArchiveError("The submissions folder must not be a symlink or use a redirected parent.")
+    else:
+        archive_root = Path(output_dir).expanduser().resolve(strict=True)
+        if not archive_root.is_dir():
+            raise ArchiveError("Use an existing folder for --output-dir.")
     destination = archive_root / f"{saved_at.date().isoformat()}-{slug}"
     pdf = destination / f"resume-{slug}.pdf"
 
@@ -51,7 +56,8 @@ def archive_pdf(source, label):
         if not re.match(rb"%PDF-\d\.\d(?:\r|\n)", original.read(10)):
             raise ArchiveError("This file has no PDF header. Choose the exported PDF, not a source file or download page.")
         original.seek(0)
-        archive_root.mkdir(mode=0o700, exist_ok=True)
+        if output_dir is None:
+            archive_root.mkdir(mode=0o700, exist_ok=True)
         try:
             destination.mkdir(mode=0o700)
         except FileExistsError as error:
@@ -159,7 +165,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description=__doc__,
         epilog=(
-            "Saves locally under this checkout's ignored submissions/ folder. "
+            "Saves locally under this checkout's ignored submissions/ folder, "
+            "or an existing private folder chosen with --output-dir. "
             "Existing archives are never overwritten. Checks the PDF header only; "
             "review the PDF before archiving it. Verification reads only the saved "
             "PDF and receipt, including in a moved backup folder. Requires Python 3.9+, no other tools."
@@ -167,11 +174,12 @@ def main(argv=None):
     )
     parser.add_argument("pdf", type=Path, nargs="?", help="the exact PDF uploaded to the application")
     parser.add_argument("--label", help='company and role, for example "Acme - Backend Engineer"')
+    parser.add_argument("--output-dir", type=Path, metavar="DIR", help="save the dated archive inside this existing folder")
     parser.add_argument("--verify", type=Path, metavar="ARCHIVE_DIR", help="check the saved PDF against its receipt; change no files")
     args = parser.parse_args(argv)
     if args.verify is not None:
-        if args.pdf is not None or args.label is not None:
-            parser.error("Use --verify ARCHIVE_DIR without a PDF argument or --label.")
+        if args.pdf is not None or args.label is not None or args.output_dir is not None:
+            parser.error("Use --verify ARCHIVE_DIR without a PDF argument, --label, or --output-dir.")
         try:
             verify_archive(args.verify)
         except ArchiveError as error:
@@ -184,7 +192,7 @@ def main(argv=None):
     if args.pdf is None or args.label is None:
         parser.error("Choose a PDF and --label, or use --verify ARCHIVE_DIR.")
     try:
-        destination = archive_pdf(args.pdf, args.label)
+        destination = archive_pdf(args.pdf, args.label, output_dir=args.output_dir)
     except (ArchiveError, OSError, RuntimeError, ValueError) as error:
         print(f"FAIL: {error}", file=sys.stderr)
         print("Check the file path, label, and folder permissions; existing archives are unchanged.", file=sys.stderr)

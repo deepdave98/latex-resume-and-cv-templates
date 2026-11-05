@@ -83,6 +83,63 @@ class SubmissionArchiveTests(unittest.TestCase):
         receipt = json.loads((saved / "receipt.json").read_text(encoding="utf-8"))
         self.assertEqual(receipt["sha256"], hashlib.sha256(original).hexdigest())
 
+    def test_custom_output_folder_keeps_exact_bytes_and_its_existing_contents(self):
+        output = self.root / "private copies Québec"
+        output.mkdir()
+        marker = output / "keep.txt"
+        marker.write_text("existing file", encoding="utf-8")
+        before_mode = stat.S_IMODE(output.stat().st_mode)
+        saved = archive.archive_pdf(self.source, "Acme Backend", output_dir=output)
+        self.assertEqual(saved.parent, output)
+        self.assertEqual((saved / "resume-acme-backend.pdf").read_bytes(), self.content)
+        self.assertEqual(marker.read_text(encoding="utf-8"), "existing file")
+        self.assertEqual(stat.S_IMODE(output.stat().st_mode), before_mode)
+        self.assertFalse((self.root / "submissions").exists())
+        if os.name == "posix":
+            self.assertEqual(stat.S_IMODE(saved.stat().st_mode), 0o700)
+            for path in saved.iterdir():
+                self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+        archive.verify_archive(saved)
+
+    def test_output_folder_must_already_exist_and_be_a_directory(self):
+        before = sorted(self.root.rglob("*"))
+        for output in (self.root / "missing" / "backup", self.source):
+            with self.subTest(output=output), self.assertRaises((archive.ArchiveError, OSError)):
+                archive.archive_pdf(self.source, "Acme", output_dir=output)
+        self.assertEqual(sorted(self.root.rglob("*")), before)
+        self.assertEqual(self.source.read_bytes(), self.content)
+
+    def test_custom_output_preserves_previous_archive_on_collision_and_write_failure(self):
+        output = self.root / "private backup"
+        output.mkdir()
+        saved = archive.archive_pdf(self.source, "Acme Backend", output_dir=output)
+        before = {path.name: path.read_bytes() for path in saved.iterdir()}
+        self.source.write_bytes(b"%PDF-1.7\nREPLACEMENT_CONTENT\n")
+        with self.assertRaises(archive.ArchiveError):
+            archive.archive_pdf(self.source, "Acme/Backend", output_dir=output)
+        with patch.object(archive.json, "dump", side_effect=OSError("Receipt write failed")):
+            with self.assertRaises(OSError):
+                archive.archive_pdf(self.source, "Different application", output_dir=output)
+        self.assertEqual(list(output.iterdir()), [saved])
+        self.assertEqual({path.name: path.read_bytes() for path in saved.iterdir()}, before)
+        self.assertFalse((self.root / "submissions").exists())
+
+    def test_cli_saves_to_relative_output_folder_from_another_working_directory(self):
+        output = self.root / "saved copies"
+        output.mkdir()
+        result = subprocess.run(
+            [sys.executable, str(REPOSITORY / "scripts/archive_resume.py"), str(self.source),
+             "--label", "Acme Backend", "--output-dir", output.name],
+            cwd=self.root, capture_output=True, text=True, timeout=10,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Saved:", result.stdout)
+        self.assertNotIn("PRIVATE_RESUME_CONTENT", result.stdout + result.stderr)
+        saved, = output.iterdir()
+        self.assertEqual((saved / "resume-acme-backend.pdf").read_bytes(), self.content)
+        archive.verify_archive(saved)
+        self.assertFalse((self.root / "submissions").exists())
+
     def test_labels_form_short_local_filenames_with_unicode_letters(self):
         for label, slug in (
             ("  Acme / Backend: Canada  ", "acme-backend-canada"),
@@ -254,9 +311,8 @@ class SubmissionArchiveTests(unittest.TestCase):
             self.assertIn("FAIL:", err)
             self.assertNotIn("PRIVATE_RESUME_CONTENT", out + err)
 
-    def test_cli_requires_one_pdf_and_label_and_rejects_output_override(self):
-        for args in ([], [str(self.source)], [str(self.source), str(self.source), "--label", "Acme"],
-                     [str(self.source), "--label", "Acme", "--output", str(self.root)]):
+    def test_cli_requires_one_pdf_and_label(self):
+        for args in ([], [str(self.source)], [str(self.source), str(self.source), "--label", "Acme"]):
             with self.subTest(args=args), redirect_stderr(StringIO()):
                 with self.assertRaises(SystemExit) as caught:
                     archive.main(args)
@@ -449,7 +505,8 @@ class SubmissionArchiveTests(unittest.TestCase):
 
     def test_verify_cli_is_exclusive_with_archive_arguments(self):
         for args in (("--verify",), ("--verify", str(self.root), "--label", "Acme"),
-                     (str(self.source), "--verify", str(self.root))):
+                     (str(self.source), "--verify", str(self.root)),
+                     ("--verify", str(self.root), "--output-dir", str(self.project))):
             with self.subTest(args=args), redirect_stderr(StringIO()):
                 with self.assertRaises(SystemExit) as caught:
                     archive.main(args)
