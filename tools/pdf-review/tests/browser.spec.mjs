@@ -792,7 +792,7 @@ test("copy buttons send only extracted text to the clipboard", async ({ page, co
 });
 
 for (const [label, location] of [["downloaded file", artifactURL], ["hosted page", "/"]]) {
-  test(`${label}: edits and saves a text copy without changing the PDF extraction`, async ({ page, context }) => {
+  test(`${label}: edits and saves a text copy without changing the PDF extraction`, async ({ page, context, browserName }) => {
     const observations = await openReview(page, context, location);
     await reviewFile(page, filePayload(pdfFixture([{ text: 'Original first page' }, { text: 'Original second page' }]), 'My Resume.PDF'));
     await page.locator('.all-text-panel > summary').click();
@@ -807,7 +807,10 @@ for (const [label, location] of [["downloaded file", artifactURL], ["hosted page
     const pending = page.waitForEvent('download');
     await page.locator('#save-text').click();
     const download = await pending;
-    expect(download.suggestedFilename()).toBe('My Resume-text.txt');
+    // Linux WebKit replaces spaces in the browser's suggested filename.
+    const expectedFilename = browserName === 'webkit' && process.platform === 'linux'
+      ? 'My_Resume-text.txt' : 'My Resume-text.txt';
+    expect(download.suggestedFilename()).toBe(expectedFilename);
     const chunks = [];
     for await (const chunk of await download.createReadStream()) chunks.push(chunk);
     expect(Buffer.concat(chunks).toString('utf8')).toBe(edited);
