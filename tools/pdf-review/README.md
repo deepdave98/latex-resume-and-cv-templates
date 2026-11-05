@@ -13,11 +13,13 @@ Works offline with one PDF at a time, up to **20 MiB (20,971,520 bytes) and 20 p
 
 Opening another file, **Clear file**, and **Reset text** ask before discarding edits, even after copying or saving. Cancelling or dropping several files keeps the current review. Copy or save before leaving: browsers may suppress the leave-page warning. If processing fails after you edit text, those edits remain available; the page review is incomplete.
 
-## Save a submitted copy
+## Submitted copies
 
-After uploading this PDF, open **Save submitted copy**, enter the company and role, and choose **Save copy (.zip)**. Keep the ZIP in a private folder. It contains the original PDF and a receipt with your label, save time, byte count, and SHA-256 hash. Application-form text edits are excluded; PDF metadata and password protection stay intact.
+After uploading this PDF, open **Submitted copies**, enter the company and role, and choose **Save copy (.zip)**. Keep the ZIP in a private folder. It contains the original PDF and a receipt with your label, save time, byte count, and SHA-256 hash. Application-form text edits are excluded; PDF metadata and password protection stay intact.
 
-Unzip it to [verify the saved PDF](../../docs/submitted-resumes.md#verify-a-saved-copy). The receipt records a file, not employer delivery or review approval. Use a different label for each revision and check the browser's download location; nothing is saved automatically.
+To check a saved copy, unzip it, open its PDF, and select **Choose receipt.json** under **Submitted copies**. Use the receipt from that folder; browser and terminal receipts work. The check compares the original PDF's byte count and SHA-256, even if you renamed it. Receipts are limited to 64 KiB. A mismatch or unreadable receipt leaves the review and text edits available; no files change.
+
+A match does not authenticate the label or date, or prove employer delivery. Use a different label for each revision and check the browser's download location; nothing is saved automatically. See [backup and terminal verification](../../docs/submitted-resumes.md#verify-a-saved-copy).
 
 ## Compare two exports
 
@@ -58,7 +60,7 @@ Link highlights follow annotation bounds, which may cover images or broad areas.
 
 ## Privacy
 
-PDFs, passwords, names, and links are processed in browser memory. Only **Save .txt** or **Save copy (.zip)** creates a download. There are no uploads, analytics, cookies, browser storage, or service workers. PDF links and scripts are not executed; the page's security policy blocks network connections.
+PDFs, receipts, passwords, names, and links are processed in browser memory. Only **Save .txt** or **Save copy (.zip)** creates a download. There are no uploads, analytics, cookies, browser storage, or service workers. PDF links and scripts are not executed; the page's security policy blocks network connections.
 
 Clearing, reloading, or closing discards the review and comparison. Nothing is saved automatically. This is not a secure memory wipe and cannot control extensions or the operating system. A static host can receive page-request data, but not the PDF.
 
@@ -96,7 +98,7 @@ For a local preview, run `node server.mjs` and open `http://127.0.0.1:4178/`. Th
 | `src/document-properties.mjs` | Bounded, on-demand inspection of PDF Info and XMP fields |
 | `src/page-size.mjs` | Paper names, dimensions, and orientation from PDF page geometry |
 | `src/text-download.mjs` | UTF-8 text exports and safe download names |
-| `src/submission-archive.mjs` | Original-PDF ZIPs and hash receipts |
+| `src/submission-archive.mjs` | Original-PDF ZIPs, hash receipts, and saved-copy verification |
 | `src/text-limits.mjs` | Character counts and optional application-text limits |
 | `src/upload-limits.mjs` | Optional page and file-size comparisons |
 | `build.mjs` | Embedded PDF.js resources, CSP hashes, and ZIP |
