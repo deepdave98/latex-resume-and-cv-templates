@@ -79,6 +79,17 @@ async function readSubmission(download) {
   return pdf;
 }
 
+function receiptPayload(pdf, changes = {}) {
+  return {
+    name: 'receipt.json', mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({
+      label: 'Acme - Backend Engineer', saved_at: '2026-11-05T10:30:00-05:00',
+      pdf: 'resume-acme-backend-engineer.pdf', bytes: pdf.length,
+      sha256: createHash('sha256').update(pdf).digest('hex'), ...changes,
+    })),
+  };
+}
+
 async function assertPrivate(context, page, observations) {
   expect(observations.requests).toEqual([]);
   expect(observations.errors).toEqual([]);
@@ -669,7 +680,7 @@ test("warns about form values that page-text extraction may omit", async ({ page
   // PDF form widgets must not become active inputs; these controls belong to the app.
   await expect(page.locator("#pages input, #pages form")).toHaveCount(0);
   expect(await page.locator('#review input').evaluateAll(inputs => inputs.map(input => input.id).sort()))
-    .toEqual(['max-characters', 'max-mb', 'max-pages', 'submission-label']);
+    .toEqual(['max-characters', 'max-mb', 'max-pages', 'submission-label', 'submission-receipt']);
   await assertPrivate(context, page, observations);
 });
 
@@ -679,6 +690,7 @@ test("password retry and cancellation stay local and recover", async ({ page, co
   await page.locator("#pdf-file").setInputFiles(filePayload(encrypted));
   await expect(page.locator("#password-form")).toBeVisible();
   await expect(page.locator('#save-submission')).toBeDisabled();
+  await expect(page.locator('#verify-receipt')).toBeDisabled();
   await page.locator("#password").fill("incorrect");
   await page.locator("#password-form button[type=submit]").click();
   await expect(page.locator("#password-form")).toBeVisible();
@@ -692,9 +704,13 @@ test("password retry and cancellation stay local and recover", async ({ page, co
   const saved = page.waitForEvent('download');
   await page.locator('#save-submission').click();
   expect(await readSubmission(await saved)).toEqual(encrypted);
+  await page.locator('#submission-receipt').setInputFiles(receiptPayload(encrypted));
+  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
   await page.locator("#pdf-file").setInputFiles(filePayload(encryptedFixture(), "locked-again.pdf"));
   await expect(page.locator("#password-form")).toBeVisible();
   await expect(page.locator('#save-submission')).toBeDisabled();
+  await expect(page.locator('#verify-receipt')).toBeDisabled();
+  await expect(page.locator('#receipt-status')).toHaveText('');
   await page.locator("#cancel-password").click();
   await expect(page.locator("#password-form")).toBeHidden();
   await expect(page.locator('#submission-label')).toHaveValue('');
@@ -1002,6 +1018,221 @@ test('submission archive is usable by keyboard on a narrow screen', async ({ pag
   await page.keyboard.press('Enter');
   await readSubmission(await pending);
   await expect(page.locator('#submission-status')).toHaveAttribute('role', 'status');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await assertPrivate(context, page, observations);
+});
+
+for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
+  test(`${label}: verifies browser and terminal receipts against the original PDF offline`, async ({ page, context }) => {
+    const observations = await openReview(page, context, location);
+    const original = pdfFixture([{ text: 'The submitted PDF' }]);
+    await reviewFile(page, filePayload(original, 'Renamed Resume.pdf'));
+    await openSubmission(page);
+    await page.locator('#submission-label').fill('Acme - Backend Engineer');
+    await page.locator('.all-text-panel > summary').click();
+    await page.locator('#all-text').fill('This edited answer is not the submitted PDF.');
+    const pending = page.waitForEvent('download');
+    await page.locator('#save-submission').click();
+    const download = await pending;
+    const chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    const entries = unzipSync(Buffer.concat(chunks));
+    const receipt = entries[Object.keys(entries).find(name => name.endsWith('/receipt.json'))];
+    await page.evaluate(() => {
+      const read = File.prototype.arrayBuffer;
+      File.prototype.arrayBuffer = function (...args) {
+        if (this.name.endsWith('.pdf')) throw new Error('The selected PDF changed on disk.');
+        return read.apply(this, args);
+      };
+    });
+    const downloads = [];
+    page.on('download', item => downloads.push(item));
+    await page.locator('#submission-receipt').setInputFiles({ name: 'receipt.json', mimeType: 'application/json', buffer: Buffer.from(receipt) });
+    await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
+    await expect(page.locator('#receipt-pdf')).toHaveText('Receipt PDF: resume-acme-backend-engineer.pdf');
+    await page.locator('#submission-receipt').setInputFiles(receiptPayload(original, {
+      sha256: createHash('sha256').update(original).digest('hex').toUpperCase(),
+      pdf: 'different-backup-name.pdf',
+    }));
+    await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
+    await expect(page.locator('#receipt-pdf')).toHaveText('Receipt PDF: different-backup-name.pdf');
+    await expect(page.locator('#filename')).toHaveText('Renamed Resume.pdf');
+    await expect(page.locator('#submission-receipt')).toHaveValue('');
+    await expect(page.locator('#all-text')).toHaveValue('This edited answer is not the submitted PDF.');
+    await expect(page.locator('.page-card textarea')).toHaveValue(/The submitted PDF/);
+    expect(downloads).toHaveLength(0);
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('receipt mismatches and unreadable receipts replace a previous match', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  const original = pdfFixture([{ text: 'First PDF' }]);
+  const changed = pdfFixture([{ text: 'Other PDF' }]);
+  expect(changed.length).toBe(original.length);
+  await reviewFile(page, filePayload(changed));
+  await openSubmission(page);
+  const input = page.locator('#submission-receipt');
+  const status = page.locator('#receipt-status');
+  await input.setInputFiles(receiptPayload(original));
+  await expect(status).toContainText('SHA-256 does not match the receipt');
+  await input.setInputFiles(receiptPayload(changed, { bytes: changed.length + 1 }));
+  await expect(status).toContainText('byte count does not match the receipt');
+  const invalidEncoding = receiptPayload(changed).buffer;
+  invalidEncoding[invalidEncoding.indexOf('Acme')] = 0xff;
+  for (const [buffer, expected] of [[Buffer.from('{not JSON'), /JSON/i], [invalidEncoding, /UTF-8 JSON/], [Buffer.alloc(65537, 32), /64 KiB/]]) {
+    await input.setInputFiles(receiptPayload(changed));
+    await expect(status).toContainText('byte count and SHA-256 match the receipt');
+    await input.setInputFiles({ name: 'receipt.json', mimeType: 'application/json', buffer });
+    await expect(status).toContainText(expected);
+    await expect(status).not.toContainText('match the receipt');
+    await expect(page.locator('#receipt-pdf')).toHaveText('');
+    await expect(page.locator('#verify-receipt')).toBeEnabled();
+    await expect(page.locator('#status')).toHaveText('Review ready.');
+  }
+  await assertPrivate(context, page, observations);
+});
+
+test('a newer receipt wins over an unfinished read, and read failures can be retried', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  const original = pdfFixture([{ text: 'One submitted PDF' }]);
+  await reviewFile(page, filePayload(original));
+  await openSubmission(page);
+  await page.evaluate(() => {
+    const read = File.prototype.arrayBuffer;
+    window.restoreReceiptRead = () => { File.prototype.arrayBuffer = read; };
+    File.prototype.arrayBuffer = function (...args) {
+      if (this.name === 'earlier-receipt.json') {
+        return new Promise(resolve => {
+          window.releaseReceiptRead = async () => resolve(await read.apply(this, args));
+        });
+      }
+      if (this.name === 'unreadable-receipt.json') throw new Error('PRIVATE_RECEIPT_READ_DETAIL');
+      return read.apply(this, args);
+    };
+  });
+  const input = page.locator('#submission-receipt');
+  const status = page.locator('#receipt-status');
+  await input.setInputFiles({ ...receiptPayload(original, { bytes: original.length + 1 }), name: 'earlier-receipt.json' });
+  await page.waitForFunction(() => typeof window.releaseReceiptRead === 'function');
+  await expect(status).toHaveText('Checking receipt…');
+  await expect(page.locator('#verify-receipt')).toBeDisabled();
+  await input.setInputFiles(receiptPayload(original, { pdf: 'current-copy.pdf' }));
+  await expect(status).toContainText('byte count and SHA-256 match the receipt');
+  await page.evaluate(() => window.releaseReceiptRead());
+  await expect(status).toContainText('byte count and SHA-256 match the receipt');
+  await expect(page.locator('#receipt-pdf')).toHaveText('Receipt PDF: current-copy.pdf');
+  const unreadable = { ...receiptPayload(original), name: 'unreadable-receipt.json' };
+  await input.setInputFiles(unreadable);
+  await expect(status).toContainText(/not readable|could not|try again/i);
+  await expect(status).not.toContainText('PRIVATE_RECEIPT_READ_DETAIL');
+  await expect(page.locator('#receipt-pdf')).toHaveText('');
+  await expect(page.locator('#verify-receipt')).toBeEnabled();
+  await page.evaluate(() => window.restoreReceiptRead());
+  await input.setInputFiles(unreadable);
+  await expect(status).toContainText('byte count and SHA-256 match the receipt');
+  await expect(page.locator('#status')).toHaveText('Review ready.');
+  await assertPrivate(context, page, observations);
+});
+
+test('receipt results survive cancelled selection and clear with a replaced PDF', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  const original = pdfFixture([{ text: 'First PDF' }]);
+  await reviewFile(page, filePayload(original));
+  await openSubmission(page);
+  await page.locator('#submission-receipt').setInputFiles(receiptPayload(original));
+  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
+  await page.locator('#submission-receipt').setInputFiles([]);
+  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Keep my draft');
+  const replacement = filePayload(pdfFixture([{ text: 'Replacement PDF' }]));
+  await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(replacement), false);
+  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
+  await expect(page.locator('#all-text')).toHaveValue('Keep my draft');
+  await discardDecision(page, () => reviewFile(page, replacement), true);
+  await expect(page.locator('#receipt-status')).toHaveText('');
+  await expect(page.locator('#receipt-pdf')).toHaveText('');
+  await page.locator('#clear-file').click();
+  await expect(page.locator('#receipt-status')).toHaveText('');
+  await expect(page.locator('#verify-receipt')).toBeDisabled();
+  await assertPrivate(context, page, observations);
+});
+
+test('receipt hashing failure preserves the review and permits the same receipt again', async ({ page, context }) => {
+  const observations = await openReview(page, context);
+  const original = pdfFixture([{ text: 'Keep the PDF and draft' }]);
+  await reviewFile(page, filePayload(original));
+  await openSubmission(page);
+  await page.locator('.all-text-panel > summary').click();
+  await page.locator('#all-text').fill('Keep this edited answer');
+  await page.evaluate(() => {
+    const digest = crypto.subtle.digest.bind(crypto.subtle);
+    window.restoreReceiptDigest = () => { crypto.subtle.digest = digest; };
+    crypto.subtle.digest = async () => { throw new Error('PRIVATE_RECEIPT_DETAIL'); };
+  });
+  await page.locator('#submission-receipt').setInputFiles(receiptPayload(original));
+  await expect(page.locator('#receipt-status')).toContainText(/could not|failed|try again/i);
+  await expect(page.locator('#receipt-status')).not.toContainText('PRIVATE_RECEIPT_DETAIL');
+  await expect(page.locator('#verify-receipt')).toBeEnabled();
+  await expect(page.locator('#all-text')).toHaveValue('Keep this edited answer');
+  await page.evaluate(() => window.restoreReceiptDigest());
+  await page.locator('#submission-receipt').setInputFiles(receiptPayload(original));
+  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
+  await assertPrivate(context, page, observations);
+});
+
+for (const action of ['replace', 'clear']) {
+  test(`${action} during receipt hashing cannot report a match for the next PDF`, async ({ page, context }) => {
+    const observations = await openReview(page, context);
+    const original = pdfFixture([{ text: 'Previous PDF' }]);
+    await reviewFile(page, filePayload(original));
+    await openSubmission(page);
+    await page.evaluate(() => {
+      const digest = crypto.subtle.digest.bind(crypto.subtle);
+      crypto.subtle.digest = (...args) => {
+        crypto.subtle.digest = digest;
+        return new Promise(resolve => {
+          window.releaseReceiptDigest = async () => resolve(await digest(...args));
+        });
+      };
+    });
+    await page.locator('#submission-receipt').setInputFiles(receiptPayload(original));
+    await page.waitForFunction(() => typeof window.releaseReceiptDigest === 'function');
+    await expect(page.locator('#verify-receipt')).toBeDisabled();
+    await expect(page.locator('#submission-receipt')).toBeDisabled();
+    const replacement = pdfFixture([{ text: 'Current PDF' }]);
+    if (action === 'replace') await reviewFile(page, filePayload(replacement));
+    else await page.locator('#clear-file').click();
+    await page.evaluate(() => window.releaseReceiptDigest());
+    await expect(page.locator('#receipt-status')).toHaveText('');
+    if (action === 'clear') await reviewFile(page, filePayload(replacement));
+    await openSubmission(page);
+    await page.locator('#submission-receipt').setInputFiles(receiptPayload(replacement));
+    await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
+    await assertPrivate(context, page, observations);
+  });
+}
+
+test('receipt selection works by keyboard on a narrow screen', async ({ page, context, browserName }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const observations = await openReview(page, context);
+  const original = pdfFixture([{ text: 'Submitted PDF' }]);
+  await reviewFile(page, filePayload(original));
+  await page.locator('#submission-archive > summary').focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#submission-label')).toBeFocused();
+  // Safari on macOS uses Option-Tab to include buttons in keyboard navigation.
+  await page.keyboard.press(process.platform === 'darwin' && browserName === 'webkit' ? 'Alt+Tab' : 'Tab');
+  const choose = page.getByRole('button', { name: 'Choose receipt.json', exact: true });
+  await expect(choose).toBeFocused();
+  const picker = page.waitForEvent('filechooser');
+  await page.keyboard.press('Enter');
+  await (await picker).setFiles(receiptPayload(original));
+  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
+  await expect(page.locator('#receipt-status')).toHaveAttribute('role', 'status');
+  await expect(page.locator('#receipt-status')).toHaveAttribute('aria-live', 'polite');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await assertPrivate(context, page, observations);
 });

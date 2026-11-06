@@ -2,7 +2,7 @@ import { getDocument, PDFWorker, AnnotationMode, PasswordResponses } from 'pdfjs
 import { reviewDocument, displayDestination } from './review.mjs';
 import { linkRegion } from './link-region.mjs';
 import { createTextDownload, MAX_DRAFT_CHARS } from './text-download.mjs';
-import { createSubmissionArchive, SubmissionArchiveError } from './submission-archive.mjs';
+import { createSubmissionArchive, readSubmissionReceipt, verifySubmissionPDF, MAX_RECEIPT_BYTES, SubmissionArchiveError } from './submission-archive.mjs';
 import { checkUploadLimits, formatFileSize } from './upload-limits.mjs';
 import { formatPageSize } from './page-size.mjs';
 import { checkTextLimit } from './text-limits.mjs';
@@ -21,7 +21,7 @@ class EmbeddedBinaryDataFactory {
 
 const byId = id => document.getElementById(id);
 const ui = Object.fromEntries(['pdf-file', 'drop-zone', 'clear-file', 'status', 'error', 'review', 'filename', 'summary', 'pages', 'copy-all', 'all-text', 'reset-text', 'save-text', 'draft-warning', 'file-properties', 'properties-status', 'properties-list', 'password-form', 'password', 'cancel-password', 'empty-state', 'review-help', 'upload-limits', 'file-size', 'max-pages', 'max-mb', 'page-limit-result', 'size-limit-result', 'max-characters', 'text-limit-result'].map(id => [id, byId(id)]));
-for (const id of ['submission-archive', 'submission-form', 'submission-label', 'save-submission', 'submission-status']) ui[id] = byId(id);
+for (const id of ['submission-archive', 'submission-form', 'submission-label', 'save-submission', 'submission-status', 'submission-receipt', 'verify-receipt', 'receipt-status', 'receipt-pdf']) ui[id] = byId(id);
 ui['all-text'].maxLength = MAX_DRAFT_CHARS;
 let generation = 0;
 let current;
@@ -89,6 +89,12 @@ function clearReview(message = '', { keepLimits = false, keepComparison = false,
   ui['submission-label'].disabled = true;
   ui['save-submission'].disabled = true;
   ui['submission-status'].textContent = '';
+  ui['submission-receipt'].value = '';
+  ui['submission-receipt'].disabled = true;
+  ui['verify-receipt'].disabled = true;
+  ui['receipt-status'].textContent = '';
+  ui['receipt-status'].classList.remove('limit-warning');
+  ui['receipt-pdf'].textContent = '';
   if (!keepSubmissionLabel) ui['submission-label'].value = '';
   ui['pdf-file'].value = '';
   ui.password.value = '';
@@ -269,18 +275,67 @@ function saveText() {
   }
 }
 
+async function checkReceipt(file) {
+  const state = current;
+  if (!file || !state?.reviewComplete || !state.originalPDF || state.savingSubmission) return;
+  const check = {};
+  state.receiptCheck = check;
+  const active = () => current === state && state.receiptCheck === check;
+  ui['receipt-status'].textContent = 'Checking receipt…';
+  ui['receipt-status'].classList.remove('limit-warning');
+  ui['receipt-pdf'].textContent = '';
+  updateSubmissionControls();
+  try {
+    if (file.size > MAX_RECEIPT_BYTES) throw new SubmissionArchiveError('Choose a receipt no larger than 64 KiB.');
+    let text;
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer());
+    } catch {
+      throw new SubmissionArchiveError('The receipt is not readable UTF-8 JSON. Choose receipt.json from a saved copy.');
+    }
+    if (!active()) return;
+    const receipt = readSubmissionReceipt(text);
+    if (!active()) return;
+    const bytes = new Uint8Array(await state.originalPDF.arrayBuffer());
+    if (!active()) return;
+    const result = await verifySubmissionPDF(bytes, receipt);
+    if (!active()) return;
+    const messages = {
+      match: "This PDF's byte count and SHA-256 match the receipt.",
+      'size-mismatch': "This PDF's byte count does not match the receipt.",
+      'hash-mismatch': "This PDF's SHA-256 does not match the receipt.",
+    };
+    ui['receipt-status'].textContent = messages[result.status];
+    ui['receipt-status'].classList.toggle('limit-warning', result.status !== 'match');
+    ui['receipt-pdf'].textContent = `Receipt PDF: ${displayDestination(receipt.pdf)}`;
+  } catch (error) {
+    if (active()) {
+      ui['receipt-status'].textContent = error instanceof SubmissionArchiveError
+        ? error.message : 'Could not check this receipt. Choose it again to retry.';
+      ui['receipt-status'].classList.add('limit-warning');
+    }
+  } finally {
+    if (active()) {
+      state.receiptCheck = null;
+      updateSubmissionControls();
+    }
+  }
+}
+
 function updateSubmissionControls() {
   const ready = Boolean(current?.reviewComplete && current.originalPDF);
-  const busy = Boolean(current?.savingSubmission);
+  const busy = Boolean(current?.savingSubmission || current?.receiptCheck);
   ui['submission-archive'].hidden = !ready;
   ui['submission-label'].disabled = !ready || busy;
   ui['save-submission'].disabled = !ready || busy || !ui['submission-label'].value.trim();
+  ui['submission-receipt'].disabled = !ready || busy;
+  ui['verify-receipt'].disabled = !ready || busy;
 }
 
 async function saveSubmission() {
   const state = current;
   const label = ui['submission-label'].value;
-  if (!state?.reviewComplete || !state.originalPDF || state.savingSubmission || !label.trim()) return;
+  if (!state?.reviewComplete || !state.originalPDF || state.savingSubmission || state.receiptCheck || !label.trim()) return;
   state.savingSubmission = true;
   updateSubmissionControls();
   ui['submission-status'].textContent = 'Preparing copy…';
@@ -650,6 +705,12 @@ ui['submission-form'].addEventListener('submit', event => {
 ui['submission-label'].addEventListener('input', () => {
   ui['submission-status'].textContent = '';
   updateSubmissionControls();
+});
+ui['verify-receipt'].addEventListener('click', () => ui['submission-receipt'].click());
+ui['submission-receipt'].addEventListener('change', event => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  void checkReceipt(file);
 });
 ui['file-properties'].addEventListener('toggle', () => {
   if (ui['file-properties'].open) void showProperties(current);
