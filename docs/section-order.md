@@ -15,4 +15,4 @@ Use a second page when relevant experience needs it, not because of your title. 
 
 For PhD and research master's applications, education and research usually lead. Keep publications near that evidence if you have them; omit the section if you do not. The program's CV and page-limit instructions take precedence. [Admissions starter and guide](graduate-admissions.md).
 
-To reorder these templates, move each complete `\section{...}` block with its entries. All starters begin at one page. If relevant content needs a second, set `\resumepagelimit{2}` and let LaTeX paginate naturally. Rebuild and inspect the PDF after changing the order or length.
+To reorder these templates, move each complete `\section{...}` block with its entries. All starters begin at one page. If relevant content needs a second, set `\resumepagelimit{2}` and let LaTeX paginate naturally; a heading moves to the next page with its first entry, and the footer prints your name and page number from page 2. Rebuild and inspect the PDF after changing the order or length.

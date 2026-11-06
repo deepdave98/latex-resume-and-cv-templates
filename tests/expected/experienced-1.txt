@@ -5,11 +5,12 @@ City, Region ⋄ +1 (555) 555-5555 ⋄ hello@example.com ⋄ LinkedIn ⋄ GitHub
 Experience
 
 Company A – City, Region                                                                               Month Year – Present
-[Current role]
+[Current role]                                                                                         Month Year – Present
 • Chose [architecture] for [service] over [alternative] because [constraint]; split the migration into [stages] with [rollback
   condition].
 • Defined [shared API contract] with [consumer teams]; migrated [N] integrations and kept [old behavior] working until
   clients moved.
+[Earlier role at the same company]                                                                Month Year – Month Year
 • Traced [recurring outage] to [failure mode]; changed [isolation or recovery mechanism] and verified recovery with [failure
   test].
 

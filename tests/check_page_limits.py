@@ -154,6 +154,39 @@ class PageLimitBuildTests(unittest.TestCase):
         self.assert_page_count(text, 2)
         self.assertFalse((project / "resume.aux").exists())
 
+    def test_heading_moves_to_the_next_page_with_its_first_entry(self):
+        # Slide a short last section across the page foot one bullet at a time.
+        entry = (
+            r"\jobentry{Engineer}{Acme}{Toronto}{2024}"
+            r"\begin{jobduties}\item Built a tested worker.\end{jobduties}"
+        )
+        for filler in range(30, 42):
+            with self.subTest(filler=filler):
+                body = (
+                    r"\resumename{Alex Morgan}\section{Experience}"
+                    + r"\begin{jobduties}" + r"\item Filler line." * filler + r"\end{jobduties}"
+                    + r"\section{Projects}" + entry
+                )
+                _, text, _ = self.compile(body)
+                for page in check_pdf_text.split_pages(text):
+                    lines = [line.strip() for line in page.splitlines() if line.strip()]
+                    self.assertNotEqual(lines[-1], "Projects", page)
+                    if "Projects" in lines:
+                        self.assertIn("Acme", page)
+
+    def test_pages_after_the_first_show_the_name_and_page_number(self):
+        body = r"\resumename{Alex Morgan}First page.\newpage Second page."
+        _, text, project = self.compile(body, r"\resumepagelimit{2}")
+        first, second = check_pdf_text.split_pages(text)
+        self.assertNotIn("Page", first)
+        self.assertIn("Alex Morgan", second.splitlines()[-1])
+        self.assertTrue(second.rstrip().endswith("Page 2"))
+        # The total needs the previous run's page count, as with any rerun.
+        _, text, _ = self.compile(body, r"\resumepagelimit{2}", project)
+        self.assertTrue(text.rstrip().endswith("Page 2 of 2"))
+        _, text, _ = self.compile(r"\resumename{Alex Morgan}Only page.", r"\resumepagelimit{2}", project)
+        self.assertNotIn("Page", text)
+
     def test_reminder_does_not_change_extracted_content(self):
         body = r"\resumename{Alex Morgan}\section{Projects}First page.\newpage Second page."
         warnings, actual, _ = self.compile(body, r"\resumepagelimit{1}")

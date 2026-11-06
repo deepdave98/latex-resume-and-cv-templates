@@ -1,0 +1,35 @@
+% !TeX program = xelatex
+\documentclass{resume}
+\resumepagelimit{1}
+\renewcommand{\resumedoctype}{Cover Letter}
+
+% Use the same header values as your resume. One page; three or four paragraphs.
+\begin{document}
+
+\resumename{Your Name}
+\resumecontact{%
+  City, Region
+  \contactsep \resumephone{+1 (555) 555-5555}
+  \contactsep \resumeemail{hello@example.com}
+  \contactsep \resumelink{https://www.linkedin.com/in/your-handle}{LinkedIn}
+  \contactsep \resumelink{https://github.com/your-handle}{GitHub}
+}
+
+% Pass {} for a recipient line you do not have.
+\letteropening{[Month Day, Year]}{[Hiring Manager Name]}{[Team], [Company]}{Dear [Name],}
+
+% Each paragraph answers one question: why this role, what you have done
+% that is like it, what you would do here, and how to reach you.
+\begin{letterbody}
+I am applying for the [Role] position at [Company]. I build [kind of software], and most recently I [one sentence on your current work].
+
+At [Company A], I [specific change you made] so that [who benefited] could [what they could do]. The hard part was [constraint]; I handled it by [decision] and checked it with [test or measurement].
+
+[Company]'s work on [product or problem from the job description] matches that experience. I would start by [specific contribution you could make in the first months], and I am comfortable with [two or three requirements from the posting you meet].
+
+My resume is attached. I am available for a call at [times], and I can share [code, writing, or references] on request.
+\end{letterbody}
+
+\letterclosing{Sincerely,}{Your Name}
+
+\end{document}

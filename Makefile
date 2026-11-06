@@ -11,11 +11,11 @@ WATCH_TARGETS := $(addprefix watch-,$(TEMPLATES))
 
 .PHONY: $(WATCH_TARGETS)
 
-.PHONY: all $(TEMPLATES) preview $(addprefix preview-,$(TEMPLATES)) preview-ai-ml downloads clean doctor
+.PHONY: all $(TEMPLATES) cover-letter example preview $(addprefix preview-,$(TEMPLATES)) preview-cover-letter preview-example preview-ai-ml downloads clean doctor
 .PHONY: test test-unit test-pdf-text test-personal-pdf test-downloads test-starters test-placeholders test-layout test-page-limits test-contacts test-ai-ml test-graduate-admissions test-final-review
 .PHONY: application-versions application-download preview-application-versions test-application-versions clean-application-versions
 
-all: $(TEMPLATES)
+all: $(TEMPLATES) cover-letter example
 
 doctor:
 	$(PYTHON) scripts/check_setup.py
@@ -23,6 +23,16 @@ doctor:
 $(TEMPLATES):
 	@mkdir -p "$(BUILD_DIR)/$@"
 	$(LATEXMK) -xelatex -interaction=nonstopmode -halt-on-error -file-line-error -outdir="$(BUILD_DIR)/$@" "templates/$@-resume.tex"
+
+cover-letter:
+	@mkdir -p "$(BUILD_DIR)/cover-letter"
+	$(LATEXMK) -xelatex -interaction=nonstopmode -halt-on-error -file-line-error -outdir="$(BUILD_DIR)/cover-letter" "templates/cover-letter.tex"
+
+# The filled example must build with no placeholder reminders.
+example:
+	@mkdir -p "$(BUILD_DIR)/example"
+	$(LATEXMK) -xelatex -interaction=nonstopmode -halt-on-error -file-line-error -outdir="$(BUILD_DIR)/example" "examples/new-grad-example.tex"
+	@! grep -q "Placeholder reminder" "$(BUILD_DIR)/example/new-grad-example.log" || { echo "The example contains placeholder text."; exit 1; }
 
 $(WATCH_TARGETS): watch-%: templates/%-resume.tex
 	@mkdir -p "$(BUILD_DIR)/$*"
@@ -45,6 +55,8 @@ test-personal-pdf:
 	@for template in $(TEMPLATES); do \
 		$(PYTHON) scripts/check_resume.py "$(OUTPUT_DIR)/$$template-resume.pdf" --max-pages 1 || exit 1; \
 	done
+	$(PYTHON) scripts/check_resume.py "$(OUTPUT_DIR)/cover-letter.pdf" --max-pages 1
+	$(PYTHON) scripts/check_resume.py "$(OUTPUT_DIR)/new-grad-example.pdf" --max-pages 1
 
 test-final-review:
 	$(PYTHON) tests/check_final_review.py
@@ -73,20 +85,31 @@ test-ai-ml:
 test-graduate-admissions:
 	$(PYTHON) tests/check_graduate_admissions.py
 
-preview: $(addprefix preview-,$(TEMPLATES))
+preview: $(addprefix preview-,$(TEMPLATES)) preview-cover-letter preview-example
 
 preview-ai-ml: preview-ai-engineer preview-ml-engineer
 
-$(addprefix preview-,$(TEMPLATES)): preview-%: %
+# $(call publish-preview,built.pdf,name): copy the PDF to output/pdf and render page 1.
+define publish-preview
 	@mkdir -p "$(PREVIEW_DIR)" "$(OUTPUT_DIR)"
-	cp "$(BUILD_DIR)/$*/$*-resume.pdf" "$(OUTPUT_DIR)/$*-resume.pdf"
+	cp "$(1)" "$(OUTPUT_DIR)/$(2).pdf"
 	@if command -v pdftoppm >/dev/null 2>&1; then \
-		pdftoppm -png -singlefile -f 1 -l 1 -r 180 "$(OUTPUT_DIR)/$*-resume.pdf" "$(PREVIEW_DIR)/$*-resume"; \
+		pdftoppm -png -singlefile -f 1 -l 1 -r 180 "$(OUTPUT_DIR)/$(2).pdf" "$(PREVIEW_DIR)/$(2)"; \
 	elif command -v magick >/dev/null 2>&1; then \
-		magick -density 180 "$(OUTPUT_DIR)/$*-resume.pdf[0]" -background white -alpha remove -strip "$(PREVIEW_DIR)/$*-resume.png"; \
+		magick -density 180 "$(OUTPUT_DIR)/$(2).pdf[0]" -background white -alpha remove -strip "$(PREVIEW_DIR)/$(2).png"; \
 	else \
 		echo "Install Poppler or ImageMagick to generate the PNG previews."; exit 1; \
 	fi
+endef
+
+$(addprefix preview-,$(TEMPLATES)): preview-%: %
+	$(call publish-preview,$(BUILD_DIR)/$*/$*-resume.pdf,$*-resume)
+
+preview-cover-letter: cover-letter
+	$(call publish-preview,$(BUILD_DIR)/cover-letter/cover-letter.pdf,cover-letter)
+
+preview-example: example
+	$(call publish-preview,$(BUILD_DIR)/example/new-grad-example.pdf,new-grad-example)
 
 # Optional project: leave the default templates and their build targets alone.
 application-versions:
@@ -126,3 +149,5 @@ clean:
 	@for template in $(TEMPLATES); do \
 		$(LATEXMK) -C -outdir="$(BUILD_DIR)/$$template" "templates/$$template-resume.tex" || exit 1; \
 	done
+	$(LATEXMK) -C -outdir="$(BUILD_DIR)/cover-letter" "templates/cover-letter.tex"
+	$(LATEXMK) -C -outdir="$(BUILD_DIR)/example" "examples/new-grad-example.tex"
