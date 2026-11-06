@@ -147,6 +147,42 @@ Verified duplicate delivery.
 """)
         self.assertEqual(warnings, ["resume name.", "skills bullets."])
 
+    def test_subentry_and_letter_prompts_warn(self):
+        warnings, text, _ = self.compile(r"""
+\resumename{Alex Morgan}
+\jobentry{}{Acme}{Toronto}{2020 -- Present}
+\jobsubentry{[Current role]}{2023 -- Present}
+\begin{jobduties}
+\item Led the billing migration.
+\end{jobduties}
+\jobsubentry{Engineer}{Month Year -- 2023}
+\begin{jobduties}
+\item Built the retry worker.
+\end{jobduties}
+\letteropening{[Month Day, Year]}{Sam Lee}{}{Dear Sam,}
+\begin{letterbody}
+I am applying for [Role].
+
+Second paragraph.
+\end{letterbody}
+\letterclosing{Sincerely,}{Your Name}
+""")
+        self.assertEqual(warnings, ["entry 2 role.", "entry 3 dates.", "letter date.", "letter body.", "letter signature."])
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        self.assertEqual(lines[1].split()[:2], ["Acme", "–"])
+        self.assertTrue(lines[2].startswith("[Current role]"), lines[2])
+        self.assertIn("Dear Sam,", lines)
+
+    def test_empty_bullet_list_warns_instead_of_stopping(self):
+        _, text, log = self.compile(r"""
+\resumename{Alex Morgan}
+\jobentry{Engineer}{Acme}{Toronto}{2024}
+\begin{jobduties}
+\end{jobduties}
+""")
+        self.assertIn("Empty jobduties list in entry 1", log)
+        self.assertIn("Engineer", text)
+
     def test_warning_checks_do_not_change_extracted_content(self):
         body = r"""
 \resumename{Your Name}

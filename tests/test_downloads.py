@@ -27,6 +27,7 @@ INPUTS = {
     "LICENSE": "Example license\n",
     "assets/starter/latexmkrc": "$pdf_mode = 5;\n",
     "assets/starter/START_HERE.md": "# Start here\nEdit resume.tex.\n",
+    "templates/cover-letter.tex": "% cover letter\n\\documentclass{resume}\n",
 }
 EXPECTED_TEMPLATES = {
     "new-grad": "templates/new-grad-resume.tex",
@@ -91,6 +92,7 @@ class PackagingTests(unittest.TestCase):
     def test_archive_content_matches_current_sources(self):
         shared = {
             "resume.cls": "resume.cls",
+            "cover-letter.tex": "templates/cover-letter.tex",
             "LICENSE": "LICENSE",
             "latexmkrc": "assets/starter/latexmkrc",
             "START_HERE.md": "assets/starter/START_HERE.md",
@@ -292,7 +294,7 @@ class ReadmeDownloadTests(unittest.TestCase):
         self.application_download = "https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/application-versions.zip"
 
     def test_overleaf_buttons_import_each_current_zip_with_xelatex(self):
-        imports = []
+        imports, cover_letter = [], []
         for link in self.links:
             url = urlsplit(link)
             if url.netloc != "www.overleaf.com" or url.path != "/docs":
@@ -300,9 +302,13 @@ class ReadmeDownloadTests(unittest.TestCase):
             params = parse_qs(url.query, keep_blank_values=True)
             self.assertEqual(params.get("engine"), ["xelatex"])
             self.assertEqual(len(params.get("snip_uri", [])), 1)
-            self.assertEqual(params.get("main_document"), ["resume.tex"])
-            imports.extend(params["snip_uri"])
+            main = params.get("main_document")
+            self.assertIn(main, (["resume.tex"], ["cover-letter.tex"]))
+            (cover_letter if main == ["cover-letter.tex"] else imports).extend(params["snip_uri"])
         self.assertCountEqual(imports, self.downloads + [self.application_download])
+        # The cover letter opens from one starter ZIP, which bundles it.
+        self.assertEqual(len(cover_letter), 1)
+        self.assertIn(cover_letter[0], self.downloads)
 
     def test_readme_links_directly_to_each_current_zip_once(self):
         for download in self.downloads:
@@ -377,13 +383,23 @@ class StarterBuildTests(unittest.TestCase):
             archive = root / "starter.zip"
             archive.write_bytes(fixture_archive())
             project = root / "project with spaces"
-            with patch.object(smoke.subprocess, "run") as run, patch.object(smoke.check_pdf_text, "check_pdf") as check:
+            with (
+                patch.object(smoke.subprocess, "run") as run,
+                patch.object(smoke.check_pdf_text, "check_pdf") as check,
+                patch.object(smoke, "check_cover_letter") as letter,
+            ):
                 smoke.check_starter(archive, "new-grad", project, "/bin/latexmk")
                 self.assertEqual(set(path.name for path in project.iterdir()), smoke.ARCHIVE_FILES)
-                self.assertEqual(run.call_args.args[0], ["/bin/latexmk", "-interaction=nonstopmode", "-halt-on-error", "-file-line-error", "resume.tex"])
-                self.assertEqual(run.call_args.kwargs["cwd"], project)
-                self.assertFalse(run.call_args.kwargs.get("shell", False))
+                options = ["/bin/latexmk", "-interaction=nonstopmode", "-halt-on-error", "-file-line-error"]
+                self.assertEqual(
+                    [call.args[0] for call in run.call_args_list],
+                    [options + ["resume.tex"], options + ["cover-letter.tex"]],
+                )
+                for call in run.call_args_list:
+                    self.assertEqual(call.kwargs["cwd"], project)
+                    self.assertFalse(call.kwargs.get("shell", False))
                 check.assert_called_once_with(project / "resume.pdf", "new-grad")
+                letter.assert_called_once_with(project / "cover-letter.pdf")
 
     def test_invalid_archive_does_not_create_project_or_run_tex(self):
         with tempfile.TemporaryDirectory() as temporary:

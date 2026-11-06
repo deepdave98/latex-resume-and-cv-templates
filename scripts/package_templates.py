@@ -22,6 +22,7 @@ TEMPLATE_SOURCES = {
 }
 SHARED_SOURCES = {
     "resume.cls": "resume.cls",
+    "cover-letter.tex": "templates/cover-letter.tex",
     "latexmkrc": "assets/starter/latexmkrc",
     "START_HERE.md": "assets/starter/START_HERE.md",
     "LICENSE": "LICENSE",

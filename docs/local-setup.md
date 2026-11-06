@@ -37,7 +37,7 @@ cd latex-resume-and-cv-templates
 make
 ```
 
-Edit files in `templates/`. `make` builds all starters to `build/`. To build one, use `make no-internship`, `make new-grad`, `make experienced`, `make ai-engineer`, `make ml-engineer`, or `make graduate-admissions`.
+Edit files in `templates/`. `make` builds all starters, the cover letter, and the filled example to `build/`. To build one, use `make no-internship`, `make new-grad`, `make experienced`, `make ai-engineer`, `make ml-engineer`, `make graduate-admissions`, `make cover-letter`, or `make example`.
 
 To check the installed tools, packages, and fonts before building, run `make doctor` (Python 3.9+). Without make, use `python3 scripts/check_setup.py`. Missing dependencies are named in the output; nothing is installed or compiled.
 
@@ -50,6 +50,8 @@ latexmk -xelatex -outdir=build/experienced templates/experienced-resume.tex
 latexmk -xelatex -outdir=build/ai-engineer templates/ai-engineer-resume.tex
 latexmk -xelatex -outdir=build/ml-engineer templates/ml-engineer-resume.tex
 latexmk -xelatex -outdir=build/graduate-admissions templates/graduate-admissions-resume.tex
+latexmk -xelatex -outdir=build/cover-letter templates/cover-letter.tex
+latexmk -xelatex -outdir=build/example examples/new-grad-example.tex
 ```
 
 `make preview` refreshes published PDFs in `output/pdf/` and PNGs in `preview/`; it also needs Poppler or ImageMagick. See [contributing](../CONTRIBUTING.md) before changing published files.
@@ -76,7 +78,7 @@ Output: `resume.pdf`. If your PDF reader does not reload changed files, reopen t
 
 ## PDF checker dependencies
 
-The [terminal checker](../tests/README.md#check-your-own-resume) needs Python 3.9+ and Poppler's `pdftotext` on `PATH`. No pip packages.
+The [terminal checker](before-you-send.md#from-a-repository-checkout) needs Python 3.9+ and Poppler's `pdftotext` on `PATH`. No pip packages.
 
 - macOS: `brew install python poppler`
 - Ubuntu/Debian: `sudo apt install python3 poppler-utils`

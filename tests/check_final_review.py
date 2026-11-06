@@ -252,7 +252,8 @@ class FinalReviewBuildTests(unittest.TestCase):
             self.assertEqual((directory / "existing.pdf").read_bytes(), b"existing published bytes")
 
     def test_blank_page_fails_extraction_after_successful_compile(self):
-        source = self.fixture(r"First page.\newpage\null")
+        # Drop the footer so the second page is truly blank, as in a PDF from another tool.
+        source = self.fixture(r"First page.\newpage\thispagestyle{empty}\null")
         code, out, err = self.run_review(source)
         self.assertEqual(code, 1, out + err)
         self.assertIn("Built PDF:", out)

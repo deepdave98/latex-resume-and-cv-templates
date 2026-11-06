@@ -19,10 +19,16 @@
 \section{Experience}
 
 % Use your actual titles. Delete unused roles; give recent work the most space.
-\jobentry{[Current role]}{Company A}{City, Region}{Month Year -- Present}
+% Promoted at one company? Keep one company heading with the overall dates,
+% then one \jobsubentry and its bullets per role, newest first.
+\jobentry{}{Company A}{City, Region}{Month Year -- Present}
+\jobsubentry{[Current role]}{Month Year -- Present}
 \begin{jobduties}
   \item Chose [architecture] for [service] over [alternative] because [constraint]; split the migration into [stages] with [rollback condition].
   \item Defined [shared API contract] with [consumer teams]; migrated [N] integrations and kept [old behavior] working until clients moved.
+\end{jobduties}
+\jobsubentry{[Earlier role at the same company]}{Month Year -- Month Year}
+\begin{jobduties}
   \item Traced [recurring outage] to [failure mode]; changed [isolation or recovery mechanism] and verified recovery with [failure test].
 \end{jobduties}
 
