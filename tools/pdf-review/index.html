@@ -66,103 +66,18 @@
             </div>
           </div>
 
-          <div class="review-options">
-            <details id="comparison" class="comparison-panel" hidden>
-              <summary>Compare two exports</summary>
-              <div class="all-text-content">
-                <p class="field-hint">Check what changed when you tailored your resume. This compares text and external links, not layout. Spaces and line breaks are ignored; punctuation, numbers, and capitalization are kept.</p>
-                <div class="comparison-actions">
-                  <button id="keep-before" class="button button--small" type="button" disabled>Keep this PDF as before</button>
-                  <button id="clear-before" class="button button--small" type="button" hidden>Forget before copy</button>
-                </div>
-                <p id="comparison-status" class="field-hint" role="status" aria-live="polite"></p>
-                <div id="comparison-files" class="comparison-files"></div>
-                <div id="comparison-results"></div>
-                <p class="field-hint">Matching extracted text does not mean the PDFs look alike. Inspect both exports. Clear file, reload, or close this page to forget the comparison; nothing is saved automatically.</p>
+          <details class="all-text-panel">
+            <summary>Text for application forms</summary>
+            <div class="all-text-content">
+              <div class="text-toolbar">
+                <label for="all-text">Text copy</label>
+                <p id="character-count" class="character-count"></p>
               </div>
-            </details>
-
-            <details id="upload-limits" class="upload-limits-panel" hidden>
-              <summary>Application upload limits</summary>
-              <div class="all-text-content">
-                <p id="file-size" class="file-size"></p>
-                <p id="upload-limits-hint" class="field-hint">Use the limits in your application instructions. Leave either blank to skip it. 1 MB = 1,000,000 bytes. These checks do not guarantee the portal will accept the file.</p>
-                <div class="limit-fields">
-                  <div>
-                    <label for="max-pages">Maximum pages</label>
-                    <input id="max-pages" type="text" inputmode="numeric" maxlength="32" autocomplete="off" spellcheck="false" aria-describedby="upload-limits-hint page-limit-result">
-                  </div>
-                  <div>
-                    <label for="max-mb">Maximum file size (MB)</label>
-                    <input id="max-mb" type="text" inputmode="decimal" maxlength="32" autocomplete="off" spellcheck="false" aria-describedby="upload-limits-hint size-limit-result">
-                  </div>
-                </div>
-                <div class="limit-results" role="status" aria-live="polite" aria-atomic="true">
-                  <p id="page-limit-result"></p>
-                  <p id="size-limit-result"></p>
-                </div>
-              </div>
-            </details>
-
-            <details class="all-text-panel">
-              <summary>Text for application forms</summary>
-              <div class="all-text-content">
-                <div class="text-toolbar">
-                  <label for="all-text">Text copy</label>
-                  <div class="review-actions">
-                    <button id="reset-text" class="button button--small" type="button" disabled>Reset text</button>
-                    <button id="save-text" class="button button--small" type="button" disabled>Save .txt</button>
-                  </div>
-                </div>
-                <p class="field-hint" id="all-text-hint">Edit spacing or wording here, then copy or save. Changes affect this text copy, not the PDF. Opening another file, clearing, or resetting asks before discarding edits.</p>
-                <p id="draft-warning" class="notice notice--warning" hidden>Some PDF text was not extracted. Compare this copy with every page before using it.</p>
-                <textarea id="all-text" class="page-text all-text" rows="12" readonly spellcheck="false" aria-describedby="all-text-hint text-limit-result"></textarea>
-                <div class="text-limit-controls">
-                  <div class="limit-fields">
-                    <div>
-                      <label for="max-characters">Character limit (optional)</label>
-                      <input id="max-characters" type="text" inputmode="numeric" maxlength="32" autocomplete="off" spellcheck="false" aria-describedby="text-limit-hint text-limit-result" disabled>
-                    </div>
-                  </div>
-                  <p id="text-limit-result" role="status" aria-live="polite" aria-atomic="true"></p>
-                </div>
-                <p class="field-hint" id="text-limit-hint">Includes spaces and line breaks. Check the form's own counter before submitting. Text is never shortened to fit.</p>
-              </div>
-            </details>
-
-            <details id="file-properties" class="file-properties" hidden>
-              <summary>File properties</summary>
-              <p class="field-hint">Check for old names or template titles. These values are not shown on the page. This tool does not remove them.</p>
-              <p id="properties-status" class="field-hint" role="status"></p>
-              <dl id="properties-list" class="properties-list"></dl>
-              <p class="field-hint">PDF and XMP values are listed separately. This is not a complete privacy check.</p>
-            </details>
-
-            <details id="submission-archive" hidden>
-              <summary>Submitted copies</summary>
-              <div class="all-text-content">
-                <h3 class="submission-heading">Save this PDF</h3>
-                <p class="field-hint" id="submission-hint">Keep the PDF you uploaded with a dated receipt. Text edits in this reviewer are not included.</p>
-                <form id="submission-form" class="submission-controls">
-                  <div>
-                    <label for="submission-label">Company and role</label>
-                    <input id="submission-label" type="text" maxlength="500" autocomplete="off" spellcheck="false" aria-describedby="submission-hint submission-status" disabled>
-                  </div>
-                  <button id="save-submission" class="button" type="submit" disabled>Save copy (.zip)</button>
-                </form>
-                <p id="submission-status" class="status" role="status" aria-live="polite"></p>
-                <div class="receipt-check">
-                  <h3 class="submission-heading">Check a saved copy</h3>
-                  <p class="field-hint" id="receipt-hint">Unzip the saved copy and open its PDF, then choose receipt.json.</p>
-                  <input id="submission-receipt" type="file" accept=".json,application/json" hidden disabled>
-                  <button id="verify-receipt" class="button" type="button" aria-describedby="receipt-hint receipt-status" disabled>Choose receipt.json</button>
-                  <p id="receipt-status" class="status" role="status" aria-live="polite" aria-atomic="true"></p>
-                  <p id="receipt-pdf" class="status"></p>
-                  <p class="field-hint">Checks file bytes only; a receipt is not proof of delivery. No files are changed.</p>
-                </div>
-              </div>
-            </details>
-          </div>
+              <p class="field-hint" id="all-text-hint">Text from every page, in extraction order. Copy it into application forms. The count includes spaces and line breaks.</p>
+              <p id="draft-warning" class="notice notice--warning" hidden>Some PDF text was not extracted. Compare this copy with every page before using it.</p>
+              <textarea id="all-text" class="page-text all-text" rows="12" readonly spellcheck="false" aria-describedby="all-text-hint character-count"></textarea>
+            </div>
+          </details>
 
           <div id="pages" class="pages"></div>
         </section>
@@ -173,8 +88,8 @@
             <p><strong>Text:</strong> extraction order can differ from the layout. Scans and outlined letters may have no text to copy. This tool does not run OCR or predict how an application system reads your resume.</p>
             <p><strong>Pages:</strong> a blank-page warning comes from the preview. Very faint content can be missed. Check the original PDF if a preview fails.</p>
             <p><strong>Links:</strong> destinations are displayed as text. They are never opened or checked online.</p>
-            <p><strong>Your file:</strong> processing runs in this tab. Nothing is uploaded or saved automatically. Clear, reload, or close the page to discard the review and text edits. Copied text may remain in clipboard history. Saved text files and submission ZIPs stay in your downloads until you remove them.</p>
-            <p>If this page is hosted, the host receives the page request, not your PDF. Browser extensions and your operating system are outside this tool’s control.</p>
+            <p><strong>Your file:</strong> processing runs in this tab. Nothing is uploaded, saved, or downloaded. Clear, reload, or close the page to discard the review. Copied text may remain in clipboard history.</p>
+            <p>If this page is hosted, the host receives the page request, not your PDF. Browser extensions and your operating system are outside this tool's control.</p>
           </div>
         </details>
       </main>
