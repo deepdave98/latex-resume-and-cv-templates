@@ -51,6 +51,11 @@ def compare_pages(label, text, expected):
                 raise CheckError(
                     f"{label}, page {number}: unmapped or control character U+{ord(char):04X}"
                 )
+            if "\ufb00" <= char <= "\ufb06":
+                # A parser searching for "office" does not match "oﬀice".
+                raise CheckError(
+                    f"{label}, page {number}: ligature glyph U+{ord(char):04X} in the text layer"
+                )
         if not baseline.strip():
             raise CheckError(f"{label}, page {number}: empty text baseline")
         if words(actual) != words(baseline):

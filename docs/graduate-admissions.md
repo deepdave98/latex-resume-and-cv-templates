@@ -38,7 +38,7 @@ Use this only if it describes your work.
 The source includes commented-out blocks. Uncomment only what applies.
 
 - Separate published/accepted work from preprints and submissions. A draft sent to your supervisor is not a journal submission. “Under review” is not “accepted.”
-- Preserve author order. Give the title, year, venue where applicable, and current status. Follow the program's citation instructions; link only work you can share.
+- Preserve author order. Give the title, year, venue where applicable, and current status. Follow the program's citation instructions; link only work you can share. Bold your own name, italicize the venue, and link the DOI with `\resumelink`; the starter's commented item shows the form.
 - Label a poster or talk with its event and date. Attending an event is not presenting at it. Do not count a poster as a peer-reviewed paper.
 
 MIT Physics asks applicants to distinguish publication status and presentation type. Its instructions concern its own application fields, not every program's CV. [Details](https://physics.mit.edu/academic-programs/graduate-students/graduate-admissions-additional-guidance/).

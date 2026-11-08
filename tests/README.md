@@ -4,7 +4,7 @@ The browser reviewer has a separate [test suite](../tools/pdf-review/README.md#d
 
 `make test` builds all starters, runs unit tests, checks PDFs, headings, and contact links, compiles the starter ZIPs, tests placeholder and page-limit warnings, and exercises the personal PDF checker. It needs XeLaTeX, `latexmk`, Python 3.9+, and Poppler's `pdftotext` and `pdfinfo` on `PATH`; no pip packages.
 
-The check compares every page with `expected/*.txt` using Poppler's `-layout` reading order. Missing or reordered words, changed punctuation, unmapped characters, and extra or missing pages fail. Whitespace and Unicode ligature differences are ignored. Line-end hyphens are preserved.
+The check compares every page with `expected/*.txt` using Poppler's `-layout` reading order. Missing or reordered words, changed punctuation, unmapped characters, ligature glyphs, and extra or missing pages fail. Whitespace differences are ignored. Line-end hyphens are preserved.
 
 Inspect the PDF too: extraction tests cannot catch every visual defect or predict how other parsers read it.
 
@@ -38,13 +38,13 @@ Each regular starter archive contains only the chosen template as `resume.tex`, 
 
 ## Placeholder warnings
 
-`make test-placeholders` compiles small fixtures with XeLaTeX. Sample names, hidden contact URLs, example entry fields, bracketed prompts, promotion rows, and cover letter parts must warn. Completed content, comments, and command options must not. An empty `jobduties` block warns instead of stopping the build. The checks also compare extracted text with reminders enabled and disabled.
+`make test-placeholders` compiles small fixtures with XeLaTeX. Sample names, hidden contact URLs, example entry fields, bracketed prompts, promotion rows, dated rows, the summary, `\letterfor`, and cover letter parts must warn. Completed content, comments, and command options must not. An empty `jobduties` block warns instead of stopping the build. The checks also compare extracted text with reminders enabled and disabled.
 
 The shipped templates intentionally contain placeholders, so their warnings are expected. Reminders do not block compilation or certify that a resume is ready. They inspect the template commands and lists, not arbitrary macros or every word in the document.
 
 ## Entry layout
 
-`make test-layout` compiles long employer, university, location, and date fields on Letter and A4, including missing locations and dates. It rejects overfull boxes, missing or duplicated words, overlapping word bounds, and text outside the margins. A page-end fixture checks that a wrapped heading moves with its role, and a long contact line must break after a separator, never before one.
+`make test-layout` compiles long employer, university, location, and date fields on Letter and A4, including missing locations and dates. It rejects overfull boxes, missing or duplicated words, overlapping word bounds, and text outside the margins. A page-end fixture checks that a wrapped heading moves with its role, a long dated row wraps beside its dates, and a long contact line must break after a separator, never before one.
 
 Wrapped columns can interleave in layout-mode extraction. These stress tests check word completeness and bounds, not semantic reading order. The shipped templates still use exact page snapshots. Inspect rendered pages before accepting layout changes.
 

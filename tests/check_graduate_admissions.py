@@ -92,7 +92,10 @@ class AdmissionsTemplateTests(unittest.TestCase):
             self.assertEqual(len(extracted_pages), pages)
             self.assertTrue(all(page.strip() for page in extracted_pages))
             self.assert_bounds(pdf, paper, pages)
-            self.assertEqual(check_contacts.extract_urls(pdf), CONTACTS)
+            urls = check_contacts.extract_urls(pdf)
+            self.assertEqual(urls[:len(CONTACTS)], CONTACTS)
+            # The optional publications block links a DOI placeholder.
+            self.assertEqual(set(urls[len(CONTACTS):]) - {"https://doi.org/[DOI]"}, set())
             return text, log
 
     def test_default_cv_and_placeholder_warnings(self):
@@ -122,7 +125,7 @@ class AdmissionsTemplateTests(unittest.TestCase):
                     self.assertEqual(text.count(title), 1)
                     self.assertIn(status, text)
                     if block != "PRESENTATIONS":
-                        self.assertIn("[Authors in order]", text)
+                        self.assertIn("[Coauthor], [Your Name], and [Coauthor]", text)
                     self.assertTrue(check_placeholders.reminders(log))
 
     def test_two_degrees_and_outputs_allow_a_second_page(self):

@@ -22,8 +22,12 @@ class TextChecks(unittest.TestCase):
     def test_identical_text_passes(self):
         checker.compare_pages("resume", "Education\nBuilt API.\f", ["Education\nBuilt API."])
 
-    def test_whitespace_and_ligatures_pass(self):
-        checker.compare_pages("resume", "Skills\r\n  Proﬁled\tAPI.\f", ["Skills Profiled API."])
+    def test_whitespace_differences_pass(self):
+        checker.compare_pages("resume", "Skills\r\n  Profiled\tAPI.\f", ["Skills Profiled API."])
+
+    def test_ligature_glyphs_fail(self):
+        with self.assertRaisesRegex(checker.CheckError, "ligature glyph U\\+FB01"):
+            checker.compare_pages("resume", "Proﬁled API.\f", ["Profiled API."])
 
     def test_missing_word_fails(self):
         with self.assertRaisesRegex(checker.CheckError, "extracted text changed"):
