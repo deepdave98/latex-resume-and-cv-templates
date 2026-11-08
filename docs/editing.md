@@ -26,6 +26,8 @@ Unsupported formats warn and print without a link. Use `\resumelink{destination}
 
 Omit `[Optional summary]` when unnecessary. Use `{}` for no location. Long organizations and locations wrap beside the dates. Keep dates short and use labels instead of long URLs; unbroken text can overflow.
 
+To link a project, wrap its name: `\jobentry{Course project; Tools}{\resumelink{https://...}{Project Name}}{}{Dates}`. Keep the label short.
+
 Do not start a bullet with `[`: LaTeX reads `\item [text]` as a label and drops the brackets. Write `\item {[Authors in order]}` to keep them.
 
 Escape special characters in literal text: `\&`, `\%`, `\$`, `\#`, `\_`.
@@ -50,9 +52,22 @@ Keep one heading per employer. Pass `{}` as the role, then add a `\jobsubentry` 
 
 The experienced starter ships with this pattern.
 
+## Rows
+
+`\resumerow{Name}{Detail}{Date}` prints one dated line without bullets, for certifications, awards, talks, licenses, or roles too old for bullets. Pass `{}` for a detail or date you do not have. Write a level after a comma; the row prints its own dash before the detail:
+
+```latex
+\section{Certifications}
+\resumerow{AWS Certified Solutions Architect, Associate}{Amazon Web Services}{2024}
+```
+
+## Summary
+
+`\resumesummary{...}` after `\resumecontact` prints a short paragraph under the header rule. Two sentences at most. Say what the first entry cannot, such as the field you are moving from or the systems you own. No adjectives. The experienced, AI, and ML starters carry a commented line.
+
 ## Cover letter
 
-`cover-letter.tex` shares the header commands. `\letteropening{Date}{Recipient}{Organization}{Greeting}` prints the opening; pass `{}` for a line you do not have. Paragraphs go inside `letterbody`, separated by blank lines. `\letterclosing{Sincerely,}{Your Name}` ends the letter. Placeholder reminders cover every part.
+`cover-letter.tex` shares the header commands. `\letterfor{Company}{Role}` defines `\Company` and `\Role`, so each is typed once per application. `\letteropening{Date}{Recipient}{Organization}{Greeting}` prints the opening; pass `{}` for a line you do not have. Paragraphs go inside `letterbody`, separated by blank lines. `\letterclosing{Sincerely,}{Your Name}` ends the letter. Placeholder reminders cover every part.
 
 ## Change the look
 
@@ -83,7 +98,7 @@ Use `\documentclass[a4paper]{resume}` for A4 or `\documentclass[letterpaper]{res
 
 Open **View logs** in Overleaf (**Logs and output files** in the older editor), or read the local compile log.
 
-- **Placeholders:** flags sample contacts, known example fields, and `[prompts]` in headers, entries, lists, and letter parts. Replace flagged text or delete unused entries. Literal square brackets may be flagged; unmarked examples and text inside custom commands may be missed.
+- **Placeholders:** flags sample contacts, `your-handle` anywhere, known example fields, and `[prompts]` in headers, the summary, entries, rows, lists, and letter parts. Replace flagged text or delete unused entries. Literal square brackets may be flagged; unmarked examples and text inside custom commands may be missed.
 - **Page limit:** all starters use `\resumepagelimit{1}` to warn above one page. Cut less relevant content first. Use `\resumepagelimit{2}` when a second page is useful, or remove the command to disable the warning. From page 2, the footer prints your name and page number.
 - **Empty list:** a `jobduties` block with no `\item` prints nothing and warns. Add a bullet or delete the block.
 

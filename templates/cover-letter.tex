@@ -15,17 +15,21 @@
   \contactsep \resumelink{https://github.com/your-handle}{GitHub}
 }
 
+% Type the company and role once; \Company and \Role repeat them below.
+\letterfor{[Company]}{[Role]}
+
 % Pass {} for a recipient line you do not have.
-\letteropening{[Month Day, Year]}{[Hiring Manager Name]}{[Team], [Company]}{Dear [Name],}
+\letteropening{[Month Day, Year]}{[Hiring Manager Name]}{[Team], \Company}{Dear [Name],}
 
 % Each paragraph answers one question: why this role, what you have done
 % that is like it, what you would do here, and how to reach you.
+% Paragraphs 2 and 3 change with every posting.
 \begin{letterbody}
-I am applying for the [Role] position at [Company]. I build [kind of software], and most recently I [one sentence on your current work].
+I am applying for the \Role position at \Company. I build [kind of software], and most recently I [one sentence on your current work].
 
-At [Company A], I [specific change you made] so that [who benefited] could [what they could do]. The hard part was [constraint]; I handled it by [decision] and checked it with [test or measurement].
+At [Previous employer], I [specific change you made] so that [who benefited] could [what they could do]. The hard part was [constraint]; I handled it by [decision] and checked it with [test or measurement].
 
-[Company]'s work on [product or problem from the job description] matches that experience. I would start by [specific contribution you could make in the first months], and I am comfortable with [two or three requirements from the posting you meet].
+\Company's work on [product or problem from the job description] matches that experience. I would start by [specific contribution you could make in the first months], and I am comfortable with [two or three requirements from the posting you meet].
 
 My resume is attached. I am available for a call at [times], and I can share [code, writing, or references] on request.
 \end{letterbody}

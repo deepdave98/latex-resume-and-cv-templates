@@ -102,6 +102,18 @@ class EntryLayoutTests(unittest.TestCase):
                         date_word = next(word for word in pdf_words if word.text == dates.split()[0])
                         self.assertLess(abs(float(organization_word.attrib["yMin"]) - float(date_word.attrib["yMin"])), 2)
 
+    def test_long_rows_wrap_beside_their_dates(self):
+        body = r"""\resumerow{Short Certification}{Issuer}{2024}
+\resumerow{A certification with a very long name that must wrap beside its date column, Professional}{Some Very Long Issuing Organization Name}{January 2022 -- January 2025}
+\resumerow{Honors List}{Lakeshore University}{}"""
+        for paper in ("letterpaper", "a4paper"):
+            with self.subTest(paper=paper):
+                text, tree = self.compile(body, paper)
+                self.assertEqual(len(check_pdf_text.split_pages(text)), 1)
+                for phrase in ("Short Certification – Issuer", "Professional", "January 2025", "Honors List – Lakeshore University"):
+                    self.assertIn(phrase, text)
+                self.assert_inside_margins(tree)
+
     def test_long_contact_line_wraps_after_a_separator(self):
         body = r"""\resumename{Alex Morgan}
 \resumecontact{Toronto, Ontario, Canada

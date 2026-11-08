@@ -13,6 +13,7 @@
 \RequirePackage{titlesec}
 \RequirePackage{enumitem}
 \RequirePackage{etoolbox}
+\RequirePackage{xspace}
 \RequirePackage{needspace}
 \RequirePackage[normalem]{ulem}
 \RequirePackage{hyperref}
@@ -34,6 +35,10 @@
   \let\@evenfoot\@oddfoot
 }
 \pagestyle{resume}
+
+% Ligatures: keep TeX's -- and quotes, but print ff, fi, and fl as separate
+% letters so a PDF parser reads the plain word.
+\defaultfontfeatures{Ligatures={TeX,NoCommon}}
 
 % Font: replace the four OpenType filenames below; compile with XeLaTeX.
 \setmainfont{lmroman10-regular.otf}[
@@ -146,12 +151,13 @@
       { } \l__resume_check_tl
     \bool_set_false:N \l__resume_placeholder_bool
     \__resume_match:n { \[ [^\[\]]* \] }
+    \__resume_match:n { your-handle }
     \str_case:nn {#2}
       {
         {name}{ \__resume_match:n { \A \s* Your \s+ Name \s* \Z } }
         {contact}{
           \__resume_match:n
-            { hello@example\.com | your-handle |
+            { hello@example\.com |
               \+1 [\s().\-]* 555 [\s().\-]* 555 [\s().\-]* 5555 |
               City,? \s+ Region }
         }
@@ -230,6 +236,14 @@
   \vspace{8pt}{\color{black!60}\hrule height 0.5pt}%
 }
 
+% \resumesummary{Two or three sentences}: optional paragraph under the
+% contact line. Say what the first entry cannot; no adjectives.
+\newcommand{\resumesummary}[1]{%
+  \resumecheckfield{summary}{summary}{#1}%
+  \vspace{6pt}%
+  {\color{resumetextcolor}\linespread{1.06}\selectfont #1\par}%
+}
+
 % Section styling: adjust heading typography, divider, and spacing below.
 \titleformat{\section}
   {\large\bfseries\color{namecolor}}
@@ -251,12 +265,12 @@
 \newlength{\resumeorganizationwidth}
 \newlength{\resumeentryspace}
 
-% Keep the original single-line layout when it fits. Otherwise, wrap the
-% organization/location beside dates. Dates use at most 40% of the line;
-% a 1em gap separates the columns. No font sizes or margins are reduced.
-\newcommand{\resumeentryheading}[3]{%
-  \sbox{\resumeorganizationbox}{\color{namecolor}\textbf{#1}\ifblank{#2}{}{\space--\space#2}}%
-  \sbox{\resumedatesbox}{\small\textbf{\color{namecolor}#3}}%
+% Set \resumeheadingbox: the left text and dates on one line when they fit.
+% Otherwise, wrap the left text beside the dates. Dates use at most 40% of
+% the line; a 1em gap separates the columns. No font sizes or margins change.
+\newcommand{\resume@headingbox}[2]{%
+  \sbox{\resumeorganizationbox}{\color{namecolor}#1}%
+  \sbox{\resumedatesbox}{\small\textbf{\color{namecolor}#2}}%
   \ifdim\dimexpr\wd\resumeorganizationbox+\wd\resumedatesbox+2\tabcolsep\relax>\linewidth
     \setlength{\resumedateswidth}{\wd\resumedatesbox}%
     \ifdim\resumedateswidth>0.4\linewidth
@@ -265,8 +279,8 @@
     \setlength{\resumeorganizationwidth}{\dimexpr\linewidth-\resumedateswidth-1em\relax}%
     \sbox{\resumeheadingbox}{%
       \begin{tabular}{@{}p{\resumeorganizationwidth}@{\hspace{1em}}p{\resumedateswidth}@{}}
-        \raggedright\leavevmode{\color{namecolor}\textbf{#1}\ifblank{#2}{}{\space--\space#2}} &
-        \raggedleft\small\leavevmode\textbf{\color{namecolor}#3}\tabularnewline
+        \raggedright\leavevmode{\color{namecolor}#1} &
+        \raggedleft\small\leavevmode\textbf{\color{namecolor}#2}\tabularnewline
       \end{tabular}%
     }%
   \else
@@ -276,6 +290,10 @@
       \end{tabular*}%
     }%
   \fi
+}
+
+\newcommand{\resumeentryheading}[3]{%
+  \resume@headingbox{\textbf{#1}\ifblank{#2}{}{\space--\space#2}}{#3}%
   % Reserve space for wrapped headings and the role that follows them.
   \setlength{\resumeentryspace}{\dimexpr\ht\resumeheadingbox+\dp\resumeheadingbox+3\baselineskip\relax}%
   \ifdim\resumeentryspace<5\baselineskip
@@ -307,6 +325,20 @@
     {\small\itshape\color{namecolor}#1\/}\par\nopagebreak%
   }%
   \par\nopagebreak%
+}
+
+% \resumerow{Name}{Detail}{Date}: a one-line dated entry for a certification,
+% award, talk, license, or early role. Pass {} for Detail. Use a comma inside
+% Name; the row prints its own dash before Detail.
+\newcommand{\resumerow}[3]{%
+  \stepcounter{resumeentry}%
+  \resumecheckfield{entry \arabic{resumeentry} name}{organization}{#1}%
+  \resumecheckfield{entry \arabic{resumeentry} detail}{role}{#2}%
+  \resumecheckfield{entry \arabic{resumeentry} dates}{dates}{#3}%
+  \resume@headingbox{#1\ifblank{#2}{}{\space--\space#2}}{#3}%
+  \Needspace{2\baselineskip}%
+  \vspace{3pt}%
+  \noindent\usebox{\resumeheadingbox}\par
 }
 
 % \jobsubentry{Title}{Dates}: one role under an organization heading.
@@ -368,6 +400,14 @@
 }{}
 
 % Cover letter. The header commands above are shared with the resume.
+% \letterfor{Company}{Role} defines \Company and \Role for the letter text.
+\newcommand{\letterfor}[2]{%
+  \resumecheckfield{letter company}{organization}{#1}%
+  \resumecheckfield{letter role}{role}{#2}%
+  \def\Company{#1\xspace}%
+  \def\Role{#2\xspace}%
+}
+
 % \letteropening{Date}{Recipient name}{Recipient organization}{Greeting}
 % Pass {} for a recipient line you do not have.
 \newcommand{\letteropening}[4]{%
