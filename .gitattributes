@@ -1,0 +1,4 @@
+# Count the LaTeX class and templates as the primary language.
+tools/pdf-review/** linguist-detectable=false
+tests/** linguist-detectable=false
+scripts/** linguist-detectable=false
