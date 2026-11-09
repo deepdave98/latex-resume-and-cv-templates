@@ -15,6 +15,7 @@ Review the exact PDF you plan to upload. Repeat after any edit.
 
 - **Placeholder reminder in ...:** sample text remains in that field. Literal square brackets also trigger it.
 - **Unsupported email or phone format:** the contact printed without a link. Fix the value or use `\resumelink{destination}{label}`.
+- **Missing letter signature name:** set `\resumename` or supply a name in `\letterclosing{Sincerely,}{Name}`.
 - **Missing character:** the font has no glyph for a symbol. Replace the symbol or choose a font that has it.
 - **Overfull \hbox:** text ran past the margin. Shorten the unbroken text named in the log.
 - **Page limit exceeded:** the PDF has more pages than `\resumepagelimit{N}` allows.

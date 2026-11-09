@@ -102,6 +102,39 @@ class FinalReviewBuildTests(unittest.TestCase):
         self.assertEqual(list(self.root.rglob("*.pdf")), [pdf])
         self.assertFalse((project / "backend.log").exists())
 
+    def test_filled_example_builds_and_exports_with_the_root_class(self):
+        project = self.root / "examples"
+        project.mkdir()
+        source = project / "new-grad-example.tex"
+        shutil.copyfile(ROOT / "examples/new-grad-example.tex", source)
+        (project / "unselected.tex").write_text(r"\undefinedcommand", encoding="utf-8")
+        destination = self.root / "Alex Morgan Resume.pdf"
+
+        code, out, err = self.run_review(source, "--max-pages", "1", "--export-pdf", str(destination))
+
+        self.assertEqual(code, 0, out + err)
+        self.assertEqual(err, "")
+        built = self.output_path(out, "Built PDF: ")
+        self.assert_private_output(built)
+        self.assertEqual(built.name, "new-grad-example.pdf")
+        self.assertEqual(destination.read_bytes(), built.read_bytes())
+        text = check_resume.extract_text(destination)
+        self.assertEqual(check_resume.check_text(text), 1)
+        self.assertIn("Alex Morgan", text)
+        self.assertIn("Campus Room Booking", text)
+        self.assertEqual(set(self.root.rglob("*.pdf")), {built, destination})
+        self.assertEqual({path.name for path in project.iterdir()}, {"new-grad-example.tex", "unselected.tex"})
+
+    def test_missing_letter_signature_blocks_export(self):
+        source = self.fixture(r"Completed letter content.\letterclosing{Sincerely,}{}")
+        destination = self.root / "Cover Letter.pdf"
+        code, out, err = self.run_review(source, "--export-pdf", str(destination))
+        self.assertEqual(code, 3, out + err)
+        self.assertEqual(err, "")
+        self.assertIn("LETTER SIGNATURE:", out)
+        self.assertIn("Text checks: 1", out)
+        self.assertFalse(destination.exists())
+
     def test_upload_limit_checks_the_built_pdf(self):
         source = self.fixture("Completed resume content.")
         for limit, expected in (("1", 0), ("0.000001", 1)):

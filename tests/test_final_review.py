@@ -183,6 +183,19 @@ class FinalReviewTests(unittest.TestCase):
         self.assertIn("REVIEW NEEDED", out)
         self.assertNotIn("PRIVATE_CONTACT_SENTINEL", out + err)
 
+    def test_missing_letter_signature_blocks_export_without_printing_resume_text(self):
+        self.log = "\nClass resume Warning: Missing letter signature name.\nPRIVATE_SIGNATURE_SENTINEL\n"
+        destination = self.root / "Cover Letter.pdf"
+        code, out, err, _, _ = self.run_review(("--export-pdf", str(destination)))
+        self.assertEqual(code, 3, out + err)
+        self.assertIn("LETTER SIGNATURE:", out)
+        self.assertIn("log line 2", out)
+        self.assertIn(r"Set \resumename or give a name to \letterclosing", out)
+        self.assertIn("Text checks: 1", out)
+        self.assertIn("REVIEW NEEDED", out)
+        self.assertNotIn("PRIVATE_SIGNATURE_SENTINEL", out + err)
+        self.assertFalse(destination.exists())
+
     def test_overfull_boxes_need_review_without_printing_resume_text(self):
         self.log = "\n".join((
             r"Overfull \hbox (40.0pt too wide) in paragraph at lines 3--4",
