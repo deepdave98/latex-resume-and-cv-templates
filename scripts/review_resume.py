@@ -19,6 +19,7 @@ PLACEHOLDER = "Class resume Warning: Placeholder reminder in "
 PAGE_EXCEEDED = "Class resume Warning: Page limit exceeded:"
 PAGE_INVALID = "Class resume Warning: Invalid page limit."
 CONTACT_UNSUPPORTED = "Class resume Warning: Unsupported "
+SIGNATURE_MISSING = "Class resume Warning: Missing letter signature name."
 
 
 def export_destination(path):
@@ -111,6 +112,13 @@ def summarize_warnings(log):
         print(f"CONTACT LINKS: {len(contacts)} unsupported format(s); first at LaTeX log line {contacts[0]}.")
         print("The contact text is printed without a link. Correct the email or include the phone country code.")
         print(r"For other contact formats, use \resumelink{destination}{label}; check the exported PDF's links.")
+
+    for number, line in enumerate(lines, 1):
+        if SIGNATURE_MISSING in line:
+            reminders = True
+            print(f"LETTER SIGNATURE: name missing; see LaTeX log line {number}.")
+            print(r"Set \resumename or give a name to \letterclosing, then rebuild.")
+            break
 
     missing_characters = [
         number for number, line in enumerate(lines, 1)
@@ -211,9 +219,10 @@ def main(argv=None):
         print(f"Build log: {build_log}")
         print(f"LaTeX log (if created): {latex_log}")
 
-        # Match the Makefile's root-relative templates and the standalone
-        # projects' own latexmkrc / relative inputs. Never invoke an all target.
-        project = ROOT if source.parent == ROOT / "templates" else source.parent
+        # Repository starters and the filled example use the root class.
+        # Standalone projects keep their own latexmkrc and relative inputs.
+        repository_source = source.parent == ROOT / "templates" or source == ROOT / "examples/new-grad-example.tex"
+        project = ROOT if repository_source else source.parent
         with build_log.open("w", encoding="utf-8") as output:
             returncode = run_build(
                 [

@@ -22,12 +22,13 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = ROOT
 DOWNLOADS_DIR = ROOT / "downloads"
 VARIANTS = ("resume", "backend")
+DOCUMENTS = (*VARIANTS, "cover-letter")
 CONTACT_URLS = [
     "tel:+15555555555", "mailto:hello@example.com",
     "https://www.linkedin.com/in/your-handle", "https://github.com/your-handle",
 ]
 ARCHIVE_FILES = frozenset({
-    "resume.tex", "backend.tex", "setup.tex",
+    "resume.tex", "backend.tex", "cover-letter.tex", "setup.tex",
     "latexmkrc", "README.md", "resume.cls", "LICENSE",
     "content/profile.tex", "content/experience.tex", "content/education.tex",
     "content/skills.tex", "content/projects.tex",
@@ -186,6 +187,28 @@ def check_snapshot(pdf, variant, text=None):
     check_pdf_text.compare_pages(str(pdf), check_pdf_text.extract_text(pdf) if text is None else text, [expected])
 
 
+def check_letter(pdf, text, name="Your Name"):
+    flat = " ".join(check_pdf_text.words(text))
+    for phrase in (
+        "I am applying for the [Role] position at [Company]",
+        "In [project, course, or work experience]",
+        "That experience relates to [responsibility from the posting]",
+        "Sincerely,",
+    ):
+        if flat.count(phrase) != 1:
+            raise ApplicationError(f"{pdf}: letter text is missing or duplicated: {phrase}")
+    if flat.count(name) != 2:
+        raise ApplicationError(f"{pdf}: the letter header and signature must use the same name")
+    check_selection(text, ())
+    info = subprocess.run(
+        [shutil.which("pdfinfo"), str(pdf)],
+        check=True, capture_output=True, encoding="utf-8", timeout=30,
+    )
+    metadata = dict(line.split(":", 1) for line in info.stdout.splitlines() if ":" in line)
+    if metadata.get("Title", "").strip() != f"{name} Cover Letter" or metadata.get("Author", "").strip() != name:
+        raise ApplicationError(f"{pdf}: cover-letter title or author does not match the shared name")
+
+
 class ApplicationVersionTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(prefix="application-versions-")
@@ -220,25 +243,30 @@ class ApplicationVersionTests(unittest.TestCase):
                 (project / "resume.cls").rename(checkout / "resume.cls")
                 (project / "LICENSE").rename(checkout / "LICENSE")
                 self.assertFalse((project / "resume.cls").exists())
-            for variant in VARIANTS:
+            for variant in DOCUMENTS:
                 with self.subTest(kind=kind, variant=variant):
                     pdf, text, log = compile_project(project, variant)
-                    check_snapshot(pdf, variant, text)
-                    check_selection(text, SELECTIONS[variant])
+                    if variant == "cover-letter":
+                        check_letter(pdf, text)
+                        for field in ("company", "role", "date", "recipient", "greeting", "body"):
+                            self.assertIn(f"letter {field}.", check_placeholders.reminders(log))
+                    else:
+                        check_snapshot(pdf, variant, text)
+                        check_selection(text, SELECTIONS[variant])
                     check_bounds(pdf)
                     self.assertEqual(check_contacts.extract_urls(pdf), CONTACT_URLS)
-                    self.assertEqual(check_placeholders.reminders(log).count("selected bullet."), len(SELECTIONS[variant]))
+                    self.assertEqual(check_placeholders.reminders(log).count("selected bullet."), len(SELECTIONS.get(variant, ())))
                     self.assertNotIn("Experience", text)
                     self.assertNotIn("[Employer]", text)
 
     def test_all_versions_fit_a4_without_overlap(self):
-        for variant in VARIANTS:
+        for variant in DOCUMENTS:
             replace_once(self.files, f"{variant}.tex", r"\documentclass{resume}", r"\documentclass[a4paper]{resume}")
         project = self.project()
-        for variant in VARIANTS:
+        for variant in DOCUMENTS:
             with self.subTest(variant=variant):
                 pdf, text, _ = compile_project(project, variant)
-                check_selection(text, SELECTIONS[variant])
+                check_selection(text, SELECTIONS.get(variant, ()))
                 check_bounds(pdf, "a4paper")
 
     def test_shared_contact_education_and_project_edits_reach_every_version(self):
@@ -252,17 +280,54 @@ class ApplicationVersionTests(unittest.TestCase):
         replace_once(self.files, "content/projects.tex", "[Personal project]", "Reading List")
         replace_once(self.files, "content/projects.tex", "[Course project]", "Course Scheduler")
         project = self.project()
-        for variant in VARIANTS:
+        for variant in DOCUMENTS:
             with self.subTest(variant=variant):
                 pdf, text, _ = compile_project(project, variant)
                 flat = " ".join(check_pdf_text.words(text))
-                for phrase in ("Alex Morgan", "alex_morgan+jobs@domain.test", "+44 (20) 5555-0123", "Example Institute", "May 2021", "Reading List", "Course Scheduler"):
+                for phrase in ("Alex Morgan", "alex_morgan+jobs@domain.test", "+44 (20) 5555-0123"):
                     self.assertIn(phrase, flat)
+                if variant == "cover-letter":
+                    check_letter(pdf, text, "Alex Morgan")
+                    for phrase in ("Example Institute", "May 2021", "Reading List", "Course Scheduler"):
+                        self.assertNotIn(phrase, flat)
+                else:
+                    for phrase in ("Example Institute", "May 2021", "Reading List", "Course Scheduler"):
+                        self.assertIn(phrase, flat)
                 self.assertNotIn("Your Name", text)
                 self.assertNotIn("hello@example.com", text)
                 self.assertIn("mailto:alex_morgan+jobs@domain.test", check_contacts.extract_urls(pdf))
                 self.assertIn("tel:+442055550123", check_contacts.extract_urls(pdf))
                 check_bounds(pdf)
+
+    def test_letter_can_be_tailored_without_selecting_unused_resume_content(self):
+        for before, after in (
+            ("Your Name", "Alex Morgan"), ("City, Region", "Toronto, Ontario"),
+            ("hello@example.com", "alex@domain.test"),
+            ("+1 (555) 555-5555", "+1 (647) 555-0123"),
+            ("https://www.linkedin.com/in/your-handle", "https://example.test/profile"),
+            ("https://github.com/your-handle", "https://example.test/projects"),
+        ):
+            replace_once(self.files, "content/profile.tex", before, after)
+        replace_once(self.files, "cover-letter.tex", r"\letterfor{[Company]}{[Role]}",
+                     r"\letterfor{Example Cooperative}{Software Engineer}")
+        replace_once(self.files, "cover-letter.tex",
+                     r"\letteropening{[Month Day, Year]}{[Recipient Name]}{[Team], \Company}{Dear [Name],}",
+                     r"\letteropening{November 9, 2026}{}{\Company}{Dear Hiring Team,}")
+        source = self.files["cover-letter.tex"].decode("utf-8")
+        body = source.split(r"\begin{letterbody}", 1)[1].split(r"\end{letterbody}", 1)[0]
+        replace_once(self.files, "cover-letter.tex", body,
+                     "\nI built a course planner and tested conflicting schedule choices. "
+                     "I would like to discuss the team's scheduling tools.\n")
+        project = self.project()
+        pdf, text, log = compile_project(project, "cover-letter")
+        flat = " ".join(check_pdf_text.words(text))
+        self.assertIn("I built a course planner", flat)
+        self.assertEqual(flat.count("Alex Morgan"), 2)
+        self.assertEqual(check_placeholders.reminders(log), [])
+        check_selection(text, ())
+        for phrase in ("[University]", "[Employer]", "[Personal project]", "[Language and tools]"):
+            self.assertNotIn(phrase, flat)
+        check_bounds(pdf)
 
     def test_optional_work_uses_shared_role_facts_and_selected_bullets(self):
         for variant in VARIANTS:
@@ -374,11 +439,14 @@ class ApplicationVersionTests(unittest.TestCase):
 
 
 def check_published(pdf_dir):
-    for variant in VARIANTS:
+    for variant in DOCUMENTS:
         pdf = pdf_dir / f"application-{variant}.pdf"
         text = check_pdf_text.extract_text(pdf)
-        check_snapshot(pdf, variant, text)
-        check_selection(text, SELECTIONS[variant])
+        if variant == "cover-letter":
+            check_letter(pdf, text)
+        else:
+            check_snapshot(pdf, variant, text)
+            check_selection(text, SELECTIONS[variant])
         check_bounds(pdf)
         if check_contacts.extract_urls(pdf) != CONTACT_URLS:
             raise ApplicationError(f"{pdf}: contact destinations changed")

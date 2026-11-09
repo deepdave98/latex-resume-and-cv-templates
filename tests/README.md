@@ -38,13 +38,13 @@ Each regular starter archive contains only the chosen template as `resume.tex`, 
 
 ## Placeholder warnings
 
-`make test-placeholders` compiles small fixtures with XeLaTeX. Sample names, hidden contact URLs, example entry fields, bracketed prompts, promotion rows, dated rows, the summary, `\letterfor`, and cover letter parts must warn. Completed content, comments, and command options must not. An empty `jobduties` block warns instead of stopping the build. The checks also compare extracted text with reminders enabled and disabled.
+`make test-placeholders` compiles small fixtures with XeLaTeX. Sample names, hidden contact URLs, example entry fields, bracketed prompts, promotion rows, dated rows, the summary, `\letterfor`, and cover letter parts must warn. Completed content, comments, and command options must not. An empty `jobduties` block warns instead of stopping the build. Letter signatures reuse the header name or accept an explicit name; a missing name warns. The checks also compare extracted text with reminders enabled and disabled.
 
 The shipped templates intentionally contain placeholders, so their warnings are expected. Reminders do not block compilation or certify that a resume is ready. They inspect the template commands and lists, not arbitrary macros or every word in the document.
 
 ## Entry layout
 
-`make test-layout` compiles long employer, university, location, and date fields on Letter and A4, including missing locations and dates. It rejects overfull boxes, missing or duplicated words, overlapping word bounds, and text outside the margins. A page-end fixture checks that a wrapped heading moves with its role, a long dated row wraps beside its dates, and a long contact line must break after a separator, never before one.
+`make test-layout` compiles long employer, university, location, promotion, and date fields on Letter and A4, including missing locations and dates. It rejects overfull boxes, missing or duplicated words, overlapping word bounds, and text outside the margins. Page-end fixtures check that headings stay with their roles or first bullets. Long dated rows wrap beside their dates; long contact lines break after a separator, never before one.
 
 Wrapped columns can interleave in layout-mode extraction. These stress tests check word completeness and bounds, not semantic reading order. The shipped templates still use exact page snapshots. Inspect rendered pages before accepting layout changes.
 
@@ -72,9 +72,9 @@ The default role templates contain no research or publication claims. Their sour
 
 ## Shared-content application versions
 
-`make test-application-versions` checks the optional project separately from the regular starters. It checks the ZIP against an explicit source allowlist, compiles the base resume and backend application from source and download, and compares their text with `expected/application-*-1.txt`.
+`make test-application-versions` checks the optional project separately from the regular starters. It checks the ZIP against an explicit source allowlist and compiles both resumes and the cover letter from source and download. The resumes use `expected/application-*-1.txt` baselines. The letter checks body text, shared contacts, signature, title, and author.
 
-Fixtures compile the guide's selection and migration examples and cover shared facts, the optional work section, a new named application, selected and unselected bullets, unknown commands, placeholder warnings, and Letter/A4 page bounds. Both examples work without employment. The source ZIP contains the full bullet bank, while each PDF must contain only its selected bullets.
+Fixtures compile the guide's selection and migration examples and cover shared facts, the optional work section, a new named application, selected and unselected bullets, unknown commands, placeholder warnings, and Letter/A4 page bounds. All three documents work without employment. Unused resume prompts must not appear or warn in a completed letter. The source ZIP contains the full bullet bank, while each resume PDF must contain only its selected bullets.
 
 Without make:
 
@@ -84,7 +84,7 @@ python3 tests/check_application_versions.py
 python3 tests/check_application_versions.py --published
 ```
 
-After changing the example, run `make preview-application-versions` and inspect both pages. Review their extracted text before updating the matching baselines. Run `make application-download`, then `make test-application-versions`. The other starter baselines should not change.
+After changing the example, run `make preview-application-versions` and inspect all three PDFs. Review their extracted text before updating the matching baselines. Run `make application-download`, then `make test-application-versions`. The other starter baselines should not change.
 
 ## Change a baseline
 
@@ -103,10 +103,10 @@ The snapshots above describe the shipped templates, not your edited resume. For 
 
 The check fails on unreadable or empty files, Poppler errors, empty text pages, replacement or control characters, and a page count above the limit. Errors name the page or character code, not the surrounding text. Exit codes: `0` passed, `1` failed a check, `2` invalid arguments. It cannot detect missing words, wrong reading order, clipping, or false claims; read the PDF too.
 
-`make test-personal-pdf` runs the checker against every published PDF. Unit tests cover blank pages, character handling, corrupt and locked files, timeouts, missing tools, arguments, and private-data suppression. Neither check writes to the input PDF.
+`make test-personal-pdf` checks the published starters, standalone cover letter, and filled example. Unit tests cover blank pages, character handling, corrupt and locked files, timeouts, missing tools, arguments, and private-data suppression. Neither check writes to the input PDF.
 
 ## Final review command
 
-`make test-final-review` runs real one-source builds through `scripts/review_resume.py`. It covers an extracted starter in a folder with spaces, a named application with shared facts, stale PDFs after a failed compile, unlinked contacts, overflowing boxes, placeholder and page-limit reminders, and a PDF with a blank text page. It also checks separate logs for `build.tex` and isolated output despite project compiler settings. An entrypoint check invokes the script from outside the checkout and verifies that published PDFs, previews, and downloads stay unchanged.
+`make test-final-review` runs real one-source builds through `scripts/review_resume.py`. It covers an extracted starter in a folder with spaces, the filled example, a named application with shared facts, stale PDFs after a failed compile, unlinked contacts, overflowing boxes, placeholder and page-limit reminders, a missing letter signature, and a PDF with a blank text page. It also checks separate logs for `build.tex` and isolated output despite project compiler settings. An entrypoint check invokes the script from outside the checkout and verifies that published PDFs, previews, and downloads stay unchanged.
 
 Unit tests cover missing tools, invalid inputs, failed builds and extraction, incomplete logs, and the optional PDF export, which never replaces an existing file. The customer sequence is in [Before you send](../docs/before-you-send.md).

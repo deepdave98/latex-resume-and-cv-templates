@@ -14,5 +14,6 @@ If GitHub says "Unable to render", download the PDF below and open it locally. I
 | Cover letter | [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/cover-letter.pdf) | [Image](../../preview/cover-letter.png) |
 | Base resume | [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-resume.pdf) | [Image](../../preview/application-resume.png) |
 | Backend application | [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-backend.pdf) | [Image](../../preview/application-backend.png) |
+| Application cover letter | [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-cover-letter.pdf) | [Image](../../preview/application-cover-letter.png) |
 
 [Edit a template](../../README.md#pick-a-template)

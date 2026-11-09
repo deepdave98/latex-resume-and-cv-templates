@@ -91,3 +91,4 @@ jobs:
             downloads/application-versions.zip
             output/pdf/application-resume.pdf
             output/pdf/application-backend.pdf
+            output/pdf/application-cover-letter.pdf
