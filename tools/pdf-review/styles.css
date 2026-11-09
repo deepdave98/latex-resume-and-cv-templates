@@ -78,6 +78,9 @@ summary { cursor: pointer; }
 .submission-controls > div { width: min(100%, 360px); }
 .submission-controls label { display: block; margin-bottom: 4px; font-size: 13px; }
 .submission-controls input { width: 100%; min-height: 36px; padding: 6px 10px; border: 1px solid #b6b8be; border-radius: 2px; }
+.submission-heading { font-size: 13px; }
+.receipt-check { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+#receipt-pdf { overflow-wrap: anywhere; unicode-bidi: plaintext; }
 .limit-results { margin-top: 12px; font-size: 13px; }
 .limit-warning { color: var(--warning); }
 .file-properties { font-size: 13px; }

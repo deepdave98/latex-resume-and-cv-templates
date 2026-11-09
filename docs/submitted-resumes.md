@@ -4,7 +4,7 @@ After uploading a resume, save that exact PDF with the company and role. Rebuild
 
 ## From Overleaf or a PDF download
 
-Open the PDF you uploaded in the [offline reviewer](../tools/pdf-review/README.md). After reviewing it, expand **Save submitted copy**, enter the company and role, and choose **Save copy (.zip)**.
+Open the PDF you uploaded in the [offline reviewer](../tools/pdf-review/README.md). After reviewing it, expand **Submitted copies**, enter the company and role, and choose **Save copy (.zip)**.
 
 Keep the ZIP privately and unzip it when needed. Its dated folder contains the original PDF and `receipt.json`, compatible with the verification command below. The PDF's metadata and password protection remain; text edits made in the reviewer are excluded. The browser controls the download filename and location, so check where it saved the ZIP and keep each revision separately.
 
@@ -42,13 +42,15 @@ The dated folder is created inside `Submitted`. The parent must already exist; e
 
 ## Verify a saved copy
 
-Pass the saved folder, including an unzipped browser download or a backup moved outside this checkout:
+**In the browser:** unzip the saved copy, open its PDF in the reviewer, then expand **Submitted copies** and choose **Choose receipt.json**. Select the receipt from that same folder. The reviewer compares the opened PDF's original bytes, excluding text edits. Renaming the PDF is allowed; the filename recorded in the receipt is shown separately. Receipts must be no larger than 64 KiB.
+
+**In a repository checkout:** pass the saved folder, including an unzipped browser download or a backup moved outside this checkout:
 
 ```bash
 python3 scripts/archive_resume.py --verify "submissions/2026-10-22-acme-backend-engineer"
 ```
 
-This compares the named PDF's byte count and SHA-256 with `receipt.json` and changes no files. Missing files, malformed receipts, or mismatches return exit code `1`; a match returns `0`.
+Both methods compare the PDF's byte count and SHA-256 with `receipt.json` and change no files. The terminal command expects the recorded filename; missing files, malformed receipts, or mismatches return exit code `1`, and a match returns `0`. If a check fails, compare with a trusted backup before replacing either file.
 
 A match does not authenticate the label/date or prove delivery. A receipt is not a signature: someone who changes both files can replace the record.
 
