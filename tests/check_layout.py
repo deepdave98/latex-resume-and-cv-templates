@@ -130,6 +130,35 @@ class EntryLayoutTests(unittest.TestCase):
                 self.assertFalse(contact[1].startswith("⋄"), contact[1])
                 self.assert_inside_margins(tree)
 
+    def test_promotion_titles_and_dates_wrap_without_losing_text(self):
+        title = "Senior Software Engineer, Infrastructure Reliability and Developer Productivity"
+        dates = "September 2020 -- December 2022; January 2024 -- Present"
+        body = r"\jobsubentry{" + title + "}{" + dates + "}"
+        for paper in ("letterpaper", "a4paper"):
+            with self.subTest(paper=paper):
+                text, tree = self.compile(body, paper)
+                self.assertEqual(len(check_pdf_text.split_pages(text)), 1)
+                expected = (title + " " + dates).replace("--", "–")
+                self.assertEqual(Counter(check_pdf_text.words(text)), Counter(check_pdf_text.words(expected)))
+                self.assert_inside_margins(tree)
+
+    def test_wrapped_promotion_stays_with_its_first_bullet_near_page_end(self):
+        for paper, space in (("letterpaper", "9.3in"), ("a4paper", "10in")):
+            with self.subTest(paper=paper):
+                body = r"First page marker\par\vspace*{" + space + "}\n" + r"""
+\jobsubentry{Senior Software Engineer, Infrastructure Reliability and Developer Productivity}{September 2020 -- December 2022; January 2024 -- Present}
+\begin{jobduties}
+\item Maintained the deployment service.
+\end{jobduties}
+"""
+                text, tree = self.compile(body, paper)
+                pages = check_pdf_text.split_pages(text)
+                self.assertEqual(len(pages), 2)
+                self.assertNotIn("Senior", pages[0])
+                for word in ("Senior", "Productivity", "Present", "Maintained"):
+                    self.assertIn(word, pages[1])
+                self.assert_inside_margins(tree)
+
     def test_heading_and_role_move_together_near_page_end(self):
         for paper, remaining in (("letterpaper", "9.3in"), ("a4paper", "10in")):
             with self.subTest(paper=paper):

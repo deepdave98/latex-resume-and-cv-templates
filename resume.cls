@@ -349,11 +349,14 @@
   \resumecheckfield{entry \arabic{resumeentry} role}{role}{#1}%
   \resumecheckfield{entry \arabic{resumeentry} dates}{dates}{#2}%
   \setlength{\jobdutiesvspace}{3pt}%
-  \Needspace{3\baselineskip}%
+  \resume@headingbox{\textit{#1}}{#2}%
+  \setlength{\resumeentryspace}{\dimexpr\ht\resumeheadingbox+\dp\resumeheadingbox+2\baselineskip\relax}%
+  \ifdim\resumeentryspace<3\baselineskip
+    \setlength{\resumeentryspace}{3\baselineskip}%
+  \fi
+  \Needspace{\resumeentryspace}%
   \vspace{1pt}%
-  \noindent\begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}r@{}}
-    {\color{namecolor}\textit{#1}} & {\small\textbf{\color{namecolor}#2}}
-  \end{tabular*}\par\nopagebreak%
+  \noindent\usebox{\resumeheadingbox}\par\nopagebreak%
 }
 
 % Entry bullets: adjust line spacing, marker, indentation, and list spacing here.
@@ -434,11 +437,16 @@
   \endgroup
 }{}
 
-% \letterclosing{Sign-off}{Your Name}
+% \letterclosing{Sign-off}{Name}: pass {} to use the name from \resumename.
 \newcommand{\letterclosing}[2]{%
-  \resumecheckfield{letter signature}{name}{#2}%
+  \ifblank{#2}{%
+    \ifdefempty{\resume@name}{%
+      \ClassWarning{resume}{Missing letter signature name.\MessageBreak
+        Set \string\resumename\space or give a name to \string\letterclosing}%
+    }{}%
+  }{\resumecheckfield{letter signature}{name}{#2}}%
   \vspace{10pt}%
   {\color{resumetextcolor}#1}\par
   \vspace{18pt}%
-  {\color{resumetextcolor}#2}\par
+  {\color{resumetextcolor}\ifblank{#2}{\resume@name}{#2}}\par
 }

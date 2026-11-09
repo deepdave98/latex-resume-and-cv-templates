@@ -205,6 +205,27 @@ I am applying for the \Role position at \Company. \Company's team ships weekly.
         self.assertIn("Empty jobduties list in entry 1", log)
         self.assertIn("Engineer", text)
 
+    def test_letter_signature_uses_the_header_name_unless_overridden(self):
+        for signature, expected in (("", "Alex Morgan"), ("Alex M.", "Alex M.")):
+            with self.subTest(signature=signature):
+                warnings, text, log = self.compile(
+                    r"\resumename{Alex Morgan}\letterclosing{Sincerely,}{" + signature + "}"
+                )
+                self.assertEqual(warnings, [])
+                self.assertNotIn("Missing letter signature", log)
+                lines = [line.strip() for line in text.splitlines() if line.strip()]
+                self.assertEqual(lines, ["Alex Morgan", "Sincerely,", expected])
+
+    def test_letter_signature_requires_a_name_and_keeps_placeholder_reminders(self):
+        warnings, text, log = self.compile(r"\letterclosing{Sincerely,}{}")
+        self.assertEqual(warnings, [])
+        self.assertIn("Missing letter signature name", log)
+        self.assertIn(r"Set \resumename or give a name to \letterclosing", log)
+        self.assertEqual(text.strip(), "Sincerely,")
+        warnings, text, _ = self.compile(r"\resumename{Your Name}\letterclosing{Sincerely,}{}")
+        self.assertEqual(warnings, ["resume name."])
+        self.assertEqual(text.count("Your Name"), 2)
+
     def test_warning_checks_do_not_change_extracted_content(self):
         body = r"""
 \resumename{Your Name}

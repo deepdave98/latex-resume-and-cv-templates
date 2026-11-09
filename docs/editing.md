@@ -67,7 +67,7 @@ The experienced starter ships with this pattern.
 
 ## Cover letter
 
-`cover-letter.tex` shares the header commands. `\letterfor{Company}{Role}` defines `\Company` and `\Role`, so each is typed once per application. `\letteropening{Date}{Recipient}{Organization}{Greeting}` prints the opening; pass `{}` for a line you do not have. Paragraphs go inside `letterbody`, separated by blank lines. `\letterclosing{Sincerely,}{Your Name}` ends the letter. Placeholder reminders cover every part.
+`cover-letter.tex` shares the header commands. `\letterfor{Company}{Role}` defines `\Company` and `\Role`, so each is typed once per application. `\letteropening{Date}{Recipient}{Organization}{Greeting}` prints the opening; pass `{}` for a line you do not have. Paragraphs go inside `letterbody`, separated by blank lines. `\letterclosing{Sincerely,}{}` ends the letter using the header name. Supply a name in the second argument to override it. The log flags known sample values in letter fields.
 
 ## Change the look
 
@@ -100,8 +100,8 @@ Open **View logs** in Overleaf (**Logs and output files** in the older editor), 
 
 - **Placeholders:** flags sample contacts, `your-handle` anywhere, known example fields, and `[prompts]` in headers, the summary, entries, rows, lists, and letter parts. Replace flagged text or delete unused entries. Literal square brackets may be flagged; unmarked examples and text inside custom commands may be missed.
 - **Page limit:** all starters use `\resumepagelimit{1}` to warn above one page. Cut less relevant content first. Use `\resumepagelimit{2}` when a second page is useful, or remove the command to disable the warning. From page 2, the footer prints your name and page number.
-- **Empty list:** a `jobduties` block with no `\item` prints nothing and warns. Add a bullet or delete the block.
+- **Empty list:** an empty `jobduties` block prints nothing and warns. Add a bullet or delete the block.
 
-Neither warning changes the PDF or stops compilation. Resolve rerun warnings before checking length; temporary rerun pages are not counted by the reminder. Review the final text, layout, and links yourself.
+These warnings do not change the PDF or stop compilation. Resolve rerun warnings before checking length; temporary rerun pages are not counted by the reminder. Review the final text, layout, and links yourself.
 
 [Back to the README](../README.md#edit-the-content)
