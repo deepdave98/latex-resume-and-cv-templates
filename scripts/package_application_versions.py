@@ -15,6 +15,7 @@ ARCHIVE_NAME = "application-versions.zip"
 SOURCES = {
     "resume.tex": "examples/application-versions/resume.tex",
     "backend.tex": "examples/application-versions/backend.tex",
+    "cover-letter.tex": "examples/application-versions/cover-letter.tex",
     "setup.tex": "examples/application-versions/setup.tex",
     "latexmkrc": "examples/application-versions/latexmkrc",
     "README.md": "examples/application-versions/README.md",

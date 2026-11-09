@@ -6,7 +6,7 @@ BUILD_DIR := build
 PREVIEW_DIR := preview
 OUTPUT_DIR := output/pdf
 TEMPLATES := no-internship new-grad experienced ai-engineer ml-engineer graduate-admissions
-APPLICATION_VERSIONS := resume backend
+APPLICATION_VERSIONS := resume backend cover-letter
 WATCH_TARGETS := $(addprefix watch-,$(TEMPLATES))
 
 .PHONY: $(WATCH_TARGETS)

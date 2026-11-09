@@ -1,0 +1,25 @@
+% !TeX program = xelatex
+\documentclass{resume}
+\input{setup}
+\renewcommand{\resumedoctype}{Cover Letter}
+
+\begin{document}
+\SharedHeader
+
+% Copy this entry file for each application. Keep the shared profile unchanged.
+\letterfor{[Company]}{[Role]}
+\letteropening{[Month Day, Year]}{[Recipient Name]}{[Team], \Company}{Dear [Name],}
+
+% Use a project, course, or job you can discuss. Remove any sentence you do not need.
+\begin{letterbody}
+I am applying for the \Role position at \Company because [specific work the team does that interests you].
+
+In [project, course, or work experience], I [your contribution] using [tools or approach]. I chose [decision] because [constraint], and checked the result by [test or feedback].
+
+That experience relates to [responsibility from the posting]. [Explain the connection without repeating the resume bullets.] I can share [relevant code sample or demonstration] and would welcome a conversation about the role.
+\end{letterbody}
+
+% The empty name uses the name from \SharedHeader.
+\letterclosing{Sincerely,}{}
+
+\end{document}

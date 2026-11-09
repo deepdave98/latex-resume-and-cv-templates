@@ -1,8 +1,8 @@
 # One resume, tailored applications
 
-Keep contacts, dates, projects, and work history in one place. Each application chooses which entries and bullets to show.
+Keep contacts, dates, projects, and work history in one place. Each resume chooses which entries and bullets to show; the cover letter uses the same name and contacts.
 
-[Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fapplication-versions.zip&engine=xelatex&main_document=resume.tex) · [Download ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/application-versions.zip) · [Base PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-resume.pdf) · [Backend PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-backend.pdf)
+[Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fapplication-versions.zip&engine=xelatex&main_document=resume.tex) · [Download ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/application-versions.zip) · [Base PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-resume.pdf) · [Backend PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-backend.pdf) · [Cover letter PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-cover-letter.pdf)
 
 ## Start
 
@@ -10,6 +10,7 @@ Extract the ZIP into a folder for your own resume, outside a public repository. 
 
 - `resume.tex` is your base selection. It starts with education, two projects, and skills; no job is required.
 - `backend.tex` uses the same facts, brings query work first, and leaves out one interface bullet.
+- `cover-letter.tex` uses the shared header and name for the signature. Its paragraphs belong to that application.
 - `content/` holds the actual text. Nothing appears in a PDF until an entry file selects it.
 
 Replace the example content with your own work. The base resume is a selection too; it does not automatically print every bullet you add.
@@ -24,6 +25,7 @@ Replace the example content with your own work. The base resume is a selection t
 | `content/experience.tex` | Optional job headings and their named bullets |
 | `content/skills.tex` | Skills inside `\SharedSkills` |
 | `resume.tex`, `backend.tex` | Section order, selected entries, and selected bullets |
+| `cover-letter.tex` | Company, role, recipient, and letter paragraphs |
 | `setup.tex` | Shared imports and page budget |
 | `resume.cls` | Layout; included in the ZIP |
 
@@ -46,6 +48,8 @@ In the copy, move whole section or entry blocks to change their order. Inside a 
 This selects two bullets in that order. It leaves `\ToolRecovery` out of this PDF without deleting it from `content/projects.tex` or changing your base resume.
 
 To omit a project or job, remove its heading command and the following `jobduties` block from that version. Changing a selection never changes the shared facts.
+
+For a matching letter, copy `cover-letter.tex` to `company-role-letter.tex`. Edit `\letterfor{Company}{Role}`, the opening, and the paragraphs in that file. Keep `\SharedHeader` and `\letterclosing{Sincerely,}{}` so the profile supplies both the header and signature. Describe a project, course, or job that fits the role; the letter does not select resume bullets automatically.
 
 ## Bring your existing resume
 
@@ -88,10 +92,10 @@ In Overleaf, choose an entry file under **Settings > Compiler > Main document** 
 Locally, with XeLaTeX and `latexmk` installed:
 
 ```bash
-latexmk -outdir=build resume.tex backend.tex
+latexmk -outdir=build resume.tex backend.tex cover-letter.tex
 ```
 
-The bundled `latexmkrc` selects XeLaTeX. Outputs are `build/resume.pdf` and `build/backend.pdf`. Build a new application by passing its filename, such as `latexmk -outdir=build company-role.tex`. These commands work from the extracted folder; a repository clone also provides `make application-versions`.
+The bundled `latexmkrc` selects XeLaTeX. Outputs are `build/resume.pdf`, `build/backend.pdf`, and `build/cover-letter.pdf`. Build a named resume or letter by passing its filename, such as `latexmk -outdir=build company-role-letter.tex`. These commands work from the extracted folder; a repository clone also provides `make application-versions`.
 
 Read the exported PDF, check contacts and links, and resolve placeholder and page-limit warnings. The one-page budget is in `setup.tex`; change it when a longer resume is intentional. Only selected content is checked, so review an unused bullet when you choose it later.
 
