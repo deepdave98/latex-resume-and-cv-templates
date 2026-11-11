@@ -313,10 +313,8 @@ class FinalReviewTests(unittest.TestCase):
         checked = extract.call_args.args[0]
         self.assertEqual(destination.read_bytes(), checked.read_bytes())
         self.assertEqual(destination.read_bytes(), self.pdf_content)
-        self.assertNotEqual(destination.stat().st_ino, checked.stat().st_ino)
         self.assertIn(f"Exported PDF: {destination}", out)
         self.assertIn("manual review is still needed", out)
-        self.assertFalse(list(destination.parent.glob(".resume-export-*")))
 
     def test_export_expands_home_and_relative_paths(self):
         # Validate home expansion without changing the environment or writing there.
@@ -398,55 +396,42 @@ class FinalReviewTests(unittest.TestCase):
         self.assertEqual(first.read_bytes(), original)
         self.assertNotIn("Exported PDF:", out)
 
-    def test_copy_failure_removes_partial_staging_file(self):
+    def test_copy_failure_removes_the_partial_destination(self):
         destination = self.root / "Resume.pdf"
 
         def fail_copy(source, output):
             output.write(b"partial PDF")
             raise OSError("disk full")
 
-        with patch.object(review.shutil, "copyfileobj", side_effect=fail_copy), patch.object(review.os, "link") as link:
+        with patch.object(review.shutil, "copyfileobj", side_effect=fail_copy):
             code, out, err, _, _ = self.run_review(("--export-pdf", str(destination)))
         self.assertEqual(code, 1)
         self.assertIn("Cannot export PDF", err)
         self.assertNotIn("Exported PDF:", out)
-        link.assert_not_called()
         self.assertFalse(destination.exists())
-        self.assertFalse(list(self.root.glob(".resume-export-*")))
-
-    def test_export_link_failure_leaves_no_destination_or_staging_file(self):
-        destination = self.root / "Resume.pdf"
-        with patch.object(review.os, "link", side_effect=OSError("hard links unavailable")):
-            code, out, err, _, _ = self.run_review(("--export-pdf", str(destination)))
-        self.assertEqual(code, 1)
-        self.assertIn("supports hard links", err)
-        self.assertNotIn("Exported PDF:", out)
-        self.assertFalse(destination.exists())
-        self.assertFalse(list(self.root.glob(".resume-export-*")))
 
     def test_late_export_collision_never_replaces_a_file_or_symlink(self):
         target = self.root / "other.pdf"
         target.write_bytes(b"keep target")
-        native_link = os.link
+        native_compile = self.compile
         for symlink in (False, True):
             destination = self.root / f"collision-{symlink}.pdf"
 
-            def collide(source, output):
-                self.assertEqual(Path(source).read_bytes(), self.pdf_content)
+            def collide(args, **kwargs):
+                # The destination appears after its check, during the build.
                 if symlink:
-                    output.symlink_to(target)
+                    destination.symlink_to(target)
                 else:
-                    output.write_bytes(b"keep collision")
-                native_link(source, output)
+                    destination.write_bytes(b"keep collision")
+                return native_compile(args, **kwargs)
 
-            with self.subTest(symlink=symlink), patch.object(review.os, "link", side_effect=collide):
+            with self.subTest(symlink=symlink), patch.object(self, "compile", side_effect=collide):
                 code, out, err, _, _ = self.run_review(("--export-pdf", str(destination)))
             self.assertEqual(code, 1)
             self.assertIn("Cannot export PDF", err)
             self.assertNotIn("Exported PDF:", out)
             self.assertEqual(destination.is_symlink(), symlink)
             self.assertEqual(destination.read_bytes(), b"keep target" if symlink else b"keep collision")
-            self.assertFalse(list(self.root.glob(".resume-export-*")))
         self.assertEqual(target.read_bytes(), b"keep target")
 
     def test_pdf_changed_during_checks_is_not_exported(self):
@@ -461,7 +446,6 @@ class FinalReviewTests(unittest.TestCase):
         self.assertIn("changed after its checks", err)
         self.assertNotIn("Exported PDF:", out)
         self.assertFalse(destination.exists())
-        self.assertFalse(list(self.root.glob(".resume-export-*")))
 
     def test_pdf_changed_while_copying_is_not_exported(self):
         destination = self.root / "Resume.pdf"
@@ -476,7 +460,6 @@ class FinalReviewTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("changed while copying", err)
         self.assertFalse(destination.exists())
-        self.assertFalse(list(self.root.glob(".resume-export-*")))
 
     def test_help_needs_no_installed_tools(self):
         out = StringIO()

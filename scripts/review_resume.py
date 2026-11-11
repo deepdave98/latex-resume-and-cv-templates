@@ -42,26 +42,21 @@ def file_state(stat):
 
 
 def export_pdf(source, destination, reviewed_state):
-    """Install a complete copy without replacing an existing destination."""
-    temporary = None
-    try:
-        with source.open("rb") as original:
-            before = os.fstat(original.fileno())
-            if file_state(before) != reviewed_state:
-                raise OSError("The built PDF changed after its checks. Rerun the review.")
-            with tempfile.NamedTemporaryFile(
-                prefix=".resume-export-", suffix=".tmp", dir=destination.parent, delete=False,
-            ) as output:
-                temporary = Path(output.name)
-                shutil.copyfileobj(original, output)
-                if output.tell() != before.st_size or file_state(os.fstat(original.fileno())) != reviewed_state:
-                    raise OSError("The built PDF changed while copying. Rerun the review.")
-        # A same-filesystem hard link installs the complete file atomically and
-        # fails if a file or symlink appeared after the destination was checked.
-        os.link(temporary, destination)
-    finally:
-        if temporary is not None:
-            temporary.unlink()
+    """Copy the checked PDF to a new file; never replace an existing one."""
+    with source.open("rb") as original:
+        if file_state(os.fstat(original.fileno())) != reviewed_state:
+            raise OSError("The built PDF changed after its checks. Rerun the review.")
+        # Exclusive create fails if a file or symlink appeared after the check.
+        output = open(destination, "xb")
+        try:
+            shutil.copyfileobj(original, output)
+            if output.tell() != reviewed_state[2] or file_state(os.fstat(original.fileno())) != reviewed_state:
+                raise OSError("The built PDF changed while copying. Rerun the review.")
+        except BaseException:
+            output.close()
+            destination.unlink(missing_ok=True)
+            raise
+        output.close()
 
 
 def run_build(command, *, cwd, stdout, timeout):
@@ -281,7 +276,7 @@ def main(argv=None):
             export_pdf(pdf, destination, reviewed_state)
         except (OSError, RuntimeError) as error:
             print(f"FAIL: Cannot export PDF: {error}", file=sys.stderr)
-            print("Choose an unused filename in a writable folder that supports hard links, then rerun.", file=sys.stderr)
+            print("Choose an unused filename in a writable folder, then rerun.", file=sys.stderr)
             return 1
         print(f"Exported PDF: {destination}")
     print("Automated checks completed without source reminders; manual review is still needed.")

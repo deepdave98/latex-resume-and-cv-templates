@@ -1,8 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { createHash } from "node:crypto";
 import { readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { unzipSync } from "fflate";
+import { formatFileSize } from "../src/file-size.mjs";
 import { encryptedFixture, filePayload, pdfFixture } from "./fixtures.mjs";
 
 const artifactURL = new URL("../../../downloads/pdf-review.html", import.meta.url).href;
@@ -37,57 +36,6 @@ async function reviewFile(page, payload) {
   expect(await page.locator("#status").textContent(), await page.locator("#error").textContent()).toBe("Review ready.");
   await expect(page.locator("#error")).toBeHidden();
   await expect(page.locator("#review")).toBeVisible();
-}
-
-async function discardDecision(page, action, accept) {
-  const response = page.waitForEvent('dialog').then(async dialog => {
-    expect(dialog.type()).toBe('confirm');
-    expect(dialog.message()).toContain('Discard your text edits?');
-    if (accept) await dialog.accept();
-    else await dialog.dismiss();
-  });
-  await action();
-  await response;
-}
-
-async function openSubmission(page) {
-  const panel = page.locator('#submission-archive');
-  if (await panel.getAttribute('open') === null) await panel.locator('summary').click();
-}
-
-async function readSubmission(download) {
-  const chunks = [];
-  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
-  expect(await download.failure()).toBeNull();
-  const entries = unzipSync(Buffer.concat(chunks));
-  const files = Object.keys(entries).filter(name => !name.endsWith('/'));
-  expect(files).toHaveLength(2);
-  const receiptPath = files.find(name => name.endsWith('/receipt.json'));
-  expect(receiptPath).toBeDefined();
-  const folder = receiptPath.split('/')[0];
-  expect(folder).toMatch(/^\d{4}-\d{2}-\d{2}-acme-backend-engineer$/);
-  const receipt = JSON.parse(Buffer.from(entries[receiptPath]).toString('utf8'));
-  expect(Object.keys(receipt).sort()).toEqual(['bytes', 'label', 'pdf', 'saved_at', 'sha256']);
-  expect(receipt.label).toBe('Acme - Backend Engineer');
-  expect(receipt.pdf).toBe('resume-acme-backend-engineer.pdf');
-  expect(Number.isFinite(Date.parse(receipt.saved_at))).toBe(true);
-  expect(files.sort()).toEqual([`${folder}/receipt.json`, `${folder}/${receipt.pdf}`].sort());
-  expect(download.suggestedFilename()).toBe(`${folder}.zip`);
-  const pdf = Buffer.from(entries[`${folder}/${receipt.pdf}`]);
-  expect(receipt.bytes).toBe(pdf.length);
-  expect(receipt.sha256).toBe(createHash('sha256').update(pdf).digest('hex'));
-  return pdf;
-}
-
-function receiptPayload(pdf, changes = {}) {
-  return {
-    name: 'receipt.json', mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify({
-      label: 'Acme - Backend Engineer', saved_at: '2026-11-05T10:30:00-05:00',
-      pdf: 'resume-acme-backend-engineer.pdf', bytes: pdf.length,
-      sha256: createHash('sha256').update(pdf).digest('hex'), ...changes,
-    })),
-  };
 }
 
 async function assertPrivate(context, page, observations) {
@@ -253,109 +201,16 @@ test('paper labels survive zoom and narrow screens, then update with the file', 
 test("keeps text and previews for both pages of a two-page PDF", async ({ page, context }) => {
   const observations = await openReview(page, context);
   const expected = ['First page experience', 'Second page projects'];
-  await reviewFile(page, filePayload(pdfFixture(expected.map(text => ({ text })))));
+  const buffer = pdfFixture(expected.map(text => ({ text })));
+  await reviewFile(page, filePayload(buffer));
   await expect(page.locator(".page-card")).toHaveCount(2);
   const pages = await page.locator(".page-card textarea").evaluateAll((fields) => fields.map((field) => field.value));
   expect(pages).toEqual(expected);
   await expect(page.locator(".page-card canvas")).toHaveCount(2);
-  await assertPrivate(context, page, observations);
-});
-
-for (const [label, location] of [["downloaded file", artifactURL], ["hosted page", "/"]]) {
-  test(`${label}: checks applicant-supplied upload limits without rounding away excess bytes`, async ({ page, context }) => {
-    const observations = await openReview(page, context, location);
-    const buffer = pdfFixture([{ text: "First page" }, { text: "Second page" }]);
-    await reviewFile(page, filePayload(buffer));
-    await expect(page.locator('#upload-limits')).not.toHaveAttribute('open');
-    await page.getByText('Application upload limits', { exact: true }).click();
-    await expect(page.locator('#file-size')).toContainText(`${buffer.length.toLocaleString('en-US')} bytes`);
-    await expect(page.locator('#page-limit-result')).toHaveText('No page limit set.');
-    await expect(page.locator('#size-limit-result')).toHaveText('No file-size limit set.');
-    await page.getByLabel('Maximum pages', { exact: true }).fill('1');
-    await expect(page.locator('#page-limit-result')).toHaveText('2 pages; limit 1. Over the limit.');
-    await page.getByLabel('Maximum pages', { exact: true }).fill('2');
-    await expect(page.locator('#page-limit-result')).toContainText('Within the limit.');
-    await page.getByLabel('Maximum file size (MB)', { exact: true }).fill((buffer.length / 1_000_000).toFixed(6));
-    await expect(page.locator('#size-limit-result')).toContainText('Within the');
-    await page.getByLabel('Maximum file size (MB)', { exact: true }).fill(((buffer.length - 1) / 1_000_000).toFixed(6));
-    await expect(page.locator('#size-limit-result')).toContainText('by 1 byte.');
-    // The check does not modify the extracted text, preview, or original file.
-    await expect(page.locator('#all-text')).toHaveValue('First page\n\nSecond page');
-    await expect(page.locator('#pages canvas')).toHaveCount(2);
-    await assertPrivate(context, page, observations);
-  });
-}
-
-test('upload limits reject invalid entries and allow either check to be removed', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture()));
-  await page.getByText('Application upload limits', { exact: true }).click();
-  await page.getByLabel('Maximum pages', { exact: true }).fill('1.5');
-  await page.getByLabel('Maximum file size (MB)', { exact: true }).fill('-2');
-  await expect(page.locator('#max-pages')).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.locator('#max-mb')).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.locator('#page-limit-result')).toContainText('positive whole number');
-  await expect(page.locator('#size-limit-result')).toContainText('positive MB value');
-  await page.getByLabel('Maximum pages', { exact: true }).fill('');
-  await page.getByLabel('Maximum file size (MB)', { exact: true }).fill('0.5');
-  await expect(page.locator('#max-pages')).toHaveAttribute('aria-invalid', 'false');
-  await expect(page.locator('#max-mb')).toHaveAttribute('aria-invalid', 'false');
-  await expect(page.locator('#page-limit-result')).toHaveText('No page limit set.');
-  await expect(page.locator('#size-limit-result')).toHaveText('Within the 0.5 MB limit.');
-  await assertPrivate(context, page, observations);
-});
-
-test('upload limits recheck a replacement PDF and clear with the file', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'First' }, { text: 'Second' }])));
-  await page.getByText('Application upload limits', { exact: true }).click();
-  await page.getByLabel('Maximum pages', { exact: true }).fill('1');
-  await page.getByLabel('Maximum file size (MB)', { exact: true }).fill('1');
-  await expect(page.locator('#page-limit-result')).toContainText('Over the limit.');
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Shortened' }]), 'shortened.pdf'));
-  await expect(page.locator('#max-pages')).toHaveValue('1');
-  await expect(page.locator('#max-mb')).toHaveValue('1');
-  await expect(page.locator('#page-limit-result')).toHaveText('Page count: 1. Limit: 1. Within the limit.');
-  await page.getByRole('button', { name: 'Clear file', exact: true }).click();
-  await expect(page.locator('#upload-limits')).toBeHidden();
-  await expect(page.locator('#file-size')).toBeEmpty();
-  await expect(page.locator('#max-pages')).toHaveValue('');
-  await expect(page.locator('#max-mb')).toHaveValue('');
-  await reviewFile(page, filePayload(pdfFixture()));
-  await expect(page.locator('#upload-limits')).not.toHaveAttribute('open');
-  await page.getByText('Application upload limits', { exact: true }).click();
-  await expect(page.locator('#page-limit-result')).toHaveText('No page limit set.');
-  await assertPrivate(context, page, observations);
-});
-
-test('an unreadable replacement clears upload-limit results', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture()));
-  await page.getByText('Application upload limits', { exact: true }).click();
-  await page.getByLabel('Maximum pages', { exact: true }).fill('1');
-  await page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('%PDF-broken')));
-  await expect(page.locator('#error')).toBeVisible();
-  await expect(page.locator('#upload-limits')).toBeHidden();
-  await expect(page.locator('#page-limit-result')).toBeEmpty();
-  await expect(page.locator('#size-limit-result')).toBeEmpty();
-  await assertPrivate(context, page, observations);
-});
-
-test('upload limits work by keyboard on a narrow screen', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await page.setViewportSize({ width: 320, height: 700 });
-  await reviewFile(page, filePayload(pdfFixture()));
-  const summary = page.getByText('Application upload limits', { exact: true });
-  await summary.focus();
-  await page.keyboard.press('Enter');
-  await page.keyboard.press('Tab');
-  await expect(page.locator('#max-pages')).toBeFocused();
-  await page.keyboard.type('1');
-  await page.keyboard.press('Tab');
-  await expect(page.locator('#max-mb')).toBeFocused();
-  await page.keyboard.type('0.5');
-  await expect(page.locator('#size-limit-result')).toContainText('Within the');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expect(page.locator("#summary")).toHaveText(`2 pages · 0 links · ${formatFileSize(buffer.length)}`);
+  await expect(page.locator("#all-text")).toHaveValue(expected.join("\n\n"));
+  await expect(page.locator("#all-text")).toHaveAttribute("readonly", "");
+  await expect(page.locator("#character-count")).toHaveText(`${expected.join("\n\n").length} characters.`);
   await assertPrivate(context, page, observations);
 });
 
@@ -677,20 +532,16 @@ test("warns about form values that page-text extraction may omit", async ({ page
   const observations = await openReview(page, context);
   await reviewFile(page, filePayload(pdfFixture([{ text: "Form resume", formValue: "Stored form value" }])));
   await expect(page.locator("#review")).toContainText(/form/i);
-  // PDF form widgets must not become active inputs; these controls belong to the app.
+  // PDF form widgets must not become active inputs. The review has no inputs of its own.
   await expect(page.locator("#pages input, #pages form")).toHaveCount(0);
-  expect(await page.locator('#review input').evaluateAll(inputs => inputs.map(input => input.id).sort()))
-    .toEqual(['max-characters', 'max-mb', 'max-pages', 'submission-label', 'submission-receipt']);
+  await expect(page.locator("#review input, #review form")).toHaveCount(0);
   await assertPrivate(context, page, observations);
 });
 
 test("password retry and cancellation stay local and recover", async ({ page, context }) => {
   const observations = await openReview(page, context);
-  const encrypted = encryptedFixture();
-  await page.locator("#pdf-file").setInputFiles(filePayload(encrypted));
+  await page.locator("#pdf-file").setInputFiles(filePayload(encryptedFixture()));
   await expect(page.locator("#password-form")).toBeVisible();
-  await expect(page.locator('#save-submission')).toBeDisabled();
-  await expect(page.locator('#verify-receipt')).toBeDisabled();
   await page.locator("#password").fill("incorrect");
   await page.locator("#password-form button[type=submit]").click();
   await expect(page.locator("#password-form")).toBeVisible();
@@ -699,21 +550,10 @@ test("password retry and cancellation stay local and recover", async ({ page, co
   await expect(page.locator("#status")).toHaveText("Review ready.");
   await expect(page.locator("#all-text")).toHaveValue(/Protected resume fixture/);
   await expect(page.locator("#password")).toHaveValue("");
-  await openSubmission(page);
-  await page.locator('#submission-label').fill('Acme - Backend Engineer');
-  const saved = page.waitForEvent('download');
-  await page.locator('#save-submission').click();
-  expect(await readSubmission(await saved)).toEqual(encrypted);
-  await page.locator('#submission-receipt').setInputFiles(receiptPayload(encrypted));
-  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
   await page.locator("#pdf-file").setInputFiles(filePayload(encryptedFixture(), "locked-again.pdf"));
   await expect(page.locator("#password-form")).toBeVisible();
-  await expect(page.locator('#save-submission')).toBeDisabled();
-  await expect(page.locator('#verify-receipt')).toBeDisabled();
-  await expect(page.locator('#receipt-status')).toHaveText('');
   await page.locator("#cancel-password").click();
   await expect(page.locator("#password-form")).toBeHidden();
-  await expect(page.locator('#submission-label')).toHaveValue('');
   await expect(page.locator("#review")).toBeHidden();
   await reviewFile(page, filePayload(pdfFixture([{ text: "Recovered after password cancellation" }])));
   await assertPrivate(context, page, observations);
@@ -745,6 +585,8 @@ test("clears all extracted data and can select the same file again", async ({ pa
   await expect(page.locator("#review")).toBeHidden();
   await expect(page.locator("#pages")).toBeEmpty();
   await expect(page.locator("#all-text")).toHaveValue("");
+  await expect(page.locator("#character-count")).toBeEmpty();
+  await expect(page.locator("#summary")).toBeEmpty();
   await expect(page.locator("#filename")).toHaveText("");
   await expect(page.locator("#pdf-file")).toHaveValue("");
   await reviewFile(page, payload);
@@ -846,686 +688,46 @@ test("copy buttons send only extracted text to the clipboard", async ({ page, co
   await assertPrivate(context, page, observations);
 });
 
-for (const [label, location] of [["downloaded file", artifactURL], ["hosted page", "/"]]) {
-  test(`${label}: edits and saves a text copy without changing the PDF extraction`, async ({ page, context, browserName }) => {
-    const observations = await openReview(page, context, location);
-    await reviewFile(page, filePayload(pdfFixture([{ text: 'Original first page' }, { text: 'Original second page' }]), 'My Resume.PDF'));
-    await page.locator('.all-text-panel > summary').click();
-    const draft = page.locator('#all-text');
-    const original = await draft.inputValue();
-    const edited = 'Zoë — 研究\n\n• Tested retries.\n<not HTML>\n';
-    await expect(draft).toBeEditable();
-    await expect(page.locator('#reset-text')).toBeDisabled();
-    await draft.fill(edited);
-    await expect(page.locator('.page-card textarea').first()).toHaveValue('Original first page');
-    await expect(page.locator('.page-card textarea').first()).toHaveAttribute('readonly', '');
-    const pending = page.waitForEvent('download');
-    await page.locator('#save-text').click();
-    const download = await pending;
-    // Linux WebKit replaces spaces in the browser's suggested filename.
-    const expectedFilename = browserName === 'webkit' && process.platform === 'linux'
-      ? 'My_Resume-text.txt' : 'My Resume-text.txt';
-    expect(download.suggestedFilename()).toBe(expectedFilename);
-    const chunks = [];
-    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
-    expect(Buffer.concat(chunks).toString('utf8')).toBe(edited);
-    expect(await download.failure()).toBeNull();
-    await discardDecision(page, () => page.locator('#reset-text').click(), true);
-    await expect(draft).toHaveValue(original);
-    await expect(page.locator('#reset-text')).toBeDisabled();
-    await assertPrivate(context, page, observations);
-  });
-}
-
-test('copy all uses the edited draft while copy page retains the PDF text', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await page.evaluate(() => {
-    globalThis.copiedValues = [];
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true, value: { writeText: async value => globalThis.copiedValues.push(value) },
-    });
-  });
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original PDF text' }])));
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill('Edited text for the form');
-  await page.locator('#copy-all').click();
-  await page.getByRole('button', { name: 'Copy page text' }).click();
-  expect(await page.evaluate(() => globalThis.copiedValues)).toEqual(['Edited text for the form', 'Original PDF text']);
-  await assertPrivate(context, page, observations);
-});
-
-for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
-  test(`${label}: submission ZIP keeps the original PDF and its hash receipt`, async ({ page, context }) => {
-    const observations = await openReview(page, context, location);
-    const original = pdfFixture([{ text: 'Submitted PDF content', links: [{ url: 'mailto:hello@example.com' }] }]);
-    await reviewFile(page, filePayload(original, 'Chosen Resume.pdf'));
-    await page.evaluate(() => {
-      File.prototype.arrayBuffer = async () => { throw new Error('The selected file changed on disk.'); };
-    });
-    await expect(page.locator('.link-list .notice')).toHaveCount(1);
-    await expect(page.locator('#submission-archive')).not.toHaveAttribute('open');
-    await openSubmission(page);
-    await expect(page.locator('#save-submission')).toBeDisabled();
-    await page.getByLabel('Company and role', { exact: true }).fill('   ');
-    await expect(page.locator('#save-submission')).toBeDisabled();
-    await page.getByLabel('Company and role', { exact: true }).fill('Acme - Backend Engineer');
-    await page.locator('.all-text-panel > summary').click();
-    await page.locator('#all-text').fill('Edited application text must stay out of this ZIP.');
-    const pending = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Save copy (.zip)', exact: true }).click();
-    expect(await readSubmission(await pending)).toEqual(original);
-    await expect(page.locator('#all-text')).toHaveValue('Edited application text must stay out of this ZIP.');
-    await expect(page.locator('.page-card textarea')).toHaveValue(/Submitted PDF content/);
-    await expect(page.locator('#save-submission')).toBeEnabled();
-    await assertPrivate(context, page, observations);
-  });
-}
-
-test('submission label survives replacements and cancellation, then clears explicitly', async ({ page, context }) => {
-  const observations = await openReview(page, context, artifactURL);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'First PDF' }])));
-  await openSubmission(page);
-  await page.locator('#submission-label').fill('Acme - Backend Engineer');
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill('Keep my draft');
-  const replacement = filePayload(pdfFixture([{ text: 'Replacement PDF' }]));
-  await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(replacement), false);
-  await expect(page.locator('#submission-label')).toHaveValue('Acme - Backend Engineer');
-  await expect(page.locator('#save-submission')).toBeEnabled();
-  await discardDecision(page, () => reviewFile(page, replacement), true);
-  await expect(page.locator('#submission-label')).toHaveValue('Acme - Backend Engineer');
-  await expect(page.locator('#save-submission')).toBeEnabled();
-  await page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF')));
-  await expect(page.locator('#error')).toBeVisible();
-  await expect(page.locator('#submission-label')).toHaveValue('Acme - Backend Engineer');
-  await expect(page.locator('#save-submission')).toBeDisabled();
-  await reviewFile(page, replacement);
-  await page.locator('#clear-file').click();
-  await expect(page.locator('#submission-label')).toHaveValue('');
-  await expect(page.locator('#save-submission')).toBeDisabled();
-  await assertPrivate(context, page, observations);
-});
-
-test('submission save failure keeps the PDF and label available for retry', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  const original = pdfFixture([{ text: 'Keep this submitted PDF' }]);
-  await reviewFile(page, filePayload(original));
-  await openSubmission(page);
-  await page.locator('#submission-label').fill('Acme - Backend Engineer');
-  await page.evaluate(() => {
-    const digest = crypto.subtle.digest.bind(crypto.subtle);
-    window.restoreSubmissionDigest = () => { crypto.subtle.digest = digest; };
-    crypto.subtle.digest = async () => { throw new Error('PRIVATE_HASH_DETAIL'); };
-  });
-  await page.locator('#save-submission').click();
-  await expect(page.locator('#submission-status')).toContainText(/could not|failed|try again/i);
-  await expect(page.locator('#submission-status')).not.toContainText(/PRIVATE_HASH_DETAIL|Acme|Keep this/);
-  await expect(page.locator('#save-submission')).toBeEnabled();
-  await expect(page.locator('#submission-label')).toHaveValue('Acme - Backend Engineer');
-  await page.evaluate(() => window.restoreSubmissionDigest());
-  const pending = page.waitForEvent('download');
-  await page.locator('#save-submission').click();
-  expect(await readSubmission(await pending)).toEqual(original);
-  await assertPrivate(context, page, observations);
-});
-
-for (const action of ['replace', 'clear']) {
-  test(`${action} during submission hashing prevents a stale download`, async ({ page, context }) => {
-    const observations = await openReview(page, context);
-    const downloads = [];
-    page.on('download', download => downloads.push(download));
-    await reviewFile(page, filePayload(pdfFixture([{ text: 'Previous PDF' }])));
-    await openSubmission(page);
-    await page.locator('#submission-label').fill('Acme - Backend Engineer');
-    await page.evaluate(() => {
-      const digest = crypto.subtle.digest.bind(crypto.subtle);
-      crypto.subtle.digest = (...args) => {
-        crypto.subtle.digest = digest;
-        return new Promise(resolve => {
-          window.releaseSubmissionDigest = async () => resolve(await digest(...args));
-        });
-      };
-    });
-    await page.locator('#save-submission').click();
-    await page.waitForFunction(() => typeof window.releaseSubmissionDigest === 'function');
-    await expect(page.locator('#save-submission')).toBeDisabled();
-    const replacement = pdfFixture([{ text: 'Current PDF' }]);
-    if (action === 'replace') await reviewFile(page, filePayload(replacement));
-    else await page.locator('#clear-file').click();
-    await page.evaluate(() => window.releaseSubmissionDigest());
-    if (action === 'clear') await reviewFile(page, filePayload(replacement));
-    await openSubmission(page);
-    await page.locator('#submission-label').fill('Acme - Backend Engineer');
-    const pending = page.waitForEvent('download');
-    await page.locator('#save-submission').click();
-    expect(await readSubmission(await pending)).toEqual(replacement);
-    expect(downloads).toHaveLength(1);
-    await assertPrivate(context, page, observations);
-  });
-}
-
-test('submission archive is usable by keyboard on a narrow screen', async ({ page, context }) => {
-  await page.setViewportSize({ width: 320, height: 640 });
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Submitted PDF' }])));
-  const summary = page.locator('#submission-archive > summary');
-  await summary.focus();
-  await page.keyboard.press('Enter');
-  await page.keyboard.press('Tab');
-  await expect(page.locator('#submission-label')).toBeFocused();
-  await page.keyboard.type('Acme - Backend Engineer');
-  const pending = page.waitForEvent('download');
-  await page.keyboard.press('Enter');
-  await readSubmission(await pending);
-  await expect(page.locator('#submission-status')).toHaveAttribute('role', 'status');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await assertPrivate(context, page, observations);
-});
-
-for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
-  test(`${label}: verifies browser and terminal receipts against the original PDF offline`, async ({ page, context }) => {
-    const observations = await openReview(page, context, location);
-    const original = pdfFixture([{ text: 'The submitted PDF' }]);
-    await reviewFile(page, filePayload(original, 'Renamed Resume.pdf'));
-    await openSubmission(page);
-    await page.locator('#submission-label').fill('Acme - Backend Engineer');
-    await page.locator('.all-text-panel > summary').click();
-    await page.locator('#all-text').fill('This edited answer is not the submitted PDF.');
-    const pending = page.waitForEvent('download');
-    await page.locator('#save-submission').click();
-    const download = await pending;
-    const chunks = [];
-    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
-    const entries = unzipSync(Buffer.concat(chunks));
-    const receipt = entries[Object.keys(entries).find(name => name.endsWith('/receipt.json'))];
-    await page.evaluate(() => {
-      const read = File.prototype.arrayBuffer;
-      File.prototype.arrayBuffer = function (...args) {
-        if (this.name.endsWith('.pdf')) throw new Error('The selected PDF changed on disk.');
-        return read.apply(this, args);
-      };
-    });
-    const downloads = [];
-    page.on('download', item => downloads.push(item));
-    await page.locator('#submission-receipt').setInputFiles({ name: 'receipt.json', mimeType: 'application/json', buffer: Buffer.from(receipt) });
-    await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
-    await expect(page.locator('#receipt-pdf')).toHaveText('Receipt PDF: resume-acme-backend-engineer.pdf');
-    await page.locator('#submission-receipt').setInputFiles(receiptPayload(original, {
-      sha256: createHash('sha256').update(original).digest('hex').toUpperCase(),
-      pdf: 'different-backup-name.pdf',
-    }));
-    await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
-    await expect(page.locator('#receipt-pdf')).toHaveText('Receipt PDF: different-backup-name.pdf');
-    await expect(page.locator('#filename')).toHaveText('Renamed Resume.pdf');
-    await expect(page.locator('#submission-receipt')).toHaveValue('');
-    await expect(page.locator('#all-text')).toHaveValue('This edited answer is not the submitted PDF.');
-    await expect(page.locator('.page-card textarea')).toHaveValue(/The submitted PDF/);
-    expect(downloads).toHaveLength(0);
-    await assertPrivate(context, page, observations);
-  });
-}
-
-test('receipt mismatches and unreadable receipts replace a previous match', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  const original = pdfFixture([{ text: 'First PDF' }]);
-  const changed = pdfFixture([{ text: 'Other PDF' }]);
-  expect(changed.length).toBe(original.length);
-  await reviewFile(page, filePayload(changed));
-  await openSubmission(page);
-  const input = page.locator('#submission-receipt');
-  const status = page.locator('#receipt-status');
-  await input.setInputFiles(receiptPayload(original));
-  await expect(status).toContainText('SHA-256 does not match the receipt');
-  await input.setInputFiles(receiptPayload(changed, { bytes: changed.length + 1 }));
-  await expect(status).toContainText('byte count does not match the receipt');
-  const invalidEncoding = receiptPayload(changed).buffer;
-  invalidEncoding[invalidEncoding.indexOf('Acme')] = 0xff;
-  for (const [buffer, expected] of [[Buffer.from('{not JSON'), /JSON/i], [invalidEncoding, /UTF-8 JSON/], [Buffer.alloc(65537, 32), /64 KiB/]]) {
-    await input.setInputFiles(receiptPayload(changed));
-    await expect(status).toContainText('byte count and SHA-256 match the receipt');
-    await input.setInputFiles({ name: 'receipt.json', mimeType: 'application/json', buffer });
-    await expect(status).toContainText(expected);
-    await expect(status).not.toContainText('match the receipt');
-    await expect(page.locator('#receipt-pdf')).toHaveText('');
-    await expect(page.locator('#verify-receipt')).toBeEnabled();
-    await expect(page.locator('#status')).toHaveText('Review ready.');
-  }
-  await assertPrivate(context, page, observations);
-});
-
-test('a newer receipt wins over an unfinished read, and read failures can be retried', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  const original = pdfFixture([{ text: 'One submitted PDF' }]);
-  await reviewFile(page, filePayload(original));
-  await openSubmission(page);
-  await page.evaluate(() => {
-    const read = File.prototype.arrayBuffer;
-    window.restoreReceiptRead = () => { File.prototype.arrayBuffer = read; };
-    File.prototype.arrayBuffer = function (...args) {
-      if (this.name === 'earlier-receipt.json') {
-        return new Promise(resolve => {
-          window.releaseReceiptRead = async () => resolve(await read.apply(this, args));
-        });
-      }
-      if (this.name === 'unreadable-receipt.json') throw new Error('PRIVATE_RECEIPT_READ_DETAIL');
-      return read.apply(this, args);
-    };
-  });
-  const input = page.locator('#submission-receipt');
-  const status = page.locator('#receipt-status');
-  await input.setInputFiles({ ...receiptPayload(original, { bytes: original.length + 1 }), name: 'earlier-receipt.json' });
-  await page.waitForFunction(() => typeof window.releaseReceiptRead === 'function');
-  await expect(status).toHaveText('Checking receipt…');
-  await expect(page.locator('#verify-receipt')).toBeDisabled();
-  await input.setInputFiles(receiptPayload(original, { pdf: 'current-copy.pdf' }));
-  await expect(status).toContainText('byte count and SHA-256 match the receipt');
-  await page.evaluate(() => window.releaseReceiptRead());
-  await expect(status).toContainText('byte count and SHA-256 match the receipt');
-  await expect(page.locator('#receipt-pdf')).toHaveText('Receipt PDF: current-copy.pdf');
-  const unreadable = { ...receiptPayload(original), name: 'unreadable-receipt.json' };
-  await input.setInputFiles(unreadable);
-  await expect(status).toContainText(/not readable|could not|try again/i);
-  await expect(status).not.toContainText('PRIVATE_RECEIPT_READ_DETAIL');
-  await expect(page.locator('#receipt-pdf')).toHaveText('');
-  await expect(page.locator('#verify-receipt')).toBeEnabled();
-  await page.evaluate(() => window.restoreReceiptRead());
-  await input.setInputFiles(unreadable);
-  await expect(status).toContainText('byte count and SHA-256 match the receipt');
-  await expect(page.locator('#status')).toHaveText('Review ready.');
-  await assertPrivate(context, page, observations);
-});
-
-test('receipt results survive cancelled selection and clear with a replaced PDF', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  const original = pdfFixture([{ text: 'First PDF' }]);
-  await reviewFile(page, filePayload(original));
-  await openSubmission(page);
-  await page.locator('#submission-receipt').setInputFiles(receiptPayload(original));
-  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
-  await page.locator('#submission-receipt').setInputFiles([]);
-  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill('Keep my draft');
-  const replacement = filePayload(pdfFixture([{ text: 'Replacement PDF' }]));
-  await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(replacement), false);
-  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
-  await expect(page.locator('#all-text')).toHaveValue('Keep my draft');
-  await discardDecision(page, () => reviewFile(page, replacement), true);
-  await expect(page.locator('#receipt-status')).toHaveText('');
-  await expect(page.locator('#receipt-pdf')).toHaveText('');
-  await page.locator('#clear-file').click();
-  await expect(page.locator('#receipt-status')).toHaveText('');
-  await expect(page.locator('#verify-receipt')).toBeDisabled();
-  await assertPrivate(context, page, observations);
-});
-
-test('receipt hashing failure preserves the review and permits the same receipt again', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  const original = pdfFixture([{ text: 'Keep the PDF and draft' }]);
-  await reviewFile(page, filePayload(original));
-  await openSubmission(page);
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill('Keep this edited answer');
-  await page.evaluate(() => {
-    const digest = crypto.subtle.digest.bind(crypto.subtle);
-    window.restoreReceiptDigest = () => { crypto.subtle.digest = digest; };
-    crypto.subtle.digest = async () => { throw new Error('PRIVATE_RECEIPT_DETAIL'); };
-  });
-  await page.locator('#submission-receipt').setInputFiles(receiptPayload(original));
-  await expect(page.locator('#receipt-status')).toContainText(/could not|failed|try again/i);
-  await expect(page.locator('#receipt-status')).not.toContainText('PRIVATE_RECEIPT_DETAIL');
-  await expect(page.locator('#verify-receipt')).toBeEnabled();
-  await expect(page.locator('#all-text')).toHaveValue('Keep this edited answer');
-  await page.evaluate(() => window.restoreReceiptDigest());
-  await page.locator('#submission-receipt').setInputFiles(receiptPayload(original));
-  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
-  await assertPrivate(context, page, observations);
-});
-
-for (const action of ['replace', 'clear']) {
-  test(`${action} during receipt hashing cannot report a match for the next PDF`, async ({ page, context }) => {
-    const observations = await openReview(page, context);
-    const original = pdfFixture([{ text: 'Previous PDF' }]);
-    await reviewFile(page, filePayload(original));
-    await openSubmission(page);
-    await page.evaluate(() => {
-      const digest = crypto.subtle.digest.bind(crypto.subtle);
-      crypto.subtle.digest = (...args) => {
-        crypto.subtle.digest = digest;
-        return new Promise(resolve => {
-          window.releaseReceiptDigest = async () => resolve(await digest(...args));
-        });
-      };
-    });
-    await page.locator('#submission-receipt').setInputFiles(receiptPayload(original));
-    await page.waitForFunction(() => typeof window.releaseReceiptDigest === 'function');
-    await expect(page.locator('#verify-receipt')).toBeDisabled();
-    await expect(page.locator('#submission-receipt')).toBeDisabled();
-    const replacement = pdfFixture([{ text: 'Current PDF' }]);
-    if (action === 'replace') await reviewFile(page, filePayload(replacement));
-    else await page.locator('#clear-file').click();
-    await page.evaluate(() => window.releaseReceiptDigest());
-    await expect(page.locator('#receipt-status')).toHaveText('');
-    if (action === 'clear') await reviewFile(page, filePayload(replacement));
-    await openSubmission(page);
-    await page.locator('#submission-receipt').setInputFiles(receiptPayload(replacement));
-    await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
-    await assertPrivate(context, page, observations);
-  });
-}
-
-test('receipt selection works by keyboard on a narrow screen', async ({ page, context, browserName }) => {
-  await page.setViewportSize({ width: 320, height: 640 });
-  const observations = await openReview(page, context);
-  const original = pdfFixture([{ text: 'Submitted PDF' }]);
-  await reviewFile(page, filePayload(original));
-  await page.locator('#submission-archive > summary').focus();
-  await page.keyboard.press('Enter');
-  await page.keyboard.press('Tab');
-  await expect(page.locator('#submission-label')).toBeFocused();
-  // Safari on macOS uses Option-Tab to include buttons in keyboard navigation.
-  await page.keyboard.press(process.platform === 'darwin' && browserName === 'webkit' ? 'Alt+Tab' : 'Tab');
-  const choose = page.getByRole('button', { name: 'Choose receipt.json', exact: true });
-  await expect(choose).toBeFocused();
-  const picker = page.waitForEvent('filechooser');
-  await page.keyboard.press('Enter');
-  await (await picker).setFiles(receiptPayload(original));
-  await expect(page.locator('#receipt-status')).toContainText('byte count and SHA-256 match the receipt');
-  await expect(page.locator('#receipt-status')).toHaveAttribute('role', 'status');
-  await expect(page.locator('#receipt-status')).toHaveAttribute('aria-live', 'polite');
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await assertPrivate(context, page, observations);
-});
-
-for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
-  test(`${label}: counts application text as it is edited and reset`, async ({ page, context }) => {
-    const observations = await openReview(page, context, location);
-    await reviewFile(page, filePayload(pdfFixture([{ text: 'Draft' }])));
-    await page.locator('.all-text-panel > summary').click();
-    const draft = page.locator('#all-text');
-    const limit = page.getByLabel('Character limit (optional)');
-    const result = page.locator('#text-limit-result');
-    await expect(result).toHaveText('5 characters.');
-    await limit.fill('5');
-    await expect(result).toHaveText('5 characters. 0 characters remaining.');
-    await draft.focus();
-    await draft.press('End');
-    await page.keyboard.type('!');
-    await expect(result).toHaveText('6 characters. 1 character over the limit.');
-    await expect(draft).toHaveValue('Draft!');
-    await expect(draft).toHaveAttribute('maxlength', '500100');
-    await draft.fill('A😀é\ne\u0301');
-    await limit.fill('7');
-    await expect(result).toHaveText('7 characters. 0 characters remaining.');
-    await expect(result).not.toHaveClass(/limit-warning/);
-    await draft.fill('');
-    await expect(result).toHaveText('0 characters. 7 characters remaining.');
-    await expect(page.locator('#copy-all')).toBeDisabled();
-    await expect(page.locator('#save-text')).toBeDisabled();
-    await discardDecision(page, () => page.locator('#reset-text').click(), true);
-    await expect(result).toHaveText('5 characters. 2 characters remaining.');
-    await expect(limit).toHaveValue('7');
-    await limit.fill('');
-    await expect(result).toHaveText('5 characters.');
-    await expect(page.locator('.page-card textarea')).toHaveValue('Draft');
-    await assertPrivate(context, page, observations);
-  });
-}
-
-test('invalid and exceeded text limits leave the whole draft available to copy and save', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original text' }])));
-  await page.locator('.all-text-panel > summary').click();
-  const edited = 'Zoë\nA😀';
-  await page.locator('#all-text').fill(edited);
-  await page.locator('#max-characters').fill('1e3');
-  await expect(page.locator('#max-characters')).toHaveAttribute('aria-invalid', 'true');
-  await expect(page.locator('#text-limit-result')).toHaveText('7 characters. Enter a positive whole number for the limit, or leave blank.');
-  await page.evaluate(() => {
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true, value: { writeText: async value => { globalThis.copiedText = value; } },
-    });
-  });
-  await page.locator('#copy-all').click();
-  expect(await page.evaluate(() => globalThis.copiedText)).toBe(edited);
-  await page.locator('#max-characters').fill('6');
-  await expect(page.locator('#max-characters')).toHaveAttribute('aria-invalid', 'false');
-  await expect(page.locator('#text-limit-result')).toHaveText('7 characters. 1 character over the limit.');
-  const pending = page.waitForEvent('download');
-  await page.locator('#save-text').click();
-  const download = await pending;
-  const chunks = [];
-  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
-  expect(Buffer.concat(chunks).toString('utf8')).toBe(edited);
-  expect(await download.failure()).toBeNull();
-  await expect(page.locator('#all-text')).toHaveValue(edited);
-  await assertPrivate(context, page, observations);
-});
-
-test('text limits survive replacement and cancellation, then clear with the review', async ({ page, context }) => {
-  const observations = await openReview(page, context, artifactURL);
-  const original = filePayload(pdfFixture([{ text: 'First' }]));
-  const replacement = filePayload(pdfFixture([{ text: 'Second PDF' }]));
-  await reviewFile(page, original);
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#max-characters').fill('6');
-  await page.locator('#all-text').fill('My draft');
-  for (const action of [
-    () => page.locator('#pdf-file').setInputFiles(replacement),
-    () => page.locator('#clear-file').click(),
-    () => page.locator('#reset-text').click(),
-  ]) {
-    await discardDecision(page, action, false);
-    await expect(page.locator('#text-limit-result')).toHaveText('8 characters. 2 characters over the limit.');
-    await expect(page.locator('#max-characters')).toHaveValue('6');
-    await expect(page.locator('#all-text')).toHaveValue('My draft');
-  }
-  await discardDecision(page, () => reviewFile(page, replacement), true);
-  await page.locator('.all-text-panel > summary').click();
-  await expect(page.locator('#text-limit-result')).toHaveText('10 characters. 4 characters over the limit.');
-  await expect(page.locator('#max-characters')).toHaveValue('6');
-  await page.locator('#clear-file').click();
-  await expect(page.locator('#max-characters')).toHaveValue('');
-  await expect(page.locator('#max-characters')).toBeDisabled();
-  await expect(page.locator('#text-limit-result')).toBeEmpty();
-  await reviewFile(page, original);
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#max-characters').fill('6');
-  await page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF')));
-  await expect(page.locator('#error')).toBeVisible();
-  await expect(page.locator('#max-characters')).toHaveValue('');
-  await expect(page.locator('#text-limit-result')).toBeEmpty();
-  await reviewFile(page, original);
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#max-characters').fill('6');
-  await page.reload();
-  await expect(page.locator('#max-characters')).toHaveValue('');
-  await expect(page.locator('#text-limit-result')).toBeEmpty();
-  await assertPrivate(context, page, observations);
-});
-
-test('the text limit is reachable by keyboard and fits narrow screens', async ({ page, context }) => {
-  await page.setViewportSize({ width: 320, height: 640 });
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Draft' }])));
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').focus();
-  await page.keyboard.press('Tab');
-  const limit = page.getByLabel('Character limit (optional)');
-  await expect(limit).toBeFocused();
-  await page.keyboard.type('4');
-  await expect(page.locator('#text-limit-result')).toHaveText('5 characters. 1 character over the limit.');
-  await expect(page.locator('#text-limit-result')).toHaveAttribute('role', 'status');
-  await limit.fill('9007199254740991');
-  for (const width of [320, 390, 1280]) {
-    await page.setViewportSize({ width, height: 844 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const bounds = await limit.boundingBox();
-    expect(bounds.x).toBeGreaterThanOrEqual(0);
-    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
-  }
-  await assertPrivate(context, page, observations);
-});
-
-test('empty drafts disable copy and save but can be reset', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Recover this extraction' }])));
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill(' \n ');
-  await expect(page.locator('#copy-all')).toBeDisabled();
-  await expect(page.locator('#save-text')).toBeDisabled();
-  await expect(page.locator('#reset-text')).toBeEnabled();
-  await discardDecision(page, () => page.locator('#reset-text').click(), true);
-  await expect(page.locator('#all-text')).toHaveValue('Recover this extraction');
-  await assertPrivate(context, page, observations);
-});
-
-test('confirmed replacement and clearing discard edits without saving them', async ({ page, context }) => {
-  const observations = await openReview(page, context, artifactURL);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'First document' }])));
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill('Private edited draft');
-  await discardDecision(page, () => reviewFile(page, filePayload(pdfFixture([{ text: 'Replacement document' }]))), true);
-  await expect(page.locator('#all-text')).toHaveValue('Replacement document');
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill('Another draft');
-  await discardDecision(page, () => page.locator('#clear-file').click(), true);
-  await expect(page.locator('#all-text')).toHaveValue('');
-  await expect(page.locator('#all-text')).toHaveAttribute('readonly', '');
-  await expect(page.locator('#save-text')).toBeDisabled();
-  await expect(page.locator('#reset-text')).toBeDisabled();
-  await page.reload();
-  await expect(page.locator('#all-text')).toHaveValue('');
-  await expect(page.locator('#review')).toBeHidden();
-  await assertPrivate(context, page, observations);
-});
-
-for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
-  test(`${label}: cancelling replacement keeps edits, pages, and upload limits`, async ({ page, context }) => {
-    const observations = await openReview(page, context, location);
-    await reviewFile(page, filePayload(pdfFixture([{ text: 'Original document' }]), 'original.pdf'));
-    await page.locator('#upload-limits > summary').click();
-    await page.locator('#max-pages').fill('1');
-    await page.locator('.all-text-panel > summary').click();
-    await page.locator('#all-text').fill('Keep these edits');
-    const replacement = filePayload(pdfFixture([{ text: 'Replacement document' }]), 'replacement.pdf');
-    await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(replacement), false);
-    await expect(page.locator('#filename')).toHaveText('original.pdf');
-    await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
-    await expect(page.locator('.page-card textarea')).toHaveValue('Original document');
-    await expect(page.locator('#max-pages')).toHaveValue('1');
-    expect(await page.locator('#pdf-file').inputValue()).toBe('');
-    // Rejected input must not bypass the choice to keep the current draft.
-    for (const buffer of [Buffer.alloc(0), Buffer.from('not a PDF'), Buffer.alloc(20 * 1024 * 1024 + 1)]) {
-      await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(buffer)), false);
-      await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
-      await expect(page.locator('#filename')).toHaveText('original.pdf');
-      await expect(page.locator('#max-pages')).toHaveValue('1');
-      await expect(page.locator('#error')).toBeHidden();
-    }
-    await page.locator('#pdf-file').setInputFiles([]);
-    await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
-    // Selecting the same replacement again must still fire the change event.
-    await discardDecision(page, () => reviewFile(page, replacement), true);
-    await expect(page.locator('#all-text')).toHaveValue('Replacement document');
-    await expect(page.locator('#max-pages')).toHaveValue('1');
-    await assertPrivate(context, page, observations);
-  });
-}
-
-test('keyboard cancellation preserves edited text on clear and reset', async ({ page, context }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test('a multi-file drop is rejected and keeps the current review', async ({ page, context }) => {
   const observations = await openReview(page, context);
   await reviewFile(page, filePayload(pdfFixture([{ text: 'Original document' }])));
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill('Keep these edits');
-  for (const id of ['clear-file', 'reset-text']) {
-    await page.locator(`#${id}`).focus();
-    await discardDecision(page, () => page.keyboard.press('Enter'), false);
-    await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
-    await expect(page.locator(`#${id}`)).toBeFocused();
-  }
-  await discardDecision(page, () => page.locator('#reset-text').click(), true);
-  await expect(page.locator('#all-text')).toHaveValue('Original document');
-  // Restored text needs no confirmation to clear.
-  await page.locator('#clear-file').click();
-  await expect(page.locator('#review')).toBeHidden();
-  await assertPrivate(context, page, observations);
-});
-
-test('cancelled and multi-file drops keep the current draft', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original document' }])));
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill('Keep these edits');
   const bytes = [...pdfFixture([{ text: 'Dropped document' }])];
   const drop = count => page.locator('#drop-zone').evaluate((zone, { bytes, count }) => {
     const transfer = new DataTransfer();
     for (let i = 0; i < count; i += 1) transfer.items.add(new File([new Uint8Array(bytes)], `resume-${i}.pdf`));
     zone.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
   }, { bytes, count });
-  await discardDecision(page, () => drop(1), false);
-  await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
   await drop(2);
   await expect(page.locator('#error')).toHaveText('Choose one PDF at a time.');
-  await expect(page.locator('#all-text')).toHaveValue('Keep these edits');
   await expect(page.locator('.page-card textarea')).toHaveValue('Original document');
-  await discardDecision(page, () => drop(1), true);
+  await expect(page.locator('#all-text')).toHaveValue('Original document');
+  await drop(1);
+  await expect(page.locator('#status')).toHaveText('Review ready.');
   await expect(page.locator('#all-text')).toHaveValue('Dropped document');
   await expect(page.locator('#error')).toBeHidden();
-  await expect(page.locator('#status')).toHaveText('Review ready.');
   await assertPrivate(context, page, observations);
 });
 
-test('unload protection follows edits and is removed after reset or clear', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  const protectedFromUnload = () => page.evaluate(() => {
-    const event = new Event('beforeunload', { cancelable: true });
-    window.dispatchEvent(event);
-    return event.defaultPrevented;
-  });
-  expect(await protectedFromUnload()).toBe(false);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original document' }])));
-  await page.locator('.all-text-panel > summary').click();
-  expect(await protectedFromUnload()).toBe(false);
-  await page.locator('#all-text').fill('Edited text');
-  expect(await protectedFromUnload()).toBe(true);
-  await page.locator('#all-text').fill('Original document');
-  expect(await protectedFromUnload()).toBe(false);
-  await page.locator('#all-text').fill('');
-  expect(await protectedFromUnload()).toBe(true);
-  await discardDecision(page, () => page.locator('#reset-text').click(), true);
-  expect(await protectedFromUnload()).toBe(false);
-  await page.locator('#all-text').fill('More edits');
-  await discardDecision(page, () => page.locator('#clear-file').click(), true);
-  expect(await protectedFromUnload()).toBe(false);
-  await assertPrivate(context, page, observations);
-});
-
-test('incomplete text stays visible beside the editable copy', async ({ page, context }) => {
+test('incomplete extraction is flagged beside the text copy', async ({ page, context }) => {
   const observations = await openReview(page, context);
   await reviewFile(page, filePayload(pdfFixture([{ text: 'Readable page' }, { image: true }])));
   await page.locator('.all-text-panel > summary').click();
   await expect(page.locator('#draft-warning')).toBeVisible();
   await expect(page.locator('#draft-warning')).toContainText('Some PDF text was not extracted');
-  await page.locator('#all-text').fill('A manual text copy');
-  await expect(page.locator('#draft-warning')).toBeVisible();
-  await discardDecision(page, () => reviewFile(page, filePayload(pdfFixture([{ text: 'Complete extraction' }]))), true);
+  await expect(page.locator('#all-text')).toHaveValue(/Readable page/);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Complete extraction' }])));
   await page.locator('.all-text-panel > summary').click();
   await expect(page.locator('#draft-warning')).toBeHidden();
   await assertPrivate(context, page, observations);
 });
 
-test('a download failure preserves edits and offers copying', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Keep this text' }])));
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill('Unsaved edits');
-  await page.evaluate(() => { URL.createObjectURL = () => { throw new Error('Download unavailable'); }; });
-  await page.locator('#save-text').click();
-  await expect(page.locator('#status')).toContainText('Use Copy all text instead');
-  await expect(page.locator('#all-text')).toHaveValue('Unsaved edits');
-  await expect(page.locator('#copy-all')).toBeEnabled();
+test('reload discards the review', async ({ page, context }) => {
+  const observations = await openReview(page, context, artifactURL);
+  await reviewFile(page, filePayload(pdfFixture([{ text: 'Discard on reload' }])));
+  await page.reload();
+  await expect(page.locator('#review')).toBeHidden();
+  await expect(page.locator('#all-text')).toHaveValue('');
+  await expect(page.locator('#pages')).toBeEmpty();
   await assertPrivate(context, page, observations);
 });
 
@@ -1538,88 +740,23 @@ test("remains usable at a narrow viewport", async ({ page, context }) => {
   await expect(page.locator("#clear-file")).toBeVisible();
   await expect(page.locator(".page-card textarea")).toBeVisible();
   await page.locator('.all-text-panel > summary').click();
-  await expect(page.locator('#save-text')).toBeVisible();
-  await expect(page.locator('#all-text')).toBeEditable();
+  await expect(page.locator('#all-text')).toBeVisible();
+  await expect(page.locator('#all-text')).toHaveAttribute('readonly', '');
+  await expect(page.locator('#character-count')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await assertPrivate(context, page, observations);
 });
 
-test('file properties are read on demand and keep PDF and XMP values separate', async ({ page, context }) => {
-  const observations = await openReview(page, context, artifactURL);
-  const xmp = `<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Older XMP title</rdf:li></rdf:Alt></dc:title><dc:creator><rdf:Seq><rdf:li>Previous Author</rdf:li><rdf:li>Another Author</rdf:li></rdf:Seq></dc:creator></rdf:Description></rdf:RDF></x:xmpmeta>`;
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Visible resume text' }], {
-    title: 'Current PDF title', info: { Author: 'Zoë', Creator: 'Test writer', CreationDate: 'D:20260928120000Z' }, xmp,
-  })));
-  await expect(page.locator('#file-properties')).not.toHaveAttribute('open');
-  await expect(page.locator('#properties-list')).toBeEmpty();
-  await page.locator('#file-properties > summary').click();
-  await expect(page.locator('#properties-list')).toContainText('Current PDF title');
-  await expect(page.locator('#properties-list')).toContainText('Older XMP title');
-  await expect(page.locator('#properties-list')).toContainText('Previous Author; Another Author');
-  await expect(page.locator('#properties-list')).toContainText('Zoë');
-  await expect(page.locator('#properties-list')).toContainText('Title (PDF)');
-  await expect(page.locator('#properties-list')).toContainText('Title (XMP)');
-  await expect(page.locator('#properties-list')).toContainText('D:20260928120000Z');
-  await expect(page.locator('#all-text')).toHaveValue('Visible resume text');
-  await page.locator('#file-properties > summary').click();
-  const count = await page.locator('#properties-list > div').count();
-  await page.locator('#file-properties > summary').click();
-  await expect(page.locator('#properties-list > div')).toHaveCount(count);
-  await assertPrivate(context, page, observations);
-});
-
-test('property values are inert text with visible controls and bounded length', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  const title = '<img src="https://example.test/metadata" onerror="globalThis.metadataExecuted=true">';
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Safe page' }], {
-    title, info: { Author: 'Name\u202eHidden', Subject: 'x'.repeat(2000) },
-  })));
-  await page.locator('#file-properties > summary').click();
-  await expect(page.locator('#properties-list')).toContainText(title);
-  await expect(page.locator('#properties-list')).toContainText('Name\\u202eHidden');
-  await expect(page.locator('#properties-list img, #properties-list a, #properties-list script')).toHaveCount(0);
-  await expect(page.locator('#properties-status')).toContainText('cut short');
-  expect(await page.evaluate(() => globalThis.metadataExecuted)).toBeUndefined();
-  const subject = page.locator('#properties-list > div').filter({ hasText: 'Subject (PDF)' });
-  await expect(subject.locator('dd')).toHaveText('x'.repeat(1024) + 'Value cut short.');
-  await assertPrivate(context, page, observations);
-});
-
-test('missing properties are scoped to checked fields and do not imply a clean file', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'A document without common properties' }], { title: null, info: { CustomField: 'Not part of this inspection' } })));
-  await page.locator('#file-properties > summary').click();
-  await expect(page.locator('#properties-status')).toHaveText('No values reported for the fields checked.');
-  await expect(page.locator('#file-properties')).toContainText('not a complete privacy check');
-  await expect(page.locator('#properties-list')).toBeEmpty();
-  await assertPrivate(context, page, observations);
-});
-
-test('clearing and replacing a file discard its properties', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'First PDF' }], { title: 'Old private title' })));
-  await page.locator('#file-properties > summary').click();
-  await expect(page.locator('#properties-list')).toContainText('Old private title');
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Second PDF' }], { title: 'Replacement title' })));
-  await expect(page.locator('#properties-list')).toBeEmpty();
-  await expect(page.locator('#file-properties')).not.toHaveAttribute('open');
-  await page.locator('#file-properties > summary').click();
-  await expect(page.locator('#properties-list')).toContainText('Replacement title');
-  await expect(page.locator('#properties-list')).not.toContainText('Old private title');
-  await page.locator('#clear-file').click();
-  await expect(page.locator('#file-properties')).toBeHidden();
-  await expect(page.locator('#properties-list')).toBeEmpty();
-  await expect(page.locator('#properties-status')).toHaveText('');
-  await assertPrivate(context, page, observations);
-});
-
-
 for (const failure of ['preview timeout', 'worker failure']) {
-  test(`${failure} preserves edited text for copying and saving`, async ({ page, context }) => {
+  test(`${failure} reports an error and the next PDF can be reviewed`, async ({ page, context }) => {
     await page.addInitScript(() => {
       const NativeWorker = window.Worker;
+      let intercepted = false;
       window.Worker = function (...args) {
         const worker = new NativeWorker(...args);
+        // Interfere with the first review only, so the replacement can finish.
+        if (intercepted) return worker;
+        intercepted = true;
         window.failReviewWorker = () => worker.dispatchEvent(new ErrorEvent('error', { cancelable: true }));
         const post = worker.postMessage.bind(worker);
         worker.postMessage = (message, ...args) => {
@@ -1639,145 +776,14 @@ for (const failure of ['preview timeout', 'worker failure']) {
     const observations = await openReview(page, context);
     await page.locator('#pdf-file').setInputFiles(filePayload(pdfFixture([{ text: 'Original PDF text' }])));
     await expect(page.locator('#status')).toContainText('Rendering page');
-    await expect(page.locator('#save-submission')).toBeDisabled();
-    await page.locator('.all-text-panel > summary').click();
-    await page.locator('#all-text').fill('An edited application answer');
+    await expect(page.locator('#all-text')).toHaveValue('Original PDF text');
     await page.evaluate(kind => kind === 'preview timeout' ? window.expireReview() : window.failReviewWorker(), failure);
     await expect(page.locator('#error')).toBeVisible();
-    await expect(page.locator('#save-submission')).toBeDisabled();
-    await expect(page.locator('#all-text')).toHaveValue('An edited application answer');
-    await expect(page.locator('#all-text')).toBeEditable();
-    await expect(page.locator('#copy-all')).toBeEnabled();
-    await expect(page.locator('#save-text')).toBeEnabled();
-    await expect(page.locator('#pages canvas')).toHaveCount(0);
-    const saved = page.waitForEvent('download');
-    await page.locator('#save-text').click();
-    const download = await saved;
-    expect(download.suggestedFilename()).toBe('fixture-text.txt');
-    await discardDecision(page, () => page.locator('#clear-file').click(), false);
-    await expect(page.locator('#all-text')).toHaveValue('An edited application answer');
-    await discardDecision(page, () => page.locator('#clear-file').click(), true);
     await expect(page.locator('#review')).toBeHidden();
+    await expect(page.locator('#all-text')).toHaveValue('');
+    await expect(page.locator('#pages canvas')).toHaveCount(0);
+    await reviewFile(page, filePayload(pdfFixture([{ text: 'Recovered after failure' }])));
+    await expect(page.locator('#all-text')).toHaveValue('Recovered after failure');
     await assertPrivate(context, page, observations);
   });
 }
-
-for (const [label, location] of [['downloaded file', artifactURL], ['hosted page', '/']]) {
-  test(`${label}: compares original PDF wording and link destinations offline`, async ({ page, context }) => {
-    const observations = await openReview(page, context, location);
-    await reviewFile(page, filePayload(pdfFixture([{ text: 'Built API v1', links: [{ url: 'https://example.test/old' }] }]), 'before.pdf'));
-    await page.locator('#comparison > summary').click();
-    await page.locator('.all-text-panel > summary').click();
-    await page.locator('#all-text').fill('Draft text must stay out of the comparison');
-    await page.locator('#keep-before').click();
-    await expect(page.locator('#comparison-status')).toContainText('Open the revised PDF');
-    await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(pdfFixture([
-      { text: 'Built API v2', links: [{ url: 'https://example.test/new' }] }, { text: 'Another project' },
-    ]), 'after.pdf')), true);
-    await expect(page.locator('#status')).toHaveText('Review ready.');
-    await expect(page.locator('#comparison-files')).toContainText('before.pdf');
-    await expect(page.locator('#comparison-files')).toContainText('after.pdf');
-    await expect(page.locator('#comparison-files')).toContainText('1 page');
-    await expect(page.locator('#comparison-files')).toContainText('2 pages');
-    await expect(page.locator('.comparison-text del')).toContainText('v1');
-    await expect(page.locator('.comparison-text ins').first()).toContainText('v2');
-    await expect(page.locator('#comparison-results')).not.toContainText('Draft text must');
-    await expect(page.locator('.comparison-links')).toContainText('https://example.test/old');
-    await expect(page.locator('.comparison-links')).toContainText('https://example.test/new');
-    await expect(page.locator('.comparison-links a')).toHaveCount(0);
-    await page.locator('.all-text-panel > summary').click();
-    await page.locator('#all-text').fill('Another draft');
-    await expect(page.locator('#comparison-results')).not.toContainText('Another draft');
-    await assertPrivate(context, page, observations);
-  });
-}
-
-test('comparison ignores reflow but retains duplicate link changes', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  const destination = { url: 'https://example.test/code', label: '' };
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Built an API.', links: [destination, destination] }])));
-  await page.locator('#comparison > summary').click();
-  await page.locator('#keep-before').click();
-  await reviewFile(page, filePayload(pdfFixture([{ content: 'BT /F1 12 Tf 72 720 Td (Built an) Tj 0 -20 Td (API.) Tj ET', links: [destination] }])));
-  await expect(page.locator('#comparison-results')).toContainText('No differences in extracted text.');
-  await expect(page.locator('.comparison-links')).toContainText('Removed · 1 occurrence');
-  await expect(page.locator('.comparison-links li')).toHaveCount(1);
-  await expect(page.locator('#comparison')).toContainText('does not mean the PDFs look alike');
-  await assertPrivate(context, page, observations);
-});
-
-test('comparison never declares scanned or form-field text unchanged', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  for (const fixture of [{ image: true }, { text: 'Contact', formValue: 'Entered name' }]) {
-    await reviewFile(page, filePayload(pdfFixture([fixture])));
-    await page.locator('#comparison').evaluate(node => { node.open = true; });
-    await page.locator('#keep-before').click();
-    await reviewFile(page, filePayload(pdfFixture([fixture])));
-    await expect(page.locator('#comparison-results')).toContainText('Text comparison is incomplete.');
-    await expect(page.locator('#comparison-results')).not.toContainText('No differences in extracted text.');
-    await page.locator('#clear-before').click();
-  }
-  await assertPrivate(context, page, observations);
-});
-
-test('failed or cancelled replacement keeps the before copy until explicitly forgotten', async ({ page, context }) => {
-  const observations = await openReview(page, context);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Original resume' }]), 'before.pdf'));
-  await page.locator('#comparison > summary').click();
-  await page.locator('#keep-before').click();
-  await page.locator('.all-text-panel > summary').click();
-  await page.locator('#all-text').fill('Keep my draft');
-  await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF'))), false);
-  await expect(page.locator('#all-text')).toHaveValue('Keep my draft');
-  await expect(page.locator('#comparison-files')).toContainText('before.pdf');
-  await discardDecision(page, () => page.locator('#pdf-file').setInputFiles(filePayload(Buffer.from('not a PDF'))), true);
-  await expect(page.locator('#error')).toBeVisible();
-  await expect(page.locator('#comparison-files')).toContainText('before.pdf');
-  await expect(page.locator('#comparison-results')).toBeEmpty();
-  await page.locator('#pdf-file').setInputFiles(filePayload(encryptedFixture()));
-  await expect(page.locator('#password-form')).toBeVisible();
-  await page.locator('#cancel-password').click();
-  await expect(page.locator('#comparison-files')).toContainText('before.pdf');
-  await page.locator('#clear-before').click();
-  await expect(page.locator('#comparison')).toBeHidden();
-  await expect(page.locator('#comparison-files')).toBeEmpty();
-  await assertPrivate(context, page, observations);
-});
-
-test('clear and reload forget both comparison copies', async ({ page, context }) => {
-  const observations = await openReview(page, context, artifactURL);
-  for (const action of ['clear', 'reload']) {
-    await reviewFile(page, filePayload(pdfFixture([{ text: 'Before contents' }])));
-    await page.locator('#comparison > summary').click();
-    await page.locator('#keep-before').click();
-    await reviewFile(page, filePayload(pdfFixture([{ text: 'After contents' }])));
-    await expect(page.locator('#comparison-results')).toContainText('After');
-    if (action === 'clear') await page.locator('#clear-file').click();
-    else await page.reload();
-    await expect(page.locator('#comparison')).toBeHidden();
-    await expect(page.locator('#comparison-files')).toBeEmpty();
-    await expect(page.locator('#comparison-results')).toBeEmpty();
-  }
-  await assertPrivate(context, page, observations);
-});
-
-test('comparison is keyboard usable at phone width and treats markup as text', async ({ page, context }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  const observations = await openReview(page, context, artifactURL);
-  await reviewFile(page, filePayload(pdfFixture([{ text: 'Before version' }]), 'before.pdf'));
-  const summary = page.locator('#comparison > summary');
-  await summary.focus();
-  await page.keyboard.press('Enter');
-  await page.locator('#keep-before').focus();
-  await page.keyboard.press('Enter');
-  const markup = '<img src=https://example.test/private>';
-  await reviewFile(page, filePayload(pdfFixture([{ text: markup }]), 'Long-'.repeat(40) + '.pdf'));
-  await expect(page.locator('.comparison-text')).toContainText(markup);
-  await expect(page.locator('#comparison-results img, #comparison-results script')).toHaveCount(0);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.locator('#clear-before').focus();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('#keep-before')).toBeFocused();
-  await expect(page.locator('#comparison-results')).toBeEmpty();
-  await assertPrivate(context, page, observations);
-});

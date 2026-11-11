@@ -15,14 +15,22 @@
   \contactsep \resumelink{https://www.linkedin.com/in/your-handle}{LinkedIn}
   \contactsep \resumelink{https://github.com/your-handle}{GitHub}
 }
+% Optional: two or three specific sentences, or delete this line.
+% \resumesummary{[What you build, for whom, and the one thing the first entry cannot say]}
 
 \section{Experience}
 
 % Use your actual titles. Delete unused roles; give recent work the most space.
-\jobentry{[Current role]}{Company A}{City, Region}{Month Year -- Present}
+% Promoted at one company? Keep one company heading with the overall dates,
+% then one \jobsubentry and its bullets per role, newest first.
+\jobentry{}{Company A}{City, Region}{Month Year -- Present}
+\jobsubentry{[Current role]}{Month Year -- Present}
 \begin{jobduties}
   \item Chose [architecture] for [service] over [alternative] because [constraint]; split the migration into [stages] with [rollback condition].
   \item Defined [shared API contract] with [consumer teams]; migrated [N] integrations and kept [old behavior] working until clients moved.
+\end{jobduties}
+\jobsubentry{[Earlier role at the same company]}{Month Year -- Month Year}
+\begin{jobduties}
   \item Traced [recurring outage] to [failure mode]; changed [isolation or recovery mechanism] and verified recovery with [failure test].
 \end{jobduties}
 
@@ -40,6 +48,9 @@
   \item Fixed [defect] caused by [state or timing condition] and kept the failing case as a regression test.
 \end{jobduties}
 
+% Optional: roles too old for bullets, one line each.
+% \resumerow{[Earlier role], Company D}{City, Region}{Year -- Year}
+
 \section{Skills}
 \begin{skillitems}
   \item \textbf{Languages}: [Language], [Language], [Language].
@@ -52,7 +63,8 @@
 \jobentry{[Degree and Major]}{[University]}{[City, Region]}{[Graduation Month Year]}
 
 % Optional: uncomment only if you hold a credential relevant to the role.
+% Write the level after a comma; the row prints its own dash before the issuer.
 % \section{Certifications}
-% \jobentry{[Issuing Organization]}{[Certification]}{}{[Year]}
+% \resumerow{[Certification, Level]}{[Issuing Organization]}{[Year]}
 
 \end{document}

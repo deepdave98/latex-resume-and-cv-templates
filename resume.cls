@@ -7,43 +7,63 @@
 \LoadClass{article}
 
 % Page margins: change the four geometry values below.
-\RequirePackage[left=0.5in,top=0.5in,right=0.5in,bottom=0.5in]{geometry}
+\RequirePackage[left=0.5in,top=0.5in,right=0.5in,bottom=0.5in,footskip=18pt]{geometry}
 \RequirePackage{xcolor}
 \RequirePackage{fontspec}
 \RequirePackage{titlesec}
 \RequirePackage{enumitem}
 \RequirePackage{etoolbox}
+\RequirePackage{xspace}
 \RequirePackage{needspace}
 \RequirePackage[normalem]{ulem}
 \RequirePackage{hyperref}
 
-\pagestyle{empty}
 \raggedbottom
+
+% Pages after the first show the name and page number in the footer.
+% A one-page resume has no footer.
+\def\resume@name{}
+\newcommand{\resume@footer}{%
+  \footnotesize\color{namecolor}\resume@name\hfill Page~\thepage
+  \ifdefined\PreviousTotalPages
+    \ifnum\PreviousTotalPages>1 \space of~\PreviousTotalPages\fi
+  \fi
+}
+\newcommand{\ps@resume}{%
+  \let\@oddhead\@empty \let\@evenhead\@empty
+  \def\@oddfoot{\ifnum\value{page}>1 \resume@footer\fi}%
+  \let\@evenfoot\@oddfoot
+}
+\pagestyle{resume}
+
+% Ligatures: keep TeX's -- and quotes, but print ff, fi, and fl as separate
+% letters so a PDF parser reads the plain word.
+\defaultfontfeatures{Ligatures={TeX,NoCommon}}
 
 % Font: replace the four OpenType filenames below; compile with XeLaTeX.
 \setmainfont{lmroman10-regular.otf}[
   BoldFont=lmroman10-bold.otf,
   ItalicFont=lmroman10-italic.otf,
-  BoldItalicFont=lmroman10-bolditalic.otf
+  BoldItalicFont=lmroman10-bolditalic.otf,
+  SmallCapsFont=lmromancaps10-regular.otf
 ]
 
-% Colors: namecolor controls resume text and headings; linkblue controls links.
+% Colors: namecolor for the name, headings, and entry lines; resumetextcolor
+% for bullets and letter paragraphs; linkblue for links.
 \definecolor{namecolor}{HTML}{293E49}
+\definecolor{resumetextcolor}{HTML}{293E49}
 \definecolor{linkblue}{HTML}{003B73}
 
-% Link colors and default PDF metadata; each resume can override its title and subject.
+% Link colors. The PDF title and author come from \resumename; the title
+% ends with \resumedoctype, which a CV or cover letter redefines.
 \hypersetup{
   colorlinks=true,
   urlcolor=linkblue,
   linkcolor=linkblue,
-  pdftitle={Resume},
-  pdfauthor={},
-  pdfsubject={},
-  pdfkeywords={},
-  pdfcreator={XeLaTeX},
-  pdfproducer={}
+  pdfcreator={XeLaTeX}
 }
 \urlstyle{same}
+\newcommand{\resumedoctype}{Resume}
 
 % Link styling: replace \uline{#2} with #2 to remove underlining.
 \newcommand{\resumelink}[2]{\href{#1}{\uline{#2}}}
@@ -131,12 +151,13 @@
       { } \l__resume_check_tl
     \bool_set_false:N \l__resume_placeholder_bool
     \__resume_match:n { \[ [^\[\]]* \] }
+    \__resume_match:n { your-handle }
     \str_case:nn {#2}
       {
         {name}{ \__resume_match:n { \A \s* Your \s+ Name \s* \Z } }
         {contact}{
           \__resume_match:n
-            { hello@example\.com | your-handle |
+            { hello@example\.com |
               \+1 [\s().\-]* 555 [\s().\-]* 555 [\s().\-]* 5555 |
               City,? \s+ Region }
         }
@@ -200,16 +221,27 @@
 % Header styling: adjust the name size, contact size, and vertical gaps here.
 \newcommand{\resumename}[1]{%
   \resumecheckfield{resume name}{name}{#1}%
+  \gdef\resume@name{#1}%
+  \hypersetup{pdfauthor={#1},pdftitle={#1 \resumedoctype}}%
   \noindent{\fontsize{30}{36}\selectfont\color{namecolor}\textbf{#1}}\par
   \vspace{6pt}%
 }
 
-\newcommand{\contactsep}{\enspace\ensuremath{\diamond}\enspace}
+% A long contact line breaks after a separator, never before one.
+\newcommand{\contactsep}{\unskip\nobreak\enspace\ensuremath{\diamond}\enskip}
 
 \newcommand{\resumecontact}[1]{%
   \resumecheckfield{contact details}{contact}{#1}%
-  {\small\color{namecolor}#1}\par
+  {\small\color{namecolor}\raggedright#1\par}%
   \vspace{8pt}{\color{black!60}\hrule height 0.5pt}%
+}
+
+% \resumesummary{Two or three sentences}: optional paragraph under the
+% contact line. Say what the first entry cannot; no adjectives.
+\newcommand{\resumesummary}[1]{%
+  \resumecheckfield{summary}{summary}{#1}%
+  \vspace{6pt}%
+  {\color{resumetextcolor}\linespread{1.06}\selectfont #1\par}%
 }
 
 % Section styling: adjust heading typography, divider, and spacing below.
@@ -220,6 +252,10 @@
 
 \titlespacing*{\section}{0pt}{9pt}{6pt}
 
+% Move a heading to the next page when its first entry would not fit below
+% it: the heading block plus the five lines an entry reserves.
+\newcommand{\sectionbreak}{\Needspace{8.5\baselineskip}}
+
 \newlength{\jobdutiesvspace}
 \newcounter{resumeentry}
 \newsavebox{\resumeorganizationbox}
@@ -229,12 +265,12 @@
 \newlength{\resumeorganizationwidth}
 \newlength{\resumeentryspace}
 
-% Keep the original single-line layout when it fits. Otherwise, wrap the
-% organization/location beside dates. Dates use at most 40% of the line;
-% a 1em gap separates the columns. No font sizes or margins are reduced.
-\newcommand{\resumeentryheading}[3]{%
-  \sbox{\resumeorganizationbox}{\color{namecolor}\textbf{#1}\ifblank{#2}{}{\space--\space#2}}%
-  \sbox{\resumedatesbox}{\small\textbf{\color{namecolor}#3}}%
+% Set \resumeheadingbox: the left text and dates on one line when they fit.
+% Otherwise, wrap the left text beside the dates. Dates use at most 40% of
+% the line; a 1em gap separates the columns. No font sizes or margins change.
+\newcommand{\resume@headingbox}[2]{%
+  \sbox{\resumeorganizationbox}{\color{namecolor}#1}%
+  \sbox{\resumedatesbox}{\small\textbf{\color{namecolor}#2}}%
   \ifdim\dimexpr\wd\resumeorganizationbox+\wd\resumedatesbox+2\tabcolsep\relax>\linewidth
     \setlength{\resumedateswidth}{\wd\resumedatesbox}%
     \ifdim\resumedateswidth>0.4\linewidth
@@ -243,8 +279,8 @@
     \setlength{\resumeorganizationwidth}{\dimexpr\linewidth-\resumedateswidth-1em\relax}%
     \sbox{\resumeheadingbox}{%
       \begin{tabular}{@{}p{\resumeorganizationwidth}@{\hspace{1em}}p{\resumedateswidth}@{}}
-        \raggedright\leavevmode{\color{namecolor}\textbf{#1}\ifblank{#2}{}{\space--\space#2}} &
-        \raggedleft\small\leavevmode\textbf{\color{namecolor}#3}\tabularnewline
+        \raggedright\leavevmode{\color{namecolor}#1} &
+        \raggedleft\small\leavevmode\textbf{\color{namecolor}#2}\tabularnewline
       \end{tabular}%
     }%
   \else
@@ -254,6 +290,10 @@
       \end{tabular*}%
     }%
   \fi
+}
+
+\newcommand{\resumeentryheading}[3]{%
+  \resume@headingbox{\textbf{#1}\ifblank{#2}{}{\space--\space#2}}{#3}%
   % Reserve space for wrapped headings and the role that follows them.
   \setlength{\resumeentryspace}{\dimexpr\ht\resumeheadingbox+\dp\resumeheadingbox+3\baselineskip\relax}%
   \ifdim\resumeentryspace<5\baselineskip
@@ -265,8 +305,8 @@
 }
 
 % \jobentry[Optional summary]{Title}{Company}{Location}{Dates}
-% Pass {} for Location to omit it.
-% The gap before jobduties is 5pt with a summary and 3pt without.
+% Pass {} for Location to omit it, or {} for Title when \jobsubentry
+% lines follow. The gap before jobduties is 5pt with a summary and 3pt without.
 \newcommand{\jobentry}[5][]{%
   \stepcounter{resumeentry}%
   \resumecheckfield{entry \arabic{resumeentry} summary}{summary}{#1}%
@@ -276,8 +316,10 @@
   \resumecheckfield{entry \arabic{resumeentry} dates}{dates}{#5}%
   \ifblank{#1}{\setlength{\jobdutiesvspace}{3pt}}{\setlength{\jobdutiesvspace}{5pt}}%
   \resumeentryheading{#3}{#4}{#5}%
-  \vspace{1pt}%
-  {\color{namecolor}\textit{#2}}\par\nopagebreak%
+  \ifblank{#2}{}{%
+    \vspace{1pt}%
+    {\color{namecolor}\textit{#2}}\par\nopagebreak%
+  }%
   \ifblank{#1}{}{%
     \vspace{4pt}%
     {\small\itshape\color{namecolor}#1\/}\par\nopagebreak%
@@ -285,11 +327,64 @@
   \par\nopagebreak%
 }
 
+% \resumerow{Name}{Detail}{Date}: a one-line dated entry for a certification,
+% award, talk, license, or early role. Pass {} for Detail. Use a comma inside
+% Name; the row prints its own dash before Detail.
+\newcommand{\resumerow}[3]{%
+  \stepcounter{resumeentry}%
+  \resumecheckfield{entry \arabic{resumeentry} name}{organization}{#1}%
+  \resumecheckfield{entry \arabic{resumeentry} detail}{role}{#2}%
+  \resumecheckfield{entry \arabic{resumeentry} dates}{dates}{#3}%
+  \resume@headingbox{#1\ifblank{#2}{}{\space--\space#2}}{#3}%
+  \Needspace{2\baselineskip}%
+  \vspace{3pt}%
+  \noindent\usebox{\resumeheadingbox}\par
+}
+
+% \jobsubentry{Title}{Dates}: one role under an organization heading.
+% For promotions, write \jobentry{}{Company}{Location}{Overall dates}, then a
+% \jobsubentry and its jobduties for each role, newest first.
+\newcommand{\jobsubentry}[2]{%
+  \stepcounter{resumeentry}%
+  \resumecheckfield{entry \arabic{resumeentry} role}{role}{#1}%
+  \resumecheckfield{entry \arabic{resumeentry} dates}{dates}{#2}%
+  \setlength{\jobdutiesvspace}{3pt}%
+  \Needspace{3\baselineskip}%
+  \vspace{1pt}%
+  \noindent\begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}r@{}}
+    {\color{namecolor}\textit{#1}} & {\small\textbf{\color{namecolor}#2}}
+  \end{tabular*}\par\nopagebreak%
+}
+
 % Entry bullets: adjust line spacing, marker, indentation, and list spacing here.
 \NewDocumentEnvironment{jobduties}{+b}{%
   \resumecheckfield{entry \arabic{resumeentry} bullets}{bullets}{#1}%
-  \vspace{\jobdutiesvspace}%
-  \color{namecolor}\normalfont%
+  \ifblank{#1}{%
+    \ClassWarning{resume}{Empty jobduties list in entry \arabic{resumeentry};\MessageBreak
+      add an \string\item\space or delete the environment}%
+  }{%
+    \vspace{\jobdutiesvspace}%
+    \color{resumetextcolor}\normalfont%
+    \linespread{1.06}\selectfont%
+    \begin{itemize}[
+      leftmargin=*,
+      label=\textbullet,
+      topsep=2pt,
+      itemsep=2pt,
+      parsep=0pt,
+      partopsep=0pt
+    ]
+    #1%
+    \end{itemize}
+    \vspace{4pt}%
+  }%
+}{}
+
+% Skills bullets: change these values if skills should use a different list style.
+\NewDocumentEnvironment{skillitems}{+b}{%
+  \resumecheckfield{skills bullets}{bullets}{#1}%
+  \vspace{8pt}%
+  \color{resumetextcolor}\normalfont%
   \linespread{1.06}\selectfont%
   \begin{itemize}[
     leftmargin=*,
@@ -304,21 +399,46 @@
   \vspace{4pt}%
 }{}
 
-% Skills bullets: change these values if skills should use a different list style.
-\NewDocumentEnvironment{skillitems}{+b}{%
-  \resumecheckfield{skills bullets}{bullets}{#1}%
-  \vspace{8pt}%
-  \color{namecolor}\normalfont%
-  \linespread{1.06}\selectfont%
-  \begin{itemize}[
-    leftmargin=*,
-    label=\textbullet,
-    topsep=2pt,
-    itemsep=2pt,
-    parsep=0pt,
-    partopsep=0pt
-  ]
-  #1%
-  \end{itemize}
-  \vspace{4pt}%
+% Cover letter. The header commands above are shared with the resume.
+% \letterfor{Company}{Role} defines \Company and \Role for the letter text.
+\newcommand{\letterfor}[2]{%
+  \resumecheckfield{letter company}{organization}{#1}%
+  \resumecheckfield{letter role}{role}{#2}%
+  \def\Company{#1\xspace}%
+  \def\Role{#2\xspace}%
+}
+
+% \letteropening{Date}{Recipient name}{Recipient organization}{Greeting}
+% Pass {} for a recipient line you do not have.
+\newcommand{\letteropening}[4]{%
+  \resumecheckfield{letter date}{dates}{#1}%
+  \resumecheckfield{letter recipient}{recipient}{#2 #3}%
+  \resumecheckfield{letter greeting}{greeting}{#4}%
+  \vspace{14pt}%
+  {\color{resumetextcolor}#1}\par
+  \vspace{10pt}%
+  \ifblank{#2}{}{{\color{resumetextcolor}#2}\par}%
+  \ifblank{#3}{}{{\color{resumetextcolor}#3}\par}%
+  \vspace{10pt}%
+  {\color{resumetextcolor}#4}\par
+}
+
+% Letter paragraphs, separated by blank lines. Bracketed prompts are checked.
+\NewDocumentEnvironment{letterbody}{+b}{%
+  \resumecheckfield{letter body}{body}{#1}%
+  \vspace{6pt}%
+  \begingroup
+  \setlength{\parskip}{8pt}%
+  \color{resumetextcolor}\linespread{1.12}\selectfont
+  #1\par
+  \endgroup
 }{}
+
+% \letterclosing{Sign-off}{Your Name}
+\newcommand{\letterclosing}[2]{%
+  \resumecheckfield{letter signature}{name}{#2}%
+  \vspace{10pt}%
+  {\color{resumetextcolor}#1}\par
+  \vspace{18pt}%
+  {\color{resumetextcolor}#2}\par
+}

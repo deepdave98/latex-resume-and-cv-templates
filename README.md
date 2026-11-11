@@ -1,48 +1,47 @@
 # LaTeX Resume and CV Templates
 
-Resumes for software, AI, and ML engineers, plus a graduate-admissions CV. Edit in Overleaf or build with XeLaTeX.
+One-page resumes for software, AI, and ML engineers, a graduate-admissions CV, and a matching cover letter. Edit in Overleaf with one click or build with XeLaTeX.
+
+<img src="preview/new-grad-example.png" alt="Filled example of the new-grad resume: education, an internship, two projects, and skills on one page" width="560">
+
+The PDF is one column of real text with embedded fonts, no icons, and no photo, so the text a parser extracts matches the page. The compile log reminds you about sample text you have not replaced, warns when the resume runs past its page budget, and links your email and phone automatically. [Example PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/new-grad-example.pdf) · [Example source](examples/new-grad-example.tex).
 
 ## Pick a template
 
-| Template | Pages | Edit | Download |
-| --- | --- | --- | --- |
-| No internship | 1 | [Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fno-internship-resume.zip&engine=xelatex&main_document=resume.tex) | [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/no-internship-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/no-internship-resume.pdf) |
-| New grad | 1 | [Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fnew-grad-resume.zip&engine=xelatex&main_document=resume.tex) | [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/new-grad-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/new-grad-resume.pdf) |
-| Experienced | 1 | [Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fexperienced-resume.zip&engine=xelatex&main_document=resume.tex) | [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/experienced-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/experienced-resume.pdf) |
-| AI engineer | 1 | [Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fai-engineer-resume.zip&engine=xelatex&main_document=resume.tex) | [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/ai-engineer-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/ai-engineer-resume.pdf) |
-| ML engineer | 1 | [Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fml-engineer-resume.zip&engine=xelatex&main_document=resume.tex) | [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/ml-engineer-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/ml-engineer-resume.pdf) |
-| Graduate admissions | 1 (starter) | [Open in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fgraduate-admissions-resume.zip&engine=xelatex&main_document=resume.tex) | [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/graduate-admissions-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/graduate-admissions-resume.pdf) |
+- **No internship** (education, projects, other experience): [Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fno-internship-resume.zip&engine=xelatex&main_document=resume.tex) · [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/no-internship-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/no-internship-resume.pdf)
+- **New grad** (education, internship, projects): [Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fnew-grad-resume.zip&engine=xelatex&main_document=resume.tex) · [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/new-grad-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/new-grad-resume.pdf)
+- **Experienced** (work history, with a promotion pattern): [Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fexperienced-resume.zip&engine=xelatex&main_document=resume.tex) · [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/experienced-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/experienced-resume.pdf)
+- **AI engineer** (applied AI work, with evaluation details): [Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fai-engineer-resume.zip&engine=xelatex&main_document=resume.tex) · [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/ai-engineer-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/ai-engineer-resume.pdf)
+- **ML engineer** (training, data splits, and serving): [Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fml-engineer-resume.zip&engine=xelatex&main_document=resume.tex) · [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/ml-engineer-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/ml-engineer-resume.pdf)
+- **Graduate admissions** (education, research, teaching): [Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fgraduate-admissions-resume.zip&engine=xelatex&main_document=resume.tex) · [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/graduate-admissions-resume.zip) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/graduate-admissions-resume.pdf)
 
-Start with **New grad** if you have an internship, or **No internship** if projects are your strongest work. **Experienced** puts work first; keep only the roles you need. All starters begin at one page. Use a second page when the content warrants it. For admissions, follow the program's length requirements.
+Every ZIP also contains `cover-letter.tex` with the same header. [Open the cover letter in Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fnew-grad-resume.zip&engine=xelatex&main_document=cover-letter.tex) · [PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/cover-letter.pdf).
 
-For AI or ML jobs, use the role starter when its work matches yours; move education and projects first if you are a student or new grad.
+Start with **New grad** if you have an internship, or **No internship** if projects are your strongest work. All starters begin at one page. If relevant work needs a second, the footer prints your name and page number from page 2. For admissions, follow the program's length rules.
 
-[All previews](output/pdf/README.md) · [Section order](docs/section-order.md) · [AI/ML guide](docs/ai-ml-resumes.md) · [Admissions guide](docs/graduate-admissions.md).
-
-<img src="preview/new-grad-resume.png" alt="New-grad resume with education, experience, projects, and skills" width="420">
+[Section order](docs/section-order.md) · [AI/ML guide](docs/ai-ml-resumes.md) · [Admissions guide](docs/graduate-admissions.md) · [All previews](output/pdf/README.md)
 
 ## Edit the content
 
-1. Open a template above, or upload its ZIP to Overleaf. Select **XeLaTeX** and `resume.tex`.
-2. Replace contacts, education, and sample work in `resume.tex`. The bullets are prompts, not a checklist of things you must have done. Delete unused entries.
-3. Recompile. Check placeholder warnings, every page, and the PDF's links. Warnings can miss unfinished text.
+1. Open a template above. Overleaf imports the ZIP; select **XeLaTeX** and `resume.tex`.
+2. Replace the header, education, and sample work. The bullets are prompts, not a checklist of things you must have done. Delete unused entries.
+3. Recompile. The log names each unreplaced placeholder and warns above the page budget. Read every page and click the links in the PDF.
 
-[Editing reference](docs/editing.md) · [Bullet examples](examples/engineering-bullets.md) · [Before you send](docs/before-you-send.md). Styling lives in `resume.cls`.
+The [editing reference](docs/editing.md) covers contacts, promotions, the cover letter, fonts, colors, and paper size. [Bullet examples](examples/engineering-bullets.md) show how to turn notes into specific bullets. [Before you send](docs/before-you-send.md) is the final checklist.
 
 ## Build locally
 
-[Install XeLaTeX and latexmk](docs/local-setup.md), then run inside an extracted starter:
+[Install XeLaTeX and latexmk](docs/local-setup.md), then run inside an extracted ZIP:
 
 ```bash
 latexmk resume.tex
 ```
 
-Output: `resume.pdf`. In a clone, `make` builds all starters to `build/`; `make doctor` checks local dependencies.
+In a clone, `make` builds every document to `build/` and `make doctor` checks dependencies. [![Build](https://github.com/deepdave98/latex-resume-and-cv-templates/actions/workflows/build.yml/badge.svg)](https://github.com/deepdave98/latex-resume-and-cv-templates/actions/workflows/build.yml) Every change compiles all six starters, the cover letter, and the example on a pinned TeX Live image, checks that each stays on one page and that contact links point where the text says, compares each starter's extracted text with a reviewed baseline, and checks the ZIPs against their sources. `make test` runs the same checks.
 
 ## Optional tools
 
-- **[PDF reviewer](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/pdf-review.zip):** unzip and open `pdf-review.html`. Inspect pages, text, links, and metadata; compare exports or prepare text for application forms. Works offline without changing the PDF. [Upload limits and privacy](tools/pdf-review/README.md).
-- **[Application versions](examples/application-versions/README.md):** edit shared facts once; choose entries and bullets for each application. Includes steps for moving an existing resume. [Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fapplication-versions.zip&engine=xelatex&main_document=resume.tex) · [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/application-versions.zip) · [Base PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-resume.pdf) · [Backend PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-backend.pdf).
-- **[Submitted copies](docs/submitted-resumes.md):** save the uploaded PDF with a receipt, then check it later in the reviewer or terminal. Keep each application version for interview preparation.
+- **[PDF reviewer](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/pdf-review.zip):** unzip and open `pdf-review.html` to read the text a parser extracts from your PDF and check where each link goes. Works offline; nothing leaves your browser. [Details](tools/pdf-review/README.md).
+- **[Application versions](examples/application-versions/README.md):** keep facts in one place and choose entries and bullets per application. [Overleaf](https://www.overleaf.com/docs?snip_uri=https%3A%2F%2Fraw.githubusercontent.com%2Fdeepdave98%2Flatex-resume-and-cv-templates%2Fmain%2Fdownloads%2Fapplication-versions.zip&engine=xelatex&main_document=resume.tex) · [ZIP](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/downloads/application-versions.zip) · [Base PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-resume.pdf) · [Backend PDF](https://raw.githubusercontent.com/deepdave98/latex-resume-and-cv-templates/main/output/pdf/application-backend.pdf).
 
 [Contribute](CONTRIBUTING.md) · [Tests](tests/README.md) · [MIT License](LICENSE) · [Report a security issue privately](https://github.com/deepdave98/latex-resume-and-cv-templates/security/advisories/new).

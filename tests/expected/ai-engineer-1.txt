@@ -18,7 +18,7 @@ AI Engineer
 Company B – City, Region                                                                          Month Year – Month Year
 Software Engineer
 • Built [API or worker] for [workflow] with [language and database]; tested timeout recovery without repeating [side effect].
-• Rolled out [service change] behind [feature flag], monitored [failure signal], and verified rollback before expanding traﬀic.
+• Rolled out [service change] behind [feature flag], monitored [failure signal], and verified rollback before expanding traffic.
 
 Projects
 

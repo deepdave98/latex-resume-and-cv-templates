@@ -12,8 +12,8 @@
   h1 { margin: 0; font: bold 58px/1.1 Georgia, serif; letter-spacing: -1.4px; }
   .roles { margin: 32px 0 0; font-size: 20px; line-height: 1.65; }
   .repo { margin: auto 0 0; font-size: 16px; color: #606f77; }
-  .previews { display: grid; grid-template-columns: 1fr 1fr; align-content: center; gap: 20px; }
-  figure { margin: 0; min-width: 0; }
+  .previews { display: flex; align-items: flex-start; overflow: hidden; }
+  figure { margin: 0; min-width: 0; width: 100%; }
   figcaption { margin-bottom: 16px; font-size: 14px; color: #606f77; }
   img { display: block; width: 100%; border: 1px solid #dde1e2; box-shadow: 0 8px 18px #293e4910; }
 </style>
@@ -21,17 +21,13 @@
   <section class="intro">
     <p class="format">OVERLEAF / XELATEX</p>
     <h1>LaTeX resumes<br>and CV templates</h1>
-    <p class="roles">Software, AI &amp; ML engineering<br>Master's &amp; PhD admissions</p>
+    <p class="roles">Software, AI &amp; ML engineering<br>Graduate admissions, cover letter</p>
     <p class="repo">deepdave98/latex-resume-and-cv-templates</p>
   </section>
   <section class="previews" aria-label="Template previews">
     <figure>
-      <figcaption>New-grad resume</figcaption>
-      <img src="../preview/new-grad-resume.png" alt="One-page new-grad resume">
-    </figure>
-    <figure>
-      <figcaption>Graduate-admissions CV</figcaption>
-      <img src="../preview/graduate-admissions-resume.png" alt="One-page graduate-admissions CV">
+      <figcaption>Filled example</figcaption>
+      <img src="../preview/new-grad-example.png" alt="One-page filled example resume">
     </figure>
   </section>
 </main>

@@ -147,6 +147,64 @@ Verified duplicate delivery.
 """)
         self.assertEqual(warnings, ["resume name.", "skills bullets."])
 
+    def test_subentry_and_letter_prompts_warn(self):
+        warnings, text, _ = self.compile(r"""
+\resumename{Alex Morgan}
+\jobentry{}{Acme}{Toronto}{2020 -- Present}
+\jobsubentry{[Current role]}{2023 -- Present}
+\begin{jobduties}
+\item Led the billing migration.
+\end{jobduties}
+\jobsubentry{Engineer}{Month Year -- 2023}
+\begin{jobduties}
+\item Built the retry worker.
+\end{jobduties}
+\letteropening{[Month Day, Year]}{Sam Lee}{}{Dear Sam,}
+\begin{letterbody}
+I am applying for [Role].
+
+Second paragraph.
+\end{letterbody}
+\letterclosing{Sincerely,}{Your Name}
+""")
+        self.assertEqual(warnings, ["entry 2 role.", "entry 3 dates.", "letter date.", "letter body.", "letter signature."])
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        self.assertEqual(lines[1].split()[:2], ["Acme", "–"])
+        self.assertTrue(lines[2].startswith("[Current role]"), lines[2])
+        self.assertIn("Dear Sam,", lines)
+
+    def test_rows_summary_letterfor_and_linked_titles_warn(self):
+        warnings, text, _ = self.compile(r"""
+\resumename{Alex Morgan}
+\resumecontact{Toronto, ON}
+\resumesummary{Backend engineer; [one more sentence].}
+\jobentry{Personal project; Python}{\resumelink{https://github.com/your-handle/tool}{Import Tool}}{}{2025}
+\resumerow{[Certification, Level]}{Issuing Organization}{2024}
+\resumerow{AWS Certified Developer, Associate}{Amazon Web Services}{Month Year}
+\letterfor{[Company]}{Backend Engineer}
+\begin{letterbody}
+I am applying for the \Role position at \Company. \Company's team ships weekly.
+\end{letterbody}
+""")
+        self.assertEqual(warnings, [
+            "summary.", "entry 1 organization.", "entry 2 name.", "entry 2 detail.",
+            "entry 3 dates.", "letter company.",
+        ])
+        self.assertIn("Backend engineer; [one more sentence].", text)
+        self.assertIn("Import Tool", text)
+        self.assertIn("AWS Certified Developer, Associate – Amazon Web Services", text)
+        self.assertIn("the Backend Engineer position at [Company]. [Company]\u2019s team", text)
+
+    def test_empty_bullet_list_warns_instead_of_stopping(self):
+        _, text, log = self.compile(r"""
+\resumename{Alex Morgan}
+\jobentry{Engineer}{Acme}{Toronto}{2024}
+\begin{jobduties}
+\end{jobduties}
+""")
+        self.assertIn("Empty jobduties list in entry 1", log)
+        self.assertIn("Engineer", text)
+
     def test_warning_checks_do_not_change_extracted_content(self):
         body = r"""
 \resumename{Your Name}

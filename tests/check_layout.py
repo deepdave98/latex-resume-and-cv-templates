@@ -61,15 +61,20 @@ class EntryLayoutTests(unittest.TestCase):
         return text, ET.fromstring(bounds.stdout)
 
     def assert_inside_margins(self, tree):
-        for page in tree.findall(".//{*}page"):
+        for number, page in enumerate(tree.findall(".//{*}page"), start=1):
             width, height = float(page.attrib["width"]), float(page.attrib["height"])
             words = page.findall(".//{*}word")
             self.assertTrue(words)
             for word in words:
+                y_min, y_max = float(word.attrib["yMin"]), float(word.attrib["yMax"])
                 self.assertGreaterEqual(float(word.attrib["xMin"]), 35.5, word.text)
                 self.assertLessEqual(float(word.attrib["xMax"]), width - 35.5, word.text)
-                self.assertGreaterEqual(float(word.attrib["yMin"]), 35.5, word.text)
-                self.assertLessEqual(float(word.attrib["yMax"]), height - 35.5, word.text)
+                if number > 1 and y_min > height - 35.5:
+                    continue  # the class prints the name and page number in the bottom margin
+                # The 30pt name glyph rises above the body margin.
+                top = 31.5 if y_max - y_min > 25 and y_max < 65 else 35.5
+                self.assertGreaterEqual(y_min, top, word.text)
+                self.assertLessEqual(y_max, height - 35.5, word.text)
             for index, word in enumerate(words):
                 for other in words[index + 1:]:
                     x_overlap = min(float(word.attrib["xMax"]), float(other.attrib["xMax"])) - max(float(word.attrib["xMin"]), float(other.attrib["xMin"]))
@@ -96,6 +101,34 @@ class EntryLayoutTests(unittest.TestCase):
                         organization_word = next(word for word in pdf_words if word.text == organization.split()[0])
                         date_word = next(word for word in pdf_words if word.text == dates.split()[0])
                         self.assertLess(abs(float(organization_word.attrib["yMin"]) - float(date_word.attrib["yMin"])), 2)
+
+    def test_long_rows_wrap_beside_their_dates(self):
+        body = r"""\resumerow{Short Certification}{Issuer}{2024}
+\resumerow{A certification with a very long name that must wrap beside its date column, Professional}{Some Very Long Issuing Organization Name}{January 2022 -- January 2025}
+\resumerow{Honors List}{Lakeshore University}{}"""
+        for paper in ("letterpaper", "a4paper"):
+            with self.subTest(paper=paper):
+                text, tree = self.compile(body, paper)
+                self.assertEqual(len(check_pdf_text.split_pages(text)), 1)
+                for phrase in ("Short Certification – Issuer", "Professional", "January 2025", "Honors List – Lakeshore University"):
+                    self.assertIn(phrase, text)
+                self.assert_inside_margins(tree)
+
+    def test_long_contact_line_wraps_after_a_separator(self):
+        body = r"""\resumename{Alex Morgan}
+\resumecontact{Toronto, Ontario, Canada
+  \contactsep \resumephone{+1 (416) 555-0123}
+  \contactsep \resumeemail{alexandra.morgan-anderson@example.com}
+  \contactsep \resumelink{https://www.linkedin.com/in/alexandra-morgan-anderson}{linkedin.com/in/alexandra-morgan-anderson}
+  \contactsep \resumelink{https://github.com/alexandra-morgan-anderson}{github.com/alexandra-morgan-anderson}}"""
+        for paper in ("letterpaper", "a4paper"):
+            with self.subTest(paper=paper):
+                text, tree = self.compile(body, paper)
+                contact = [line.strip() for line in text.splitlines() if "⋄" in line]
+                self.assertEqual(len(contact), 2, text)
+                self.assertTrue(contact[0].endswith("⋄"), contact[0])
+                self.assertFalse(contact[1].startswith("⋄"), contact[1])
+                self.assert_inside_margins(tree)
 
     def test_heading_and_role_move_together_near_page_end(self):
         for paper, remaining in (("letterpaper", "9.3in"), ("a4paper", "10in")):

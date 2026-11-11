@@ -1,0 +1,60 @@
+% !TeX program = xelatex
+% A filled copy of the new-grad starter. Every person, employer, and number
+% here is fictional. It shows how the design reads with real sentences.
+\documentclass{resume}
+\resumepagelimit{1}
+
+\begin{document}
+
+\resumename{Alex Morgan}
+\resumecontact{%
+  Toronto, Ontario
+  \contactsep \resumephone{+1 (416) 555-0123}
+  \contactsep \resumeemail{alex.morgan@example.com}
+  \contactsep \resumelink{https://alexmorgan.example}{alexmorgan.example}
+}
+
+\section{Education}
+
+\jobentry{Bachelor of Science in Computer Science}{Lakeshore University}{Toronto, Ontario}{April 2026}
+\begin{jobduties}
+  \item \textbf{Relevant coursework}: Operating Systems, Databases, Distributed Systems, Software Testing.
+\end{jobduties}
+
+\section{Experience}
+
+\jobentry{Software Engineering Intern}{Northstar Analytics}{Toronto, Ontario}{May 2025 -- August 2025}
+\begin{jobduties}
+  \item Built the account-settings form in React. Kept edits after failed saves and moved keyboard focus to the field that needed attention.
+  \item Fixed duplicate receipts when the payment provider retried a webhook by storing its event ID before sending email.
+  \item Added an index for order-history queries, reducing p95 response time from 800 ms to 120 ms in a load test with 20 concurrent requests.
+\end{jobduties}
+
+\jobentry{Teaching Assistant, Introduction to Systems Programming}{Lakeshore University}{Toronto, Ontario}{September 2025 -- April 2026}
+\begin{jobduties}
+  \item Ran weekly labs for 40 students and wrote the autograder tests for the shell assignment, including the pipe and redirection cases students most often got wrong.
+  \item Rewrote the memory-debugging guide after the same three questions recurred in office hours; the next term's lab reports cited it instead of asking.
+\end{jobduties}
+
+\section{Projects}
+
+\jobentry{Course project; TypeScript, PostgreSQL}{\resumelink{https://alexmorgan.example/room-booking}{Campus Room Booking}}{}{March 2026}
+\begin{jobduties}
+  \item Built room search and booking validation for a four-person course project; prevented overlapping reservations with a database exclusion constraint.
+  \item Tested the booking endpoint with empty, overlapping, and duplicate requests, and kept each failing case as a regression test.
+\end{jobduties}
+
+\jobentry{Personal project; Python, SQLite}{Resumable CSV Importer}{}{November 2025}
+\begin{jobduties}
+  \item Moved daily imports to resumable batches so a failed run restarts from the last completed file instead of the beginning.
+  \item Published the code with setup steps, sample data, and a note on the two encodings it does not handle.
+\end{jobduties}
+
+\section{Skills}
+\begin{skillitems}
+  \item \textbf{Languages}: Python, TypeScript, SQL, C.
+  \item \textbf{Frameworks \& Libraries}: React, Node.js, FastAPI, pytest.
+  \item \textbf{Tools \& Platforms}: Git, PostgreSQL, Docker, GitHub Actions, Linux.
+\end{skillitems}
+
+\end{document}

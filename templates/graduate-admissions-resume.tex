@@ -1,7 +1,7 @@
 % !TeX program = xelatex
 \documentclass{resume}
 \resumepagelimit{1}
-\hypersetup{pdftitle={Curriculum Vitae}}
+\renewcommand{\resumedoctype}{Curriculum Vitae}
 
 % Start here: replace every bracketed prompt; delete entries you do not have.
 % This is a one-page starting point, not a program's required format or length.
@@ -19,6 +19,7 @@
   \contactsep\resumelink{https://example.com}{Website}
   \contactsep\resumelink{https://github.com/your-handle}{GitHub}}
 % Delete Website or GitHub if you have no relevant work to link.
+% Add \contactsep\resumelink{https://orcid.org/0000-0000-0000-0000}{ORCID} only if you have one.
 
 \section{Education}
 
@@ -55,7 +56,7 @@
 % BEGIN OPTIONAL PUBLICATIONS
 % \section{Publications}
 % \begin{skillitems}
-%   \item {[Authors in order]}. ``[Title].'' [Venue], [Year]. [Published / accepted].
+%   \item {[Coauthor]}, \textbf{[Your Name]}, and [Coauthor]. ``[Title].'' \textit{[Venue]}, [Year]. [Published / accepted]. \resumelink{https://doi.org/[DOI]}{doi:[DOI]}
 % \end{skillitems}
 % END OPTIONAL PUBLICATIONS
 
@@ -63,7 +64,7 @@
 % BEGIN OPTIONAL PREPRINTS
 % \section{Preprints}
 % \begin{skillitems}
-%   \item {[Authors in order]}. ``[Title].'' [Year]. Preprint, not peer reviewed.
+%   \item {[Coauthor]}, \textbf{[Your Name]}, and [Coauthor]. ``[Title].'' [Year]. Preprint, not peer reviewed.
 % \end{skillitems}
 % END OPTIONAL PREPRINTS
 
@@ -85,16 +86,18 @@
 % \end{skillitems}
 % END OPTIONAL PRESENTATIONS
 
-% Keep this heading with its entry when optional sections push it onto page two.
-\Needspace{8\baselineskip}
 \section{Teaching and Service}
 
 \jobentry{[Teaching / Mentoring / Service Role]}{[Department or Organization]}{}{[Month Year] -- [Month Year]}
 \begin{jobduties}
   \item Led [tutorial or activity] on [topic]; prepared [materials] and helped [audience] with [specific difficulty].
 \end{jobduties}
-% Delete this section if it does not apply. Add awards only if received, naming
-% the award, awarding body, and year. Do not invent selectivity or class rank.
+% Delete this section if it does not apply.
+
+% Optional awards: name the award, the awarding body, and the year. Do not
+% invent selectivity or class rank.
+% \section{Honors and Awards}
+% \resumerow{[Award]}{[Awarding body]}{[Year]}
 
 \section{Research Skills}
 

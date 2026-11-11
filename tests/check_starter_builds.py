@@ -15,7 +15,7 @@ import check_pdf_text
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES = ("new-grad", "no-internship", "experienced", "ai-engineer", "ml-engineer", "graduate-admissions")
-ARCHIVE_FILES = frozenset({"resume.tex", "resume.cls", "latexmkrc", "START_HERE.md", "LICENSE"})
+ARCHIVE_FILES = frozenset({"resume.tex", "cover-letter.tex", "resume.cls", "latexmkrc", "START_HERE.md", "LICENSE"})
 
 
 class StarterError(Exception):
@@ -55,21 +55,29 @@ def read_archive(path):
         ) from error
 
 
+def check_cover_letter(pdf):
+    """The bundled cover letter must build to one page of extractable text."""
+    pages = check_pdf_text.split_pages(check_pdf_text.extract_text(pdf))
+    if len(pages) != 1 or not pages[0].strip():
+        raise check_pdf_text.CheckError(f"{pdf}: expected one page of text, got {len(pages)} page(s)")
+
+
 def check_starter(archive, template, project_dir, latexmk):
     files = read_archive(archive)
     try:
         project_dir.mkdir()
         for name, content in files.items():
             (project_dir / name).write_bytes(content)
-        subprocess.run(
-            [latexmk, "-interaction=nonstopmode", "-halt-on-error", "-file-line-error", "resume.tex"],
-            cwd=project_dir,
-            check=True,
-            capture_output=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=180,
-        )
+        for source in ("resume.tex", "cover-letter.tex"):
+            subprocess.run(
+                [latexmk, "-interaction=nonstopmode", "-halt-on-error", "-file-line-error", source],
+                cwd=project_dir,
+                check=True,
+                capture_output=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=180,
+            )
     except subprocess.CalledProcessError as error:
         detail = ((error.stdout or "") + "\n" + (error.stderr or "")).strip()
         excerpt = "\n".join(detail.splitlines()[-40:])
@@ -83,6 +91,7 @@ def check_starter(archive, template, project_dir, latexmk):
 
     try:
         check_pdf_text.check_pdf(project_dir / "resume.pdf", template)
+        check_cover_letter(project_dir / "cover-letter.pdf")
     except check_pdf_text.CheckError as error:
         raise StarterError(f"{archive}: {error}") from error
 

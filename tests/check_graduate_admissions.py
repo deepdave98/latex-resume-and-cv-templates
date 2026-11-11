@@ -45,15 +45,20 @@ class AdmissionsTemplateTests(unittest.TestCase):
         pages = ET.fromstring(result.stdout).findall(".//{*}page")
         self.assertEqual(len(pages), page_count)
         width, height = PAPERS[paper]
-        for page in pages:
+        for number, page in enumerate(pages, start=1):
             self.assertAlmostEqual(float(page.attrib["width"]), width, delta=0.1)
             self.assertAlmostEqual(float(page.attrib["height"]), height, delta=0.1)
             boxes = []
+            footer = []
             for word in page.findall(".//{*}word"):
                 x1, y1, x2, y2 = (float(word.attrib[key]) for key in ("xMin", "yMin", "xMax", "yMax"))
                 # Preserve the shared class's large name glyph above the body margin.
                 top = 31.5 if y2 - y1 > 25 and y2 < 65 else 35.5
                 self.assertTrue(35.5 <= x1 < x2 <= width - 35.5, word.text)
+                if number > 1 and y1 > height - 35.5:
+                    # The class prints the name and page number in the bottom margin.
+                    footer.append(word.text)
+                    continue
                 self.assertTrue(top <= y1 < y2 <= height - 35.5, word.text)
                 for other in boxes:
                     self.assertFalse(
@@ -63,6 +68,8 @@ class AdmissionsTemplateTests(unittest.TestCase):
                     )
                 boxes.append((x1, y1, x2, y2, word.text))
             self.assertTrue(boxes, "Empty page")
+            expected_footer = ["Your", "Name", "Page", str(number), "of", str(page_count)] if number > 1 else []
+            self.assertEqual(footer, expected_footer)
 
     def compile(self, source, paper, pages=1):
         with tempfile.TemporaryDirectory(prefix="resume-admissions-") as temporary:
@@ -85,7 +92,10 @@ class AdmissionsTemplateTests(unittest.TestCase):
             self.assertEqual(len(extracted_pages), pages)
             self.assertTrue(all(page.strip() for page in extracted_pages))
             self.assert_bounds(pdf, paper, pages)
-            self.assertEqual(check_contacts.extract_urls(pdf), CONTACTS)
+            urls = check_contacts.extract_urls(pdf)
+            self.assertEqual(urls[:len(CONTACTS)], CONTACTS)
+            # The optional publications block links a DOI placeholder.
+            self.assertEqual(set(urls[len(CONTACTS):]) - {"https://doi.org/[DOI]"}, set())
             return text, log
 
     def test_default_cv_and_placeholder_warnings(self):
@@ -115,7 +125,7 @@ class AdmissionsTemplateTests(unittest.TestCase):
                     self.assertEqual(text.count(title), 1)
                     self.assertIn(status, text)
                     if block != "PRESENTATIONS":
-                        self.assertIn("[Authors in order]", text)
+                        self.assertIn("[Coauthor], [Your Name], and [Coauthor]", text)
                     self.assertTrue(check_placeholders.reminders(log))
 
     def test_two_degrees_and_outputs_allow_a_second_page(self):

@@ -9,9 +9,9 @@ import sys
 
 TEX_FILES = (
     "article.cls", "geometry.sty", "xcolor.sty", "fontspec.sty",
-    "titlesec.sty", "enumitem.sty", "etoolbox.sty", "needspace.sty",
+    "titlesec.sty", "enumitem.sty", "etoolbox.sty", "xspace.sty", "needspace.sty",
     "ulem.sty", "hyperref.sty", "lmroman10-regular.otf", "lmroman10-bold.otf",
-    "lmroman10-italic.otf", "lmroman10-bolditalic.otf",
+    "lmroman10-italic.otf", "lmroman10-bolditalic.otf", "lmromancaps10-regular.otf",
 )
 TOOL_ARGUMENTS = {"xelatex": "--version", "latexmk": "-v", "kpsewhich": "--version"}
 TIMEOUT_SECONDS = 10
